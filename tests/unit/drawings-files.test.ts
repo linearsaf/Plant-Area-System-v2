@@ -16,6 +16,8 @@ import {
   maxPdfBytes,
   normalizeRotation,
   parseRange,
+  requireContentType,
+  requireUpload,
   serveFile,
   stampPdf,
   stampPlacement,
@@ -24,6 +26,7 @@ import {
   storageKey,
   validatePdf,
 } from '@plant/drawings-core';
+import { AppError, type DrawingsRole, type Identity } from '@plant/contracts';
 
 let dir: string;
 before(async () => {
@@ -229,4 +232,46 @@ test('stamp output can be read back from disk', async () => {
     await stampPdf(await pdf(), [{ title: 'Check', name: 'A', role: 'B', decidedAt: new Date() }]),
   );
   assert.equal((await readFile(path)).subarray(0, 5).toString(), '%PDF-');
+});
+
+test('upload kinds follow the role matrix; SVG is never an accepted image type', () => {
+  const as = (role: DrawingsRole): Identity => ({
+    id: 'u-' + role,
+    name: role,
+    email: role + '@example.test',
+    position: '',
+    portalAdmin: false,
+    mustChangePassword: false,
+    grants: [{ appId: 'drawings', role }],
+  });
+  const status = (fn: () => unknown) => {
+    try {
+      fn();
+      return 200;
+    } catch (e) {
+      return e instanceof AppError ? e.status : 500;
+    }
+  };
+  // Images are Drawing Request / review attachments; Drafter cannot create requests.
+  assert.equal(
+    status(() => requireUpload(as('drafter'), 'image')),
+    403,
+  );
+  assert.equal(
+    status(() => requireUpload(as('viewer'), 'pdf')),
+    403,
+  );
+  for (const role of ['viewer', 'leader', 'approver', 'head', 'admin'] as const)
+    assert.equal(requireUpload(as(role), 'image'), 'image', role);
+  for (const role of ['drafter', 'leader', 'admin'] as const)
+    assert.equal(requireUpload(as(role), 'pdf'), 'pdf', role);
+  assert.equal(
+    status(() => requireUpload(as('admin'), 'svg')),
+    400,
+  );
+  assert.equal(
+    status(() => requireContentType('image', 'image/svg+xml')),
+    415,
+  );
+  assert.equal(requireContentType('image', 'image/png'), 'image/png');
 });

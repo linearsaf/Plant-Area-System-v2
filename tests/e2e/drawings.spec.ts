@@ -174,8 +174,16 @@ test('upload rejects non-PDF, SVG and oversize; gateway sends the /drawings CSP'
     data: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
   });
   expect(fake.status()).toBe(422);
-  const svg = await drafter.post('/drawings/api/uploads?kind=image', {
-    headers: { origin, 'Content-Type': 'image/svg+xml', 'X-File-Name': 'x.svg' },
+  // Images are request/review attachments: Drafter cannot create requests (PRD matrix), so 403.
+  const svgHeaders = { origin, 'Content-Type': 'image/svg+xml', 'X-File-Name': 'x.svg' };
+  const denied = await drafter.post('/drawings/api/uploads?kind=image', {
+    headers: svgHeaders,
+    data: '<svg/>',
+  });
+  expect(denied.status()).toBe(403);
+  // A role allowed to attach images still cannot upload SVG.
+  const svg = await people.viewer!.api.post('/drawings/api/uploads?kind=image', {
+    headers: svgHeaders,
     data: '<svg/>',
   });
   expect(svg.status()).toBe(415);
