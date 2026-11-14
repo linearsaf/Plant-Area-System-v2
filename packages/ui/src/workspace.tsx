@@ -27,6 +27,9 @@ type Activity = {
   brand: string | null;
   positionCount: number | string;
   appId?: string;
+  /** Drawing Database: tautan dan judul notifikasi. */
+  href?: string;
+  title?: string;
   unit?: string;
   actorName: string;
   installedAt: string;
@@ -41,9 +44,11 @@ type LinkItem = {
   countLabel?: string;
 };
 const batchLink = (item: Activity) =>
-  item.appId === 'consumables'
-    ? `/consumables/history?document=${encodeURIComponent(item.id)}`
-    : `/bag-filter/equipment/${item.equipmentCode.toLowerCase()}?batch=${encodeURIComponent(item.id)}`;
+  item.href
+    ? item.href
+    : item.appId === 'consumables'
+      ? `/consumables/history?document=${encodeURIComponent(item.id)}`
+      : `/bag-filter/equipment/${item.equipmentCode.toLowerCase()}?batch=${encodeURIComponent(item.id)}`;
 export function Workspace({
   identity,
   active,
@@ -138,7 +143,12 @@ export function Workspace({
     group: 'Drawing Database',
     ...(key === 'tasks' ? { count: drawingTasks, countLabel: `${drawingTasks} tugas menunggu` } : {}),
   }));
-  const sourceIds = [...(grant ? ['bag-filter'] : []), ...(stockGrant ? ['consumables'] : [])];
+  const drawingsGrant = drawingLinks.length > 0;
+  const sourceIds = [
+    ...(grant ? ['bag-filter'] : []),
+    ...(stockGrant ? ['consumables'] : []),
+    ...(drawingsGrant ? ['drawings'] : []),
+  ];
   const normalizeStock = (m: StockDocument): Activity => ({
     id: m.id,
     equipmentCode: m.hec || 'R22',
@@ -151,6 +161,26 @@ export function Workspace({
     installedAt: m.createdAt,
     createdAt: m.createdAt,
     appId: 'consumables',
+  });
+  const normalizeDrawing = (n: {
+    id: string;
+    title: string;
+    body: string;
+    href: string;
+    createdAt: string;
+  }): Activity => ({
+    id: n.id,
+    equipmentCode: '',
+    wo: '',
+    reason: n.body,
+    brand: null,
+    positionCount: '',
+    actorName: '',
+    installedAt: n.createdAt,
+    createdAt: n.createdAt,
+    appId: 'drawings',
+    href: n.href,
+    title: n.title,
   });
   const [materialResults, setMaterialResults] = useState<LinkItem[]>([]);
   const links: LinkItem[] = [
@@ -263,7 +293,7 @@ export function Workspace({
     };
   }, [identity.id, toggleSidebar]);
   const loadActivity = useCallback(async () => {
-    const sources = [...(grant ? ['bag-filter'] : []), ...(stockGrant ? ['consumables'] : [])];
+    const sources = sourceIds;
     const results = await Promise.allSettled(
       sources.map(async (source) => {
         const r = await fetch('/' + source + '/api/activity', { cache: 'no-store' });
@@ -274,7 +304,9 @@ export function Workspace({
           items:
             source === 'consumables'
               ? d.items.map(normalizeStock)
-              : (d.items.map((i: Activity) => ({ ...i, appId: source })) as Activity[]),
+              : source === 'drawings'
+                ? d.items.map(normalizeDrawing)
+                : (d.items.map((i: Activity) => ({ ...i, appId: source })) as Activity[]),
         };
       }),
     );
@@ -298,7 +330,7 @@ export function Workspace({
     setItems(all.slice(0, 24));
     setUnread(unseen);
     setNoticeError(errors.join(' '));
-  }, [!!grant, stockGrant, identity.id]);
+  }, [!!grant, stockGrant, drawingsGrant, identity.id]);
   useEffect(() => {
     void loadActivity();
     const timer = setInterval(() => {
@@ -307,7 +339,7 @@ export function Workspace({
     return () => clearInterval(timer);
   }, [loadActivity]);
   useEffect(() => {
-    if (!command || (!grant && !stockGrant)) {
+    if (!command || (!grant && !stockGrant && !drawingsGrant)) {
       setResults([]);
       setMaterialResults([]);
       return;
@@ -316,7 +348,7 @@ export function Workspace({
     const timer = setTimeout(() => {
       setSearchBusy(true);
       setSearchError('');
-      const sources = [...(grant ? ['bag-filter'] : []), ...(stockGrant ? ['consumables'] : [])];
+      const sources = sourceIds;
       void Promise.allSettled(
         sources.map(async (source) => {
           const r = await fetch('/' + source + '/api/discovery?q=' + encodeURIComponent(query), {
@@ -339,7 +371,24 @@ export function Workspace({
             }
             const { source, data } = r.value;
             if (source === 'bag-filter') activities.push(...data.items);
-            else {
+            else if (source === 'drawings') {
+              materials.push(
+                ...data.drawings.map(
+                  (d: { id: string; number: string | null; title: string | null; hac: string }) => ({
+                    label: `${d.number ?? 'Draft'} · ${d.title ?? d.hac}`,
+                    href: '/drawings/library/' + d.id,
+                    icon: 'drawing' as const,
+                    group: 'Drawing',
+                  }),
+                ),
+                ...data.requests.map((r: { id: string; number: string; hac: string }) => ({
+                  label: `${r.number} · ${r.hac}`,
+                  href: '/drawings/requests/' + r.id,
+                  icon: 'drawing' as const,
+                  group: 'Drawing Request',
+                })),
+              );
+            } else {
               activities.push(...data.items.map(normalizeStock));
               materials.push(
                 ...data.materials.map(
@@ -365,7 +414,7 @@ export function Workspace({
       clearTimeout(timer);
       abort.abort();
     };
-  }, [command, query, !!grant, stockGrant]);
+  }, [command, query, !!grant, stockGrant, drawingsGrant]);
   const remember = (link: LinkItem) => {
     try {
       localStorage.setItem(
@@ -478,7 +527,7 @@ export function Workspace({
           </button>
           <div className="topbar-actions">
             <ThemeToggle />
-            {(grant || stockGrant) && (
+            {(grant || stockGrant || drawingsGrant) && (
               <button
                 ref={notificationButton}
                 type="button"
@@ -489,6 +538,13 @@ export function Workspace({
                   setNotifications(true);
                   void loadActivity();
                   setUnread(false);
+                  // Drawing Database keeps read state on the server (PRD §4.8).
+                  if (drawingsGrant)
+                    void fetch('/drawings/api/notifications/read', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ all: true }),
+                    }).catch(() => undefined);
                   try {
                     for (const source of sourceIds)
                       localStorage.setItem(
@@ -644,32 +700,45 @@ export function Workspace({
           <p className="empty">Belum ada aktivitas aplikasi dalam cakupan Anda.</p>
         ) : (
           <div className="activity-scroll scroll-fade">
-            {items.map((item) => (
-              <a
-                href={batchLink(item)}
-                key={`${item.appId || 'bag-filter'}-${item.id}`}
-                className="activity-row"
-              >
-                <span className="app-icon">
-                  <Icon name="grid" />
-                </span>
-                <span>
-                  <strong className="code-text">
-                    {item.wo || 'Tanpa WO'} · {item.equipmentCode}
+            {items.map((item) =>
+              item.appId === 'drawings' ? (
+                <a href={batchLink(item)} key={`drawings-${item.id}`} className="activity-row">
+                  <span className="app-icon">
+                    <Icon name="drawing" />
+                  </span>
+                  <span>
+                    <strong>{item.title}</strong>
+                    {item.reason && <small>{item.reason}</small>}
+                    <small>Drawing Database · {formatDate(item.createdAt)} WIB</small>
+                  </span>
+                </a>
+              ) : (
+                <a
+                  href={batchLink(item)}
+                  key={`${item.appId || 'bag-filter'}-${item.id}`}
+                  className="activity-row"
+                >
+                  <span className="app-icon">
+                    <Icon name="grid" />
+                  </span>
+                  <span>
+                    <strong className="code-text">
+                      {item.wo || 'Tanpa WO'} · {item.equipmentCode}
+                    </strong>
+                    <small>
+                      {item.appId === 'consumables' ? 'Consumable Room' : 'Bag Filter'} ? {item.reason}
+                    </small>
+                    <small>
+                      {item.brand || 'Belum tercatat'} · {item.actorName} · {formatDate(item.createdAt)} WIB
+                    </small>
+                  </span>
+                  <strong>
+                    {item.positionCount}
+                    <small>{item.unit || 'bag'}</small>
                   </strong>
-                  <small>
-                    {item.appId === 'consumables' ? 'Consumable Room' : 'Bag Filter'} ? {item.reason}
-                  </small>
-                  <small>
-                    {item.brand || 'Belum tercatat'} · {item.actorName} · {formatDate(item.createdAt)} WIB
-                  </small>
-                </span>
-                <strong>
-                  {item.positionCount}
-                  <small>{item.unit || 'bag'}</small>
-                </strong>
-              </a>
-            ))}
+                </a>
+              ),
+            )}
           </div>
         )}
       </Overlay>

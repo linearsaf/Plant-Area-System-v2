@@ -14,6 +14,7 @@ export * from './consumables';
 export * from './drawings';
 export * from './drawings-model';
 export * from './drawings-workflow';
+export * from './drawings-requests';
 export type Identity = {
   id: string;
   name: string;

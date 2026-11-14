@@ -48,6 +48,7 @@ import {
   type Tx,
 } from './support';
 import { withStorage } from './storage';
+import { closeRequestForDrawing } from './requests';
 
 export type DirectoryPerson = { id: string; name: string; position: string; role: string };
 export type DrawingRow = typeof drawings.$inferSelect;
@@ -350,7 +351,7 @@ export async function voidDrawing(actor: Identity, id: string, input: unknown, k
         updatedAt: now,
       })
       .where(eq(drawings.id, d.id));
-    // Data, revisi, file dan audit tetap tersimpan (K9). Penutupan Drawing Request: Fase 5.
+    // Data, revisi, file dan audit tetap tersimpan (K9). Request asal ditutup dengan alasannya.
     await writeAudit(
       tx,
       actor,
@@ -361,6 +362,7 @@ export async function voidDrawing(actor: Identity, id: string, input: unknown, k
       d.id,
       now,
     );
+    await closeRequestForDrawing(tx, actor, d, { voided: data.reason }, now);
     return { status: 200, body: { id: d.id, version: d.version + 1 }, targetId: d.id };
   });
 }

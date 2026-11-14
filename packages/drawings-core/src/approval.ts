@@ -32,6 +32,8 @@ import {
   type TaskItem,
   type TaskKind,
   type WorkflowAvailability,
+  revisionStatusLabels,
+  revisionStatusTone,
 } from '@plant/contracts';
 import { approvalActions, approvalSteps, drawings, files, revisions } from './schema';
 import {
@@ -45,6 +47,8 @@ import {
 import { db, idempotent, lockDrawing, parse, writeAudit, type Tx } from './support';
 import { serialPdfJob, stampPdf, type StampSlot } from './pdf';
 import { storageKey, withStorage } from './storage';
+import { notify } from './notifications';
+import { closeRequestForDrawing, requestTasks } from './requests';
 import { createHash } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -164,6 +168,58 @@ async function bump(tx: Tx, d: DrawingRow, set: Partial<DrawingRow>, at: Date) {
 }
 const done = <T extends object>(d: DrawingRow, body: T, status = 200) => ({ status, body, targetId: d.id });
 
+const drawingLabel = (d: DrawingRow, rev: RevisionRow) => `${d.number ?? 'Drawing'} Rev ${rev.revisionNo}`;
+/** Notifikasi penugasan approver (PRD §4.8); satu per siklus, level dan assignee. */
+async function notifyAssignee(
+  tx: Tx,
+  actor: Identity,
+  d: DrawingRow,
+  rev: RevisionRow,
+  level: 1 | 2,
+  assigneeId: string,
+  label: string,
+  at: Date,
+) {
+  await notify(
+    tx,
+    actor,
+    {
+      recipientId: assigneeId,
+      kind: 'approval.assigned',
+      title: `${approvalLevels[level]}: ${label}`,
+      body: `Anda ditugaskan memutus ${approvalLevels[level]} untuk ${d.title ?? 'drawing ini'}.`,
+      href: `/drawings/library/${d.id}/review`,
+      sourceKey: `revision:${rev.id}:c${rev.cycle}:l${level}:assigned:${assigneeId}`,
+    },
+    at,
+  );
+}
+/** Notifikasi revisi ditolak ke owner (reject selalu kembali ke owner). */
+async function notifyRejected(
+  tx: Tx,
+  actor: Identity,
+  d: DrawingRow,
+  rev: RevisionRow,
+  level: 0 | 1 | 2,
+  note: string,
+  label: string,
+  at: Date,
+) {
+  await notify(
+    tx,
+    actor,
+    {
+      recipientId: d.ownerId,
+      kind: 'revision.rejected',
+      title: `${approvalLevels[level]} ditolak: ${label}`,
+      body: note,
+      href: `/drawings/library/${d.id}`,
+      sourceKey: `revision:${rev.id}:c${rev.cycle}:l${level}:rejected`,
+    },
+    at,
+  );
+}
+
 // ───────────────────────── Submit ─────────────────────────
 
 export async function submitRevision(
@@ -272,6 +328,11 @@ export async function checkRevision(
       d.id,
       now,
     );
+    const label = drawingLabel(d, rev);
+    if (approve) {
+      for (const s of await steps(tx, rev.id))
+        await notifyAssignee(tx, actor, d, rev, s.level as 1 | 2, s.assigneeId, label, now);
+    } else await notifyRejected(tx, actor, d, rev, 0, data.note, label, now);
     return done(d, { id: rev.id, status: to, version });
   });
 }
@@ -501,6 +562,25 @@ export async function decideApproval(
         d.id,
         now,
       );
+      const label = drawingLabel(d, rev);
+      if (!approve) await notifyRejected(tx, actor, d, rev, level, data.note, label, now);
+      if (completed) {
+        await notify(
+          tx,
+          actor,
+          {
+            recipientId: d.ownerId,
+            kind: 'drawing.completed',
+            title: `${label} Completed`,
+            body: 'Final Drawing terbit dan dapat dibuka semua role.',
+            href: `/drawings/library/${d.id}`,
+            sourceKey: `revision:${rev.id}:completed`,
+          },
+          now,
+        );
+        // Request asal ditutup saat revisi pertama drawing itu Completed (§4.6 langkah 5).
+        if (!d.releasedRevisionId) await closeRequestForDrawing(tx, actor, d, 'released', now);
+      }
       return done(d, { id: rev.id, status: to, version });
     },
     {
@@ -542,6 +622,7 @@ export async function updateApprovalPlan(
       const person = await requireCandidate(directory, 1, data.approverL1Id, maker);
       changes.l1 = { from: plan.find((s) => s.level === 1)?.assigneeName ?? null, to: person.name };
       await upsertStep(tx, actor, rev.id, 1, person, now);
+      await notifyAssignee(tx, actor, d, rev, 1, person.id, drawingLabel(d, rev), now);
     }
     if (data.approverL2Id !== undefined) {
       if (data.approverL2Id === null) {
@@ -559,6 +640,7 @@ export async function updateApprovalPlan(
         const person = await requireCandidate(directory, 2, data.approverL2Id, maker);
         changes.l2 = { from: plan.find((s) => s.level === 2)?.assigneeName ?? null, to: person.name };
         await upsertStep(tx, actor, rev.id, 2, person, now);
+        await notifyAssignee(tx, actor, d, rev, 2, person.id, drawingLabel(d, rev), now);
       }
     }
     const version = await bump(tx, d, {}, now);
@@ -793,10 +875,12 @@ export async function drawingDetail(
 const taskOrder: Record<TaskKind, number> = {
   rejected: 0,
   draft: 1,
-  waiting_check: 2,
-  approval_l1: 3,
-  approval_l2: 4,
-  inactive_approver: 5,
+  request_assignment: 2,
+  waiting_check: 3,
+  request_review: 4,
+  approval_l1: 5,
+  approval_l2: 6,
+  inactive_approver: 7,
 };
 const rejectedOrder: Partial<Record<RevisionStatus, number>> = {
   approval_2_rejected: 0,
@@ -824,12 +908,16 @@ export async function listTasks(actor: Identity, people: DirectoryPerson[] | nul
   const push = (kind: TaskKind, d: DrawingRow, r: RevisionRow) =>
     tasks.push({
       kind,
+      key: `${kind}-${r.id}`,
       drawingId: d.id,
       revisionId: r.id,
+      requestId: null,
       number: d.number,
       title: d.title,
       revisionNo: r.revisionNo,
-      status: r.status as RevisionStatus,
+      status: r.status,
+      statusLabel: revisionStatusLabels[r.status as RevisionStatus],
+      tone: revisionStatusTone(r.status as RevisionStatus),
       owner: d.ownerName,
       updatedAt: r.updatedAt.toISOString(),
       href:
@@ -862,10 +950,11 @@ export async function listTasks(actor: Identity, people: DirectoryPerson[] | nul
     )
       push('inactive_approver', d, r);
   }
+  tasks.push(...(await requestTasks(actor)));
   return tasks.sort(
     (a, b) =>
       taskOrder[a.kind] - taskOrder[b.kind] ||
-      (rejectedOrder[a.status] ?? 9) - (rejectedOrder[b.status] ?? 9) ||
+      (rejectedOrder[a.status as RevisionStatus] ?? 9) - (rejectedOrder[b.status as RevisionStatus] ?? 9) ||
       b.updatedAt.localeCompare(a.updatedAt),
   );
 }

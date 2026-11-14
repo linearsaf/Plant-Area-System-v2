@@ -33,6 +33,18 @@ import {
   listTasks,
   attachmentFile,
   approverCandidates,
+  listNotifications,
+  markNotificationsRead,
+  createRequest,
+  reviewRequest,
+  drafterDecision,
+  cancelRequest,
+  listRequests,
+  requestDetail,
+  requestImage,
+  drawingsDashboard,
+  drawingsActivity,
+  drawingsDiscovery,
   type FileIntent,
 } from '@plant/drawings-core';
 export const dynamic = 'force-dynamic';
@@ -59,7 +71,21 @@ export async function GET(request: Request, context: Context) {
         role: drawingsRole(actor),
         navigation: drawingsNavigation(actor),
       });
-    if (path === 'portal-summary') return json(await drawingsPortalSummary(actor));
+    if (path === 'portal-summary') return json(await drawingsPortalSummary(actor, await peopleOrNull()));
+    if (path === 'dashboard')
+      return json(
+        await drawingsDashboard(
+          actor,
+          params.has('year') ? Number(params.get('year')) : undefined,
+          await peopleOrNull(),
+        ),
+      );
+    if (path === 'activity') return json(await drawingsActivity(actor));
+    if (path === 'discovery') return json(await drawingsDiscovery(actor, params.get('q') || ''));
+    if (path === 'notifications') return json(await listNotifications(actor, params));
+    if (path === 'requests') return json(await listRequests(actor, params));
+    if (segments.length === 2 && segments[0] === 'requests')
+      return json(await requestDetail(actor, segments[1]));
     if (path === 'masters') return json(await listMasters());
     if (path === 'drawings') return json(await listDrawings(actor, params));
     if (path === 'hac-suggestions') return json(await hacSuggestions(actor, params.get('q') || ''));
@@ -78,6 +104,8 @@ export async function GET(request: Request, context: Context) {
             await directory(),
           ),
         });
+      if (purpose === 'drafter' && canDraw(actor, 'request.review'))
+        return json({ people: (await directory()).filter((p) => p.role === 'drafter') });
       if (purpose === 'owner' && canDraw(actor, 'drawing.transfer_owner'))
         return json({
           people: (await directory()).filter((p) => p.role === 'drafter' || p.role === 'admin'),
@@ -89,7 +117,10 @@ export async function GET(request: Request, context: Context) {
     if (path === 'tasks') return json({ items: await listTasks(actor, await peopleOrNull()) });
     if (path === 'tasks/count') return json({ count: (await listTasks(actor, await peopleOrNull())).length });
     if (segments.length === 2 && segments[0] === 'attachments') {
-      const file = await attachmentFile(actor, segments[1]);
+      // Decision attachments and request reference images share one URL; each checks its parent.
+      const file = await attachmentFile(actor, segments[1]).catch((e) =>
+        e instanceof AppError && e.status === 404 ? requestImage(actor, segments[1]) : Promise.reject(e),
+      );
       return await serveFile(request, file, { disposition: 'inline', name: file.originalName });
     }
     if (segments.length === 3 && segments[0] === 'drawings' && segments[2] === 'timeline')
@@ -147,6 +178,14 @@ async function mutate(request: Request, context: Context) {
         if (action === 'approve-l2') return replayable(await decideApproval(actor, 2, id, body, key));
         if (action === 'cancel') return replayable(await cancelRevision(actor, id, body, key));
       }
+      if (path === 'requests') return replayable(await createRequest(actor, body, key));
+      if (segments.length === 3 && segments[0] === 'requests') {
+        const [, id, action] = segments;
+        if (action === 'review') return replayable(await reviewRequest(actor, id, body, key, directory));
+        if (action === 'drafter-decision') return replayable(await drafterDecision(actor, id, body, key));
+        if (action === 'cancel') return replayable(await cancelRequest(actor, id, body, key));
+      }
+      if (path === 'notifications/read') return json(await markNotificationsRead(actor, body));
       if (path === 'masters/disciplines') return json(await createMaster(actor, 'disciplines', body), 201);
     }
     if (request.method === 'PATCH') {

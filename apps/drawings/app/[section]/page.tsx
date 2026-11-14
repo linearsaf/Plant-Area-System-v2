@@ -1,6 +1,13 @@
 import { notFound } from 'next/navigation';
 import { pageIdentity } from '@plant/server';
-import { canOpenDrawingsSection, canSeeWip, drawingsRole, drawingsSections } from '@plant/contracts';
+import {
+  canDraw,
+  canOpenDrawingsSection,
+  canSeeWip,
+  drawingsRole,
+  drawingsSections,
+  requestScopes,
+} from '@plant/contracts';
 import { Shell, Heading, EmptyState } from '@plant/ui';
 import { listMasters, maxPdfBytes } from '@plant/drawings-core';
 import { Library } from '../library';
@@ -8,6 +15,7 @@ import { DrawingForm } from '../drawing-form';
 import { MastersManager } from '../masters-manager';
 import { AuditList } from '../audit-list';
 import { TaskList } from '../task-list';
+import { RequestList } from '../requests-ui';
 export const dynamic = 'force-dynamic';
 const pages: Record<string, { title: string; description: string }> = {
   library: {
@@ -50,6 +58,11 @@ export default async function Page({ params }: { params: Promise<{ section: stri
   return (
     <Shell identity={identity} active="drawings" activePath={`/drawings/${section}`}>
       <Heading eyebrow="Drawing Database" title={page.title} description={page.description}>
+        {section === 'requests' && allowed && canDraw(identity, 'request.create') && (
+          <a className="button primary" href="/drawings/requests/new">
+            Drawing Request baru
+          </a>
+        )}
         {section === 'library' && allowed && canOpenDrawingsSection(identity, 'new') && (
           <a className="button primary" href="/drawings/new">
             Create Drawing
@@ -81,6 +94,8 @@ export default async function Page({ params }: { params: Promise<{ section: stri
         <AuditList />
       ) : section === 'tasks' ? (
         <TaskList />
+      ) : section === 'requests' ? (
+        <RequestList scopes={requestScopes(identity)} />
       ) : (
         <section className="panel">
           <EmptyState

@@ -12,6 +12,7 @@ import {
   boolean,
   index,
   uniqueIndex,
+  primaryKey,
 } from 'drizzle-orm/mysql-core';
 
 const master = (name: string) =>
@@ -156,6 +157,67 @@ export const approvalActions = mysqlTable(
     uniqueIndex('approval_actions_cycle_level_uq').on(t.revisionId, t.cycle, t.level),
     index('approval_actions_drawing_idx').on(t.drawingId, t.createdAt),
   ],
+);
+
+/** Drawing Request (PRD §4.6). Nomor `DRQ-YYYY-NNNNNN` dari `drawing_sequences`. */
+export const requests = mysqlTable(
+  'drawing_requests',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    number: varchar('number', { length: 20 }).notNull().unique(),
+    requesterId: varchar('requester_id', { length: 36 }).notNull(),
+    requesterName: varchar('requester_name', { length: 100 }).notNull(),
+    hac: varchar('hac', { length: 40 }).notNull(),
+    description: text('description').notNull(),
+    purpose: varchar('purpose', { length: 1000 }).notNull(),
+    status: varchar('status', { length: 32 }).notNull(),
+    reviewerId: varchar('reviewer_id', { length: 36 }),
+    reviewerName: varchar('reviewer_name', { length: 100 }),
+    reviewNote: varchar('review_note', { length: 1000 }).notNull().default(''),
+    drafterId: varchar('drafter_id', { length: 36 }),
+    drafterName: varchar('drafter_name', { length: 100 }),
+    drafterNote: varchar('drafter_note', { length: 1000 }).notNull().default(''),
+    drawingId: varchar('drawing_id', { length: 36 }),
+    closeReason: varchar('close_reason', { length: 500 }),
+    closedAt: timestamp('closed_at', { fsp: 3 }),
+    version: int('version').notNull().default(1),
+    createdAt: timestamp('created_at', { fsp: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { fsp: 3 }).notNull(),
+  },
+  (t) => [
+    index('drawing_requests_status_idx').on(t.status, t.updatedAt),
+    index('drawing_requests_requester_idx').on(t.requesterId, t.createdAt),
+    index('drawing_requests_drafter_idx').on(t.drafterId, t.status),
+    index('drawing_requests_drawing_idx').on(t.drawingId),
+  ],
+);
+
+/** Sekuens nomor per jenis dan tahun WIB; baris dikunci saat nomor diambil. */
+export const sequences = mysqlTable(
+  'drawing_sequences',
+  {
+    kind: varchar('kind', { length: 16 }).notNull(),
+    year: int('year').notNull(),
+    lastValue: int('last_value').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.kind, t.year] })],
+);
+
+/** Notifikasi in-app per penerima; `source_key` unik mencegah duplikasi saat retry. */
+export const notifications = mysqlTable(
+  'drawing_notifications',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    recipientId: varchar('recipient_id', { length: 36 }).notNull(),
+    kind: varchar('kind', { length: 40 }).notNull(),
+    title: varchar('title', { length: 200 }).notNull(),
+    body: varchar('body', { length: 500 }).notNull(),
+    href: varchar('href', { length: 300 }).notNull(),
+    sourceKey: varchar('source_key', { length: 191 }).notNull().unique(),
+    readAt: timestamp('read_at', { fsp: 3 }),
+    createdAt: timestamp('created_at', { fsp: 3 }).notNull(),
+  },
+  (t) => [index('drawing_notifications_recipient_idx').on(t.recipientId, t.createdAt)],
 );
 
 /** Idempotency-Key per actor; respons disimpan untuk replay payload yang sama. */

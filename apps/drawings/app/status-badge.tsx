@@ -17,6 +17,23 @@ export function StatusBadge({ status }: { status: RevisionStatus }) {
     </span>
   );
 }
+/** Badge generik untuk status revisi atau request yang sudah berlabel. */
+export function ToneBadge({
+  label,
+  tone,
+  status,
+}: {
+  label: string;
+  tone: keyof typeof toneClass;
+  status?: string;
+}) {
+  return (
+    <span className={`badge ${toneClass[tone]} drawing-status`} data-status={status}>
+      {tone === 'waiting' && <Icon name="clock" aria-hidden="true" />}
+      {label}
+    </span>
+  );
+}
 export function LegacyBadge() {
   return <span className="badge neutral">Legacy Ready</span>;
 }

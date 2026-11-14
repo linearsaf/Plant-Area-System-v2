@@ -159,15 +159,28 @@ export type WorkflowAvailability = {
   makerBlocked: boolean;
 };
 export type TaskKind =
-  'rejected' | 'draft' | 'waiting_check' | 'approval_l1' | 'approval_l2' | 'inactive_approver';
+  | 'rejected'
+  | 'draft'
+  | 'request_assignment'
+  | 'waiting_check'
+  | 'request_review'
+  | 'approval_l1'
+  | 'approval_l2'
+  | 'inactive_approver';
 export type TaskItem = {
   kind: TaskKind;
-  drawingId: string;
-  revisionId: string;
+  /** Kunci unik dalam daftar. */
+  key: string;
+  drawingId: string | null;
+  revisionId: string | null;
+  requestId: string | null;
   number: string | null;
   title: string | null;
-  revisionNo: string;
-  status: RevisionStatus;
+  revisionNo: string | null;
+  /** Status revisi atau request; label siap tampil. */
+  status: string;
+  statusLabel: string;
+  tone: 'neutral' | 'waiting' | 'attention' | 'final' | 'muted';
   owner: string;
   updatedAt: string;
   href: string;

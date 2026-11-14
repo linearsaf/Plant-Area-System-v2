@@ -3,12 +3,22 @@ import { useEffect, useState } from 'react';
 import { EmptyState, TableSkeleton } from '@plant/ui';
 import type { TaskItem, TaskKind } from '@plant/contracts';
 import { formatWib, getJson } from './client-api';
-import { StatusBadge } from './status-badge';
+import { ToneBadge } from './status-badge';
 
 const groups: { kind: TaskKind; title: string; hint: string }[] = [
   { kind: 'rejected', title: 'Perlu diperbaiki', hint: 'Revisi ditolak dan kembali kepada Anda.' },
   { kind: 'draft', title: 'Draft', hint: 'Lengkapi lalu Submit to Check.' },
+  {
+    kind: 'request_assignment',
+    title: 'Request ditugaskan',
+    hint: 'Terima atau tolak Drawing Request yang ditugaskan kepada Anda.',
+  },
   { kind: 'waiting_check', title: 'Menunggu Check', hint: 'Periksa drawing dan susun approval plan.' },
+  {
+    kind: 'request_review',
+    title: 'Request menunggu review',
+    hint: 'Tugaskan ke Drafter atau tolak dengan alasan.',
+  },
   { kind: 'approval_l1', title: 'Approval L1', hint: 'Revisi yang ditugaskan kepada Anda.' },
   { kind: 'approval_l2', title: 'Final Approval', hint: 'Revisi yang ditugaskan kepada Anda.' },
   {
@@ -56,16 +66,16 @@ export function TaskList() {
             <p className="fine">{g.hint}</p>
             <ul className="task-list">
               {list.map((t) => (
-                <li key={`${g.kind}-${t.revisionId}`}>
+                <li key={t.key}>
                   <a href={t.href}>
                     <span className="revision-row">
                       <strong className="code-text">{t.number || 'Tanpa nomor'}</strong>
-                      <span>Rev {t.revisionNo}</span>
-                      <StatusBadge status={t.status} />
+                      {t.revisionNo && <span>Rev {t.revisionNo}</span>}
+                      <ToneBadge label={t.statusLabel} tone={t.tone} status={t.status} />
                     </span>
                     <span>{t.title || 'Nama drawing belum diisi'}</span>
                     <small className="muted">
-                      Drawn by {t.owner} · diperbarui {formatWib(t.updatedAt)}
+                      {t.requestId ? 'Pemohon' : 'Drawn by'} {t.owner} · diperbarui {formatWib(t.updatedAt)}
                     </small>
                   </a>
                 </li>
