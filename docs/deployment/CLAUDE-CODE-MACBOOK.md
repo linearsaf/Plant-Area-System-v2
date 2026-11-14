@@ -13,7 +13,7 @@ digunakan melalui browser lokal. Selesaikan implementasi dan verifikasinya;
 jangan berhenti pada rencana atau hanya berhasil menjalankan satu aplikasi.
 
 Repository:
-https://github.com/safain-commits/Plant-Area-System-v2.git
+https://github.com/linearsaf/Plant-Area-System-v2.git
 
 Default workspace Mac:
 ~/Developer/plant-area-system

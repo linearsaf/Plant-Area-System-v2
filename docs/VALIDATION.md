@@ -328,7 +328,7 @@ Sertifikat localhost di `.deploy/dev/certs/tls.crt` masih self-signed dan belum 
 
 ## Perbaikan tes waktu sesi pada CI — 25 Oktober 2026
 
-[Run 40201041233](https://github.com/safain-commits/Plant-Area-System-v2/actions/runs/40201041233) gagal pada assertion `expiresAt - createdAt === 28.800.000`: hasil aktual 28.799.999 ms. Source Better Auth 1.7.12 membaca waktu secara terpisah saat mengisi kedua field, sehingga perbedaan satu milidetik sah. Assertion yang gagal juga menghentikan langkah reset password dan menyebabkan kegagalan lanjutan pada subtest limiter.
+[Run 40201041233](https://github.com/linearsaf/Plant-Area-System-v2/actions/runs/40201041233) gagal pada assertion `expiresAt - createdAt === 28.800.000`: hasil aktual 28.799.999 ms. Source Better Auth 1.7.12 membaca waktu secara terpisah saat mengisi kedua field, sehingga perbedaan satu milidetik sah. Assertion yang gagal juga menghentikan langkah reset password dan menyebabkan kegagalan lanjutan pada subtest limiter.
 
 Tes kini mencatat awal/akhir login dan memeriksa bahwa waktu pembuatan berada dalam rentang itu serta kedaluwarsa berada pada rentang yang sama ditambah tepat delapan jam. Pemeriksaan expiry tidak diperpanjang setelah pembacaan sesi tetap dipertahankan. Subtest limiter menyiapkan password fixture secara eksplisit. Tidak mengubah konfigurasi sesi, kontrol keamanan, dependency atau schema produksi.
 
@@ -397,7 +397,7 @@ Screenshot grafik serta peta 561 ditinjau visual; peta 561/562 tersedia lokal di
 
 ## Perbaikan startup MySQL pada CI Linux — 23 Oktober 2026
 
-[Run pertama commit UI refresh](https://github.com/safain-commits/Plant-Area-System-v2/actions/runs/39908376470) lulus typecheck dan unit test, lalu gagal pada persiapan MySQL sebelum migrasi. Reproduksi memakai image MySQL 8.4.13 dan initializer berizin Linux `0644` menghasilkan `MYSQL_ONETIME_PASSWORD: unbound variable`: entrypoint men-source script, sehingga `set -u` bocor ke shell entrypoint. Script pada mount Windows dapat dieksekusi sebagai proses terpisah, sehingga pengujian dengan volume lama tidak mengungkap masalah ini.
+[Run pertama commit UI refresh](https://github.com/linearsaf/Plant-Area-System-v2/actions/runs/39908376470) lulus typecheck dan unit test, lalu gagal pada persiapan MySQL sebelum migrasi. Reproduksi memakai image MySQL 8.4.13 dan initializer berizin Linux `0644` menghasilkan `MYSQL_ONETIME_PASSWORD: unbound variable`: entrypoint men-source script, sehingga `set -u` bocor ke shell entrypoint. Script pada mount Windows dapat dieksekusi sebagai proses terpisah, sehingga pengujian dengan volume lama tidak mengungkap masalah ini.
 
 Initializer kini mengisolasi opsi shell dalam subshell. Uji startup dengan database baru dan izin `0644` berhasil mencapai `healthy`; syntax Bash juga lulus. Healthcheck memakai koneksi TCP dan memeriksa kedua database agar server sementara saat inisialisasi tidak dianggap siap. Workflow memakai Ubuntu 24.04 yang dipin, action checkout/setup-node versi Node 24, serta log diagnostik sebelum cleanup jika gagal. Runtime aplikasi tetap Node 26.12.1. Pengujian ini memakai container dan penyimpanan sementara terpisah, tanpa menghapus data preview.
 
@@ -500,7 +500,7 @@ Browser memeriksa tujuan kembali dengan query lengkap, deep link/reload/aset, en
 
 ## Batas hasil
 
-Ini validasi implementasi lokal, bukan persetujuan go-live di server organisasi. Workflow `.github/workflows/ci.yml` juga [lulus di GitHub Actions](https://github.com/safain-commits/Plant-Area-System-v2/actions/runs/39795844806) untuk commit awal `c3b704a` pada branch `main` (22 Oktober 2026, durasi 7 menit 54 detik).
+Ini validasi implementasi lokal, bukan persetujuan go-live di server organisasi. Workflow `.github/workflows/ci.yml` juga [lulus di GitHub Actions](https://github.com/linearsaf/Plant-Area-System-v2/actions/runs/39795844806) untuk commit awal `c3b704a` pada branch `main` (22 Oktober 2026, durasi 7 menit 54 detik).
 
 Belum dilakukan load test skala produksi, browser selain Chromium, integrasi sertifikat/hostname organisasi, atau uji operator di lapangan. Target pemulihan empat jam perlu diukur ulang menggunakan volume data produksi. Backup lokal sudah diuji; penyalinan terenkripsi ke storage organisasi di luar host tetap merupakan tugas deployment.
 
@@ -575,7 +575,7 @@ Tidak ada migrasi atau perubahan transaksi. Seluruh integrasi MySQL dan backup/r
 
 ## Perbaikan jaringan CI — 24 Oktober 2026
 
-Run GitHub Actions [39988644093](https://github.com/safain-commits/Plant-Area-System-v2/actions/runs/39988644093) pada commit `384ec1e` gagal hanya di langkah **Gateway recovery after application IP changes**. Log runner menunjukkan Docker menolak `docker run --ip` karena jaringan menggunakan subnet otomatis, bukan subnet yang dikonfigurasi pengguna. Pada run yang sama, instalasi, typecheck/unit, integrasi MySQL, build, seluruh **16 tes browser**, restart/fail-closed, serta backup/restore sudah lulus.
+Run GitHub Actions [39988644093](https://github.com/linearsaf/Plant-Area-System-v2/actions/runs/39988644093) pada commit `384ec1e` gagal hanya di langkah **Gateway recovery after application IP changes**. Log runner menunjukkan Docker menolak `docker run --ip` karena jaringan menggunakan subnet otomatis, bukan subnet yang dikonfigurasi pengguna. Pada run yang sama, instalasi, typecheck/unit, integrasi MySQL, build, seluruh **16 tes browser**, restart/fail-closed, serta backup/restore sudah lulus.
 
 Override pengujian yang dibuat `scripts/prepare-test.ts` sekarang mendeklarasikan IPAM subnet eksplisit. `scripts/test-gateway-recovery.ts` memeriksa konfigurasi dan jaringan aktif sebelum mengganti container; kedua container aplikasi stateless dihapus agar reservasi IP dilepas secara konsisten, kemudian dibuat ulang. Konfigurasi jaringan deployment produksi tidak berubah.
 

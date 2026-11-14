@@ -73,7 +73,7 @@ Pasang Git, Node.js 26.12.1 sesuai arsitektur Mac, dan Docker dengan Linux conta
 ```sh
 mkdir -p "$HOME/Developer"
 cd "$HOME/Developer"
-git clone https://github.com/safain-commits/Plant-Area-System-v2.git plant-area-system
+git clone https://github.com/linearsaf/Plant-Area-System-v2.git plant-area-system
 cd plant-area-system
 npm install --global pnpm@12.14.0
 pnpm install --frozen-lockfile

@@ -11,7 +11,7 @@ Ini adalah instruksi operasional untuk agen di VPS, bukan bukti bahwa deployment
 ## Pesan siap salin untuk OpenClaw
 
 ```text
-Deploy repository https://github.com/safain-commits/Plant-Area-System-v2.git
+Deploy repository https://github.com/linearsaf/Plant-Area-System-v2.git
 ke VPS ini untuk domain https://tq-cmms.com.
 
 Baca lebih dahulu docs/deployment/OPENCLAW-HANDOVER.md dan
