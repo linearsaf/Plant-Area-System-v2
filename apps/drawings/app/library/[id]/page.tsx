@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { pageIdentity } from '@plant/server';
+import { fetchDirectory, pageIdentity } from '@plant/server';
 import { AppError, canDraw } from '@plant/contracts';
 import { Shell, Heading } from '@plant/ui';
 import { drawingDetail } from '@plant/drawings-core';
@@ -18,10 +18,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </p>
       </Shell>
     );
-  const drawing = await drawingDetail(identity, id).catch((e) => {
-    if (e instanceof AppError && e.status === 404) notFound();
-    throw e;
-  });
+  const drawing = await drawingDetail(identity, id, await fetchDirectory('drawings').catch(() => null)).catch(
+    (e) => {
+      if (e instanceof AppError && e.status === 404) notFound();
+      throw e;
+    },
+  );
   const shown = drawing.released ?? drawing.current;
   return (
     <Shell identity={identity} active="drawings" activePath="/drawings/library">

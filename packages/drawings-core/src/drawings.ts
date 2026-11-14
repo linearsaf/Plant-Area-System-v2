@@ -50,17 +50,17 @@ import {
 import { withStorage } from './storage';
 
 export type DirectoryPerson = { id: string; name: string; position: string; role: string };
-type DrawingRow = typeof drawings.$inferSelect;
-type RevisionRow = typeof revisions.$inferSelect;
+export type DrawingRow = typeof drawings.$inferSelect;
+export type RevisionRow = typeof revisions.$inferSelect;
 
-const facts = (d: DrawingRow) => ({
+export const facts = (d: DrawingRow) => ({
   ownerId: d.ownerId,
   voided: !!d.voidedAt,
   released: !!d.releasedRevisionId,
   everSubmitted: d.everSubmitted,
   releasedRevisionId: d.releasedRevisionId,
 });
-const conflictNumber = (e: unknown) => {
+export const conflictNumber = (e: unknown) => {
   if (mysqlCode(e) !== 'ER_DUP_ENTRY') return e;
   const message = mysqlMessage(e);
   if (message.includes('drawings_number_active_uq'))
@@ -537,7 +537,7 @@ async function revisionSummaries(rows: RevisionRow[]): Promise<Map<string, Revis
   );
 }
 
-async function loadVisible(actor: Identity, id: string) {
+export async function loadVisible(actor: Identity, id: string) {
   if (!canDraw(actor, 'read')) throw new AppError(403, 'Akses Drawing Database belum diberikan.');
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new AppError(404, 'Drawing tidak ditemukan.');
   const [d] = await db().select().from(drawings).where(eq(drawings.id, id));
@@ -546,7 +546,11 @@ async function loadVisible(actor: Identity, id: string) {
   return d;
 }
 
-export async function drawingDetail(actor: Identity, id: string): Promise<DrawingDetail> {
+/** Detail tanpa data alur approval; `approval.ts` melengkapinya menjadi `DrawingDetail`. */
+export async function drawingDetailBase(
+  actor: Identity,
+  id: string,
+): Promise<{ detail: Omit<DrawingDetail, 'workflow'>; row: DrawingRow; current: RevisionRow | undefined }> {
   const d = await loadVisible(actor, id);
   const seeWip = canSeeWip(actor, d);
   const [discipline] = d.disciplineId
@@ -560,7 +564,7 @@ export async function drawingDetail(actor: Identity, id: string): Promise<Drawin
   const visible = seeWip ? all : all.filter((r) => r.id === d.releasedRevisionId);
   const summaries = await revisionSummaries(visible);
   const current = all.find((r) => r.id === d.currentRevisionId);
-  return {
+  const detail: Omit<DrawingDetail, 'workflow'> = {
     id: d.id,
     number: d.number,
     title: d.title,
@@ -591,6 +595,7 @@ export async function drawingDetail(actor: Identity, id: string): Promise<Drawin
     createdAt: d.createdAt.toISOString(),
     updatedAt: d.updatedAt.toISOString(),
   };
+  return { detail, row: d, current };
 }
 
 const toTimeline = (r: typeof audit.$inferSelect): TimelineEntry => ({

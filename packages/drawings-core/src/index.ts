@@ -89,7 +89,6 @@ export {
   voidDrawing,
   transferOwner,
   listDrawings,
-  drawingDetail,
   drawingTimeline,
   auditList,
   hacSuggestions,
@@ -98,3 +97,15 @@ export {
   type DirectoryPerson,
   type FileIntent,
 } from './drawings';
+export {
+  submitRevision,
+  checkRevision,
+  decideApproval,
+  updateApprovalPlan,
+  createRevision,
+  cancelRevision,
+  drawingDetail,
+  listTasks,
+  attachmentFile,
+  approverCandidates,
+} from './approval';

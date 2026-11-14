@@ -93,12 +93,18 @@ export type MutationResult<T> = {
  * Izin harus diperiksa pemanggil sebelum fungsi ini (replay tidak melewati pemeriksaan izin).
  * Payload sama → respons semula; payload berbeda → 409.
  */
-export async function idempotent<T>(
+export async function idempotent<T, P = undefined>(
   actor: Identity,
   key: string | null,
   action: string,
   payload: unknown,
-  run: (tx: Tx) => Promise<MutationResult<T>>,
+  run: (tx: Tx, prepared: P) => Promise<MutationResult<T>>,
+  hooks?: {
+    /** Pekerjaan I/O sebelum transaksi (mis. membuat file issued); tidak pernah di dalam transaksi. */
+    prepare: () => Promise<P>;
+    /** Membersihkan hasil `prepare` bila transaksi gagal. */
+    rollback: (prepared: P) => Promise<void>;
+  },
 ): Promise<{ status: number; body: T; replayed: boolean }> {
   if (!key || !IDEMPOTENCY_KEY.test(key))
     throw new AppError(400, 'Idempotency-Key wajib, 8–128 karakter [A-Za-z0-9._:-].', 'IDEMPOTENCY_KEY');
@@ -122,9 +128,11 @@ export async function idempotent<T>(
   const previous = await replay();
   if (previous) return previous;
   let afterCommit: (() => Promise<void>) | undefined;
+  const prepared = (hooks ? await hooks.prepare() : undefined) as P;
+  let committed = false;
   try {
     const result = await db().transaction(async (tx) => {
-      const outcome = await run(tx);
+      const outcome = await run(tx, prepared);
       await tx.insert(idempotency).values({
         id: randomUUID(),
         actorId: actor.id,
@@ -139,9 +147,11 @@ export async function idempotent<T>(
       afterCommit = outcome.afterCommit;
       return { status: outcome.status, body: outcome.body, replayed: false };
     });
+    committed = true;
     if (afterCommit) await afterCommit().catch(() => undefined);
     return result;
   } catch (e) {
+    if (hooks && !committed) await hooks.rollback(prepared).catch(() => undefined);
     if (mysqlCode(e) === 'ER_DUP_ENTRY' && mysqlMessage(e).includes('drawing_idempotency_actor_key_uq')) {
       const value = await replay();
       if (value) return value;

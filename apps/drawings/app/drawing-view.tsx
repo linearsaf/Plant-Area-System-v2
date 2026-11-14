@@ -5,6 +5,7 @@ import type { DrawingDetail, RevisionSummary, TimelineEntry } from '@plant/contr
 import { formatWib, getJson, newKey, sendJson } from './client-api';
 import { PdfViewer } from './pdf-viewer';
 import { LegacyBadge, StatusBadge } from './status-badge';
+import { WorkflowPanel } from './workflow-panel';
 
 const actionLabels: Record<string, string> = {
   'drawing.created': 'Membuat drawing',
@@ -15,6 +16,16 @@ const actionLabels: Record<string, string> = {
   'drawing.owner_transferred': 'Mengalihkan owner',
   'file.downloaded': 'Mengunduh Final Drawing',
   'file.printed': 'Mencetak Final Drawing',
+  'revision.submitted': 'Submit to Check',
+  'revision.check_approved': 'Check disetujui',
+  'revision.check_rejected': 'Check ditolak',
+  'revision.l1_approved': 'Approval L1 disetujui',
+  'revision.l1_rejected': 'Approval L1 ditolak',
+  'revision.l2_approved': 'Final Approval disetujui',
+  'revision.l2_rejected': 'Final Approval ditolak',
+  'revision.approval_plan_changed': 'Mengganti approver',
+  'revision.created': 'Membuat revisi baru',
+  'revision.cancelled': 'Membatalkan revisi',
 };
 type Person = { id: string; name: string; position: string };
 
@@ -160,6 +171,13 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
               )}
             </div>
           </section>
+          <WorkflowPanel
+            drawing={drawing}
+            onDone={(message) => {
+              setToast(message);
+              setTimeout(() => location.reload(), 600);
+            }}
+          />
           <section className="panel">
             <h2>{p.seeWip ? 'Riwayat revisi' : 'Current Revision'}</h2>
             <ul className="revision-list">

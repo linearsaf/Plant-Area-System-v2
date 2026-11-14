@@ -13,6 +13,7 @@ export type Grant = BagGrant | import('./consumables').ConsumablesGrant | import
 export * from './consumables';
 export * from './drawings';
 export * from './drawings-model';
+export * from './drawings-workflow';
 export type Identity = {
   id: string;
   name: string;

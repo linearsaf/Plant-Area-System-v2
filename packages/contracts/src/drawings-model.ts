@@ -193,6 +193,12 @@ export type DrawingDetail = {
   revising: boolean;
   revisions: RevisionSummary[];
   permissions: DrawingPermissions;
+  /** Alur approval revisi kerja (hanya bagi yang boleh melihat data dalam proses). */
+  workflow: {
+    steps: import('./drawings-workflow').ApprovalStep[];
+    actions: import('./drawings-workflow').ApprovalActionView[];
+    available: import('./drawings-workflow').WorkflowAvailability;
+  };
   createdAt: string;
   updatedAt: string;
 };

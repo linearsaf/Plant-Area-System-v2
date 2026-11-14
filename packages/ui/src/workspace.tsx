@@ -32,7 +32,14 @@ type Activity = {
   installedAt: string;
   createdAt: string;
 };
-type LinkItem = { label: string; href: string; icon: IconName; group: string; count?: number };
+type LinkItem = {
+  label: string;
+  href: string;
+  icon: IconName;
+  group: string;
+  count?: number;
+  countLabel?: string;
+};
 const batchLink = (item: Activity) =>
   item.appId === 'consumables'
     ? `/consumables/history?document=${encodeURIComponent(item.id)}`
@@ -110,11 +117,26 @@ export function Workspace({
           })),
       ]
     : [];
-  const drawingLinks: LinkItem[] = drawingsNavigation(identity).map(({ label, href }) => ({
+  const drawingNavigation = drawingsNavigation(identity);
+  const hasDrawingTasks = drawingNavigation.some((n) => n.key === 'tasks');
+  const [drawingTasks, setDrawingTasks] = useState(0);
+  useEffect(() => {
+    if (!hasDrawingTasks) return;
+    const load = () =>
+      fetch('/drawings/api/tasks/count', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => typeof d?.count === 'number' && setDrawingTasks(d.count))
+        .catch(() => undefined);
+    void load();
+    const timer = setInterval(() => !document.hidden && void load(), 60000);
+    return () => clearInterval(timer);
+  }, [hasDrawingTasks]);
+  const drawingLinks: LinkItem[] = drawingNavigation.map(({ key, label, href }) => ({
     label,
     href,
     icon: 'drawing',
     group: 'Drawing Database',
+    ...(key === 'tasks' ? { count: drawingTasks, countLabel: `${drawingTasks} tugas menunggu` } : {}),
   }));
   const sourceIds = [...(grant ? ['bag-filter'] : []), ...(stockGrant ? ['consumables'] : [])];
   const normalizeStock = (m: StockDocument): Activity => ({

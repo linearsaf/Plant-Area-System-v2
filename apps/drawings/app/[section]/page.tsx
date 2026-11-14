@@ -7,6 +7,7 @@ import { Library } from '../library';
 import { DrawingForm } from '../drawing-form';
 import { MastersManager } from '../masters-manager';
 import { AuditList } from '../audit-list';
+import { TaskList } from '../task-list';
 export const dynamic = 'force-dynamic';
 const pages: Record<string, { title: string; description: string }> = {
   library: {
@@ -23,7 +24,7 @@ const pages: Record<string, { title: string; description: string }> = {
   },
   new: {
     title: 'Create Drawing',
-    description: 'Buat drawing baru sebagai draft. Submit to Check tersedia setelah draft lengkap.',
+    description: 'Buat drawing baru sebagai draft, lalu Submit to Check dari halaman detail.',
   },
   legacy: {
     title: 'Upload Old Drawing',
@@ -78,6 +79,8 @@ export default async function Page({ params }: { params: Promise<{ section: stri
         <MastersManager initial={masters} />
       ) : section === 'audit' ? (
         <AuditList />
+      ) : section === 'tasks' ? (
+        <TaskList />
       ) : (
         <section className="panel">
           <EmptyState

@@ -116,6 +116,48 @@ export const revisions = mysqlTable(
   ],
 );
 
+/** Approval plan per revisi (PRD §4.2): level 1 wajib, level 2 opsional; satu baris per level. */
+export const approvalSteps = mysqlTable(
+  'revision_approval_steps',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    revisionId: varchar('revision_id', { length: 36 }).notNull(),
+    level: int('level').notNull(),
+    assigneeId: varchar('assignee_id', { length: 36 }).notNull(),
+    assigneeName: varchar('assignee_name', { length: 100 }).notNull(),
+    assignedById: varchar('assigned_by_id', { length: 36 }).notNull(),
+    assignedByName: varchar('assigned_by_name', { length: 100 }).notNull(),
+    assignedAt: timestamp('assigned_at', { fsp: 3 }).notNull(),
+  },
+  (t) => [
+    uniqueIndex('revision_approval_steps_level_uq').on(t.revisionId, t.level),
+    index('revision_approval_steps_assignee_idx').on(t.assigneeId, t.level),
+  ],
+);
+
+/** Keputusan Check (0), Approval L1 (1), Final Approval (2) per siklus beserta file yang ditinjau. */
+export const approvalActions = mysqlTable(
+  'approval_actions',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    revisionId: varchar('revision_id', { length: 36 }).notNull(),
+    drawingId: varchar('drawing_id', { length: 36 }).notNull(),
+    cycle: int('cycle').notNull(),
+    level: int('level').notNull(),
+    decision: varchar('decision', { length: 12 }).notNull(), // approved | rejected
+    note: varchar('note', { length: 1000 }).notNull().default(''),
+    actorId: varchar('actor_id', { length: 36 }).notNull(),
+    actorName: varchar('actor_name', { length: 100 }).notNull(),
+    actorRole: varchar('actor_role', { length: 16 }).notNull(),
+    reviewedFileId: varchar('reviewed_file_id', { length: 36 }),
+    createdAt: timestamp('created_at', { fsp: 3 }).notNull(),
+  },
+  (t) => [
+    uniqueIndex('approval_actions_cycle_level_uq').on(t.revisionId, t.cycle, t.level),
+    index('approval_actions_drawing_idx').on(t.drawingId, t.createdAt),
+  ],
+);
+
 /** Idempotency-Key per actor; respons disimpan untuk replay payload yang sama. */
 export const idempotency = mysqlTable(
   'drawing_idempotency',

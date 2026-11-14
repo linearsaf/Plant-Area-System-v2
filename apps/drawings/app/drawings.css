@@ -28,7 +28,7 @@
   }
   .pdf-toolbar-group {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: var(--space-1);
   }
@@ -311,6 +311,11 @@
   a.button.primary:hover {
     background: var(--buttonPrimaryHover);
   }
+  a.button.secondary {
+    border-color: var(--borderStrong);
+    background: var(--surface);
+    color: var(--textPrimary);
+  }
   a.button.secondary:hover {
     background: var(--surfaceMuted);
   }
@@ -345,6 +350,76 @@
     font-weight: var(--weight-semibold);
     margin-bottom: var(--space-2);
   }
+  .contents {
+    display: contents;
+  }
+  .workflow-panel h3 {
+    margin-top: var(--space-6);
+  }
+  .workflow-panel > .meta-list {
+    margin-bottom: var(--space-4);
+  }
+  .meta-list dd .badge {
+    margin-left: var(--space-2);
+  }
+  .attachment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .attachment-list li {
+    display: grid;
+    gap: var(--space-1);
+    justify-items: center;
+  }
+  .attachment-list img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+  }
+  .review-room {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+    gap: var(--space-4);
+    align-items: start;
+  }
+  .review-room > * {
+    min-width: 0;
+  }
+  .decision-choice {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .task-list {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .task-list a {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--textPrimary);
+    text-decoration: none;
+  }
+  .task-list a:hover {
+    background: var(--surfaceMuted);
+  }
   .masters-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
@@ -365,7 +440,8 @@
     overflow-wrap: anywhere;
   }
   @media (max-width: 959px) {
-    .drawing-detail {
+    .drawing-detail,
+    .review-room {
       grid-template-columns: minmax(0, 1fr);
     }
   }
@@ -382,12 +458,15 @@
       width: auto;
       min-width: 0;
     }
-    .pdf-search {
+    .pdf-toolbar .pdf-search {
       flex-wrap: nowrap;
     }
     .pdf-zoom {
       min-width: 0;
       max-width: 9em;
+    }
+    .pdf-toolbar-group {
+      flex-wrap: wrap;
     }
     .pdf-toolbar {
       justify-content: flex-start;

@@ -24,6 +24,15 @@ import {
   updateMaster,
   uploadLimit,
   voidDrawing,
+  submitRevision,
+  checkRevision,
+  decideApproval,
+  updateApprovalPlan,
+  createRevision,
+  cancelRevision,
+  listTasks,
+  attachmentFile,
+  approverCandidates,
   type FileIntent,
 } from '@plant/drawings-core';
 export const dynamic = 'force-dynamic';
@@ -33,6 +42,8 @@ const json = (v: unknown, status = 200) =>
 const replayable = (r: { status: number; body: unknown; replayed: boolean }) =>
   json({ ...(r.body as object), replayed: r.replayed }, r.replayed ? 200 : r.status);
 const directory = () => fetchDirectory('drawings');
+// Inactive-approver marks are best effort: without the directory, tasks and detail still load.
+const peopleOrNull = () => directory().catch(() => null);
 
 export async function GET(request: Request, context: Context) {
   try {
@@ -58,6 +69,15 @@ export async function GET(request: Request, context: Context) {
       const purpose = params.get('for');
       if (purpose === 'legacy-owner' && canDraw(actor, 'drawing.legacy_upload'))
         return json({ people: (await directory()).filter((p) => p.role === 'drafter') });
+      if (purpose === 'approver-l1' || purpose === 'approver-l2')
+        return json({
+          people: await approverCandidates(
+            actor,
+            params.get('revision') || '',
+            purpose === 'approver-l1' ? 1 : 2,
+            await directory(),
+          ),
+        });
       if (purpose === 'owner' && canDraw(actor, 'drawing.transfer_owner'))
         return json({
           people: (await directory()).filter((p) => p.role === 'drafter' || p.role === 'admin'),
@@ -65,7 +85,13 @@ export async function GET(request: Request, context: Context) {
       throw new AppError(403, 'Daftar pengguna tidak tersedia untuk keperluan ini.');
     }
     if (segments.length === 2 && segments[0] === 'drawings')
-      return json(await drawingDetail(actor, segments[1]));
+      return json(await drawingDetail(actor, segments[1], await peopleOrNull()));
+    if (path === 'tasks') return json({ items: await listTasks(actor, await peopleOrNull()) });
+    if (path === 'tasks/count') return json({ count: (await listTasks(actor, await peopleOrNull())).length });
+    if (segments.length === 2 && segments[0] === 'attachments') {
+      const file = await attachmentFile(actor, segments[1]);
+      return await serveFile(request, file, { disposition: 'inline', name: file.originalName });
+    }
     if (segments.length === 3 && segments[0] === 'drawings' && segments[2] === 'timeline')
       return json(await drawingTimeline(actor, segments[1], params.get('cursor')));
     if (segments.length === 3 && segments[0] === 'revisions' && segments[2] === 'file') {
@@ -111,11 +137,23 @@ async function mutate(request: Request, context: Context) {
         return replayable(await voidDrawing(actor, segments[1], body, key));
       if (segments.length === 3 && segments[0] === 'drawings' && segments[2] === 'owner')
         return replayable(await transferOwner(actor, segments[1], body, key, directory));
+      if (segments.length === 3 && segments[0] === 'drawings' && segments[2] === 'revisions')
+        return replayable(await createRevision(actor, segments[1], body, key));
+      if (segments.length === 3 && segments[0] === 'revisions') {
+        const [, id, action] = segments;
+        if (action === 'submit') return replayable(await submitRevision(actor, id, body, key));
+        if (action === 'check') return replayable(await checkRevision(actor, id, body, key, directory));
+        if (action === 'approve-l1') return replayable(await decideApproval(actor, 1, id, body, key));
+        if (action === 'approve-l2') return replayable(await decideApproval(actor, 2, id, body, key));
+        if (action === 'cancel') return replayable(await cancelRevision(actor, id, body, key));
+      }
       if (path === 'masters/disciplines') return json(await createMaster(actor, 'disciplines', body), 201);
     }
     if (request.method === 'PATCH') {
       if (segments.length === 2 && segments[0] === 'drawings')
         return json(await updateDrawing(actor, segments[1], body));
+      if (segments.length === 3 && segments[0] === 'revisions' && segments[2] === 'approval-plan')
+        return json(await updateApprovalPlan(actor, segments[1], body, directory));
       if (segments.length === 3 && segments[0] === 'masters' && segments[1] === 'disciplines')
         return json(await updateMaster(actor, 'disciplines', segments[2], body));
     }
