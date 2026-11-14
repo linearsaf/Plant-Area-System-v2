@@ -1,7 +1,7 @@
 // Abstraksi object storage (PRD §6.2, K4). Driver `fs` untuk development/CI/sementara,
 // driver `s3` untuk penyedia S3-compatible. Key dibuat server dan tidak pernah ditimpa.
 import { createReadStream } from 'node:fs';
-import { copyFile, mkdir, rm, stat, link } from 'node:fs/promises';
+import { copyFile, mkdir, rm, stat, link, readdir } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import {
@@ -10,6 +10,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { AppError } from '@plant/contracts';
 import { storageConfig, type StorageConfig } from './config';
@@ -28,6 +29,8 @@ export interface Storage {
   get(key: string, range?: ByteRange): Promise<StoredObject>;
   head(key: string): Promise<{ size: number } | null>;
   delete(key: string): Promise<void>;
+  /** Seluruh objek di bawah `files/` (untuk rekonsiliasi dan penyalinan). */
+  list(): AsyncIterable<{ key: string; size: number }>;
 }
 
 export class StorageUnavailable extends AppError {
@@ -86,6 +89,18 @@ export class FsStorage implements Storage {
   }
   async delete(key: string) {
     await rm(this.path(key), { force: true });
+  }
+  async *list() {
+    const base = join(this.root, 'files');
+    const years = await readdir(base, { withFileTypes: true }).catch(() => []);
+    for (const year of years) {
+      if (!year.isDirectory()) continue;
+      for (const entry of await readdir(join(base, year.name), { withFileTypes: true })) {
+        if (!entry.isFile() || entry.name.startsWith('.')) continue;
+        const key = `files/${year.name}/${entry.name}`;
+        yield { key, size: (await stat(join(base, year.name, entry.name))).size };
+      }
+    }
   }
 }
 
@@ -150,7 +165,17 @@ export class S3Storage implements Storage {
   async delete(key: string) {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: assertKey(key) }));
   }
-  /** Akses klien untuk uji (membuat bucket MinIO). */
+  async *list() {
+    let token: string | undefined;
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({ Bucket: this.bucket, Prefix: 'files/', ContinuationToken: token }),
+      );
+      for (const o of page.Contents ?? []) if (o.Key) yield { key: o.Key, size: Number(o.Size ?? 0) };
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+  }
+  /** Akses klien untuk uji (membuat bucket pada layanan S3 stack uji). */
   get rawClient() {
     return this.client;
   }

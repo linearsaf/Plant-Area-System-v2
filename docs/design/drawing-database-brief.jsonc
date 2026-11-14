@@ -666,7 +666,7 @@
       "apps/portal": "form Akses Drawing Database; kartu Portal aktif",
       "infra + compose": "layanan drawings, database/user plant_drawings, volume drawings-files, route + CSP Nginx, batas upload gateway dan host, backup, direktori /data/drawings milik node",
       "scripts": "provisioning database (pola provisionConsumables), migrate, bootstrap, dev, prepare-test, backup, uji operasi, storage-copy, reconcile, penyalin aset PDF.js",
-      "ci": "stack uji memuat drawings; MinIO hanya untuk uji driver s3",
+      "ci": "stack uji memuat drawings; layanan S3-compatible (SeaweedFS) hanya untuk uji driver s3",
     },
     "authDataMigration": {
       "id": "drawings-v1",
@@ -925,7 +925,7 @@
       "id": 2,
       "name": "File dan viewer",
       "delivers": [
-        "storage fs + s3 (MinIO di stack uji)",
+        "storage fs + s3 (layanan S3-compatible di stack uji)",
         "upload dua tahap",
         "endpoint file + Range",
         "batas body gateway dan host",

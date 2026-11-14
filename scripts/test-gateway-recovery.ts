@@ -32,7 +32,8 @@ const compose = [
   '.test-runtime/compose.yaml',
 ];
 const inspect = (name: string, format: string) => docker(['inspect', '--format', format, name]);
-const names = ['plant-v2-test-bag-filter-1', 'plant-v2-test-consumables-1'];
+const names = ['plant-v2-test-bag-filter-1', 'plant-v2-test-consumables-1', 'plant-v2-test-drawings-1'];
+const services = ['bag-filter', 'consumables', 'drawings'];
 const actor: Identity = {
   id: randomUUID(),
   name: 'Gateway recovery test',
@@ -47,6 +48,7 @@ async function verifyRoutes(client: APIRequestContext) {
   for (const [path, property] of [
     ['/bag-filter/api/dashboard', 'perEquipment'],
     ['/consumables/api/dashboard', 'operational'],
+    ['/drawings/api/portal-summary', 'headline'],
   ]) {
     const r = await client.get(path, { maxRedirects: 0 });
     assert.equal(r.status(), 200, `${path} status`);
@@ -58,6 +60,7 @@ async function verifyRoutes(client: APIRequestContext) {
     ['/bag-filter', '/bag-filter/_next/'],
     ['/consumables', '/consumables/_next/'],
     ['/consumables/stock', '/consumables/_next/'],
+    ['/drawings', '/drawings/_next/'],
   ]) {
     const r = await client.get(path, { maxRedirects: 0 });
     assert.equal(r.status(), 200, `${path} status`);
@@ -84,6 +87,7 @@ try {
   userId = (await createUser(actor, { ...actor, password: temporary })).id;
   await setGrant(actor, userId, { appId: 'bag-filter', role: 'admin', equipment: ['L61-BF1'] });
   await setAppGrant(actor, userId, 'consumables', { appId: 'consumables', role: 'admin' });
+  await setAppGrant(actor, userId, 'drawings', { appId: 'drawings', role: 'admin' });
   await changePassword({ ...actor, id: userId }, temporary, password);
   const login = await client.post('/auth/api/sign-in/email', {
     headers: { origin: process.env.PUBLIC_ORIGIN! },
@@ -123,8 +127,8 @@ try {
   stopped = true;
   // Remove only these stateless test containers so their network endpoints and
   // IP reservations are released consistently across Docker Engine versions.
-  await docker([...compose, 'rm', '-s', '-f', 'bag-filter', 'consumables']);
-  // Occupy both previous addresses with a different HTML service. Static DNS
+  await docker([...compose, 'rm', '-s', '-f', ...services]);
+  // Occupy every previous address with a different HTML service. Static DNS
   // resolution would now reproduce the reported JSON parse error / wrong page.
   for (const [i, p] of previous.entries()) {
     const sentinel = `plant-v2-test-route-sentinel-${i}`;
@@ -146,17 +150,7 @@ try {
       "require('node:http').createServer((q,r)=>{r.writeHead(200,{'Content-Type':'text/html'});r.end('<!DOCTYPE html><title>Wrong application sentinel</title>')}).listen(3000,'0.0.0.0')",
     ]);
   }
-  await docker([
-    ...compose,
-    'up',
-    '-d',
-    '--no-deps',
-    '--wait',
-    '--wait-timeout',
-    '90',
-    'bag-filter',
-    'consumables',
-  ]);
+  await docker([...compose, 'up', '-d', '--no-deps', '--wait', '--wait-timeout', '90', ...services]);
   for (const p of previous) {
     const networks = JSON.parse(await inspect(p.name, '{{json .NetworkSettings.Networks}}'));
     assert.notEqual(
@@ -186,14 +180,14 @@ try {
     JSON.stringify({
       event: 'test.gateway_ip_recovery',
       result: 'passed',
-      applications: 2,
+      applications: services.length,
       checks: ['authenticated dashboards', 'SSO pages', 'CSS/JS assets', 'no gateway restart'],
     }),
   );
 } finally {
   try {
     for (const name of sentinels) await docker(['rm', '-f', name]).catch(() => {});
-    if (stopped) await docker([...compose, 'up', '-d', '--no-deps', '--wait', 'bag-filter', 'consumables']);
+    if (stopped) await docker([...compose, 'up', '-d', '--no-deps', '--wait', ...services]);
   } finally {
     try {
       if (userId)

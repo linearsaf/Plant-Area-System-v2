@@ -1,6 +1,6 @@
 # Plant Area System v2
 
-Portal SSO, Bag Filter, dan Consumable Room dengan Node.js 26, Next.js, Better Auth, MySQL 8.4, Drizzle, dan Nginx. Source aktif berada di `apps/`, `packages/`, `infra/`, dan `scripts/`. Ekspor lama tersimpan di `.arsip/` hanya pada workspace asal karena memuat data internal; folder itu tidak diterbitkan ke GitHub. Gunakan README ini dan PRD v2 sebagai acuan pengembangan saat ini.
+Portal SSO, Bag Filter, Consumable Room, dan Drawing Database dengan Node.js 26, Next.js, Better Auth, MySQL 8.4, Drizzle, dan Nginx. Source aktif berada di `apps/`, `packages/`, `infra/`, dan `scripts/`. Ekspor lama tersimpan di `.arsip/` hanya pada workspace asal karena memuat data internal; folder itu tidak diterbitkan ke GitHub. Gunakan README ini dan PRD v2 sebagai acuan pengembangan saat ini.
 
 Dokumen: [audit](docs/AUDIT.md), [PRD v2](docs/PRD-v2.md), [rencana implementasi](docs/IMPLEMENTATION-PLAN.md), [kontrak API](docs/API.md), [tema UI](docs/UI-THEME.md), [operasional](docs/OPERATIONS.md), [hasil validasi](docs/VALIDATION.md).
 
@@ -35,7 +35,7 @@ Hasilnya harus Node `v26.12.1` dan pnpm `12.14.0`. Jika pnpm lokal belum terpasa
 
 Aktivasi hanya mengubah PATH terminal tersebut dan mendahulukan runtime project; instalasi Node/NVM global tetap dapat dipakai oleh project lain.
 
-Jangan mengedit package di `node_modules/@plant/*`; pnpm menghubungkannya ke source workspace. Edit `packages/contracts`, `packages/auth-core`, `packages/bag-core`, `packages/consumables-core`, `packages/server`, atau `packages/ui` secara langsung.
+Jangan mengedit package di `node_modules/@plant/*`; pnpm menghubungkannya ke source workspace. Edit `packages/contracts`, `packages/auth-core`, `packages/bag-core`, `packages/consumables-core`, `packages/drawings-core`, `packages/server`, atau `packages/ui` secara langsung.
 
 ## Menjalankan pilot produksi
 
@@ -52,7 +52,7 @@ docker compose up -d auth portal bag-filter nginx backup
 docker compose ps
 ```
 
-Buka `PUBLIC_ORIGIN`. Login dengan akun bootstrap dan ganti password sementara. Akun bootstrap adalah admin portal, admin Consumable Room untuk seluruh lokasi, serta admin Bag Filter untuk enam equipment (561, 562, 421, 422, L61, L62; semuanya BF1). Setelah itu buat akun dan scope melalui **Kelola akses**. Tidak ada registrasi publik atau transaksi demo yang dibuat migrasi. Untuk upgrade dari katalog empat equipment, ikuti bagian migrasi equipment di [panduan operasional](docs/OPERATIONS.md).
+Buka `PUBLIC_ORIGIN`. Login dengan akun bootstrap dan ganti password sementara. Akun bootstrap adalah admin portal, admin Consumable Room, admin Drawing Database, serta admin Bag Filter untuk enam equipment (561, 562, 421, 422, L61, L62; semuanya BF1). Setelah itu buat akun dan scope melalui **Kelola akses**. Tidak ada registrasi publik atau transaksi demo yang dibuat migrasi. Untuk upgrade dari katalog empat equipment, ikuti bagian migrasi equipment di [panduan operasional](docs/OPERATIONS.md).
 
 Hapus `BOOTSTRAP_PASSWORD` dari `.env` setelah digunakan dan simpan password baru di pengelola password organisasi. Bootstrap yang dijalankan ulang tidak mengubah akun yang sudah ada. Jangan memakai `docker compose down -v` pada deployment berisi data.
 
@@ -73,7 +73,7 @@ Buka **https://localhost:9443**. Sertifikat localhost bersifat self-signed dan b
 
 Runtime `plant-v2-dev` memakai volume baru, kredensial sendiri dan binding loopback: HTTPS9443, HTTP9080 serta MySQL14306. Tidak memakai akun/data VPS atau database arsip `plant-v2-test`. Data awal kosong, selain admin, katalog aplikasi dan konfigurasi enam equipment. Seluruh rahasia/sertifikat/generated override berada di `.deploy/dev/`, diabaikan Git/Docker.
 
-Source `apps/*/app` dan `packages/*/src` mendukung hot reload. Perubahan dependency atau migrasi memerlukan `pnpm dev:up` untuk membangun ulang tools dan menjalankan migrator. `pnpm dev:down` menghentikan runtime tanpa menghapus volume; `pnpm dev:logs` menampilkan log terakhir; `pnpm dev:smoke` memverifikasi SSO, keenam peta Bag Filter, Consumable Room, WebSocket HMR (`/…/_next/hmr`), tema, dan mobile khusus terhadap `plant-v2-dev`. Setup ulang mempertahankan kredensial dan sertifikat. Script menolak Docker context remote; tidak memasang trust certificate ke OS. Runtime telah diuji baik pada PC Windows (`x86_64`) maupun MacBook Apple Silicon (`arm64`).
+Source `apps/*/app` dan `packages/*/src` mendukung hot reload. Perubahan dependency atau migrasi memerlukan `pnpm dev:up` untuk membangun ulang tools dan menjalankan migrator. `pnpm dev:down` menghentikan runtime tanpa menghapus volume; `pnpm dev:logs` menampilkan log terakhir; `pnpm dev:smoke` memverifikasi SSO, keenam peta Bag Filter, Consumable Room, health dan rute Drawing Database, WebSocket HMR (`/…/_next/hmr`), tema, dan mobile khusus terhadap `plant-v2-dev`. Setup ulang mempertahankan kredensial dan sertifikat. Script menolak Docker context remote; tidak memasang trust certificate ke OS. Runtime telah diuji baik pada PC Windows (`x86_64`) maupun MacBook Apple Silicon (`arm64`).
 
 Suite integration/E2E/operasi lama masih khusus lingkungan uji disposable di bawah; jangan menjalankannya terhadap database development atau arsip nyata.
 
@@ -113,11 +113,11 @@ node --env-file=.test-runtime/host.env --import tsx scripts/test-gateway-recover
 pnpm check:export # opsional; memeriksa arsip jika tersedia di workspace lokal
 ```
 
-Tes operasi me-restart MySQL/Bag Filter/Consumable Room, menghentikan sementara Auth, dan membuat server restore sementara pada project uji. Jangan menjalankannya saat pengujian browser masih berlangsung. Laporan browser ada di `playwright-report/`, screenshot di `test-results/`; keduanya lokal dan tidak dikomit.
+Tes operasi me-restart MySQL/Bag Filter/Consumable Room/Drawing Database (termasuk persistensi file volume), menghentikan sementara Auth, dan membuat server restore sementara pada project uji. Jangan menjalankannya saat pengujian browser masih berlangsung. Laporan browser ada di `playwright-report/`, screenshot di `test-results/`; keduanya lokal dan tidak dikomit.
 
-`pnpm dev` menjalankan Portal3000, Auth3001, Bag Filter3002, dan Consumables3003. Lingkungan development harus memasok env tiap layanan dan gateway HTTPS yang meneruskan prefix/host dengan konfigurasi setara; Compose adalah cara menjalankan SSO lengkap yang telah diuji. Script Node tidak memuat `.env` otomatis; gunakan `node --env-file=... --import tsx ...`.
+`pnpm dev` menjalankan Portal3000, Auth3001, Bag Filter3002, Consumables3003, dan Drawings3004. Lingkungan development harus memasok env tiap layanan dan gateway HTTPS yang meneruskan prefix/host dengan konfigurasi setara; Compose adalah cara menjalankan SSO lengkap yang telah diuji. Script Node tidak memuat `.env` otomatis; gunakan `node --env-file=... --import tsx ...`.
 
-Build terpisah: `pnpm --filter @plant/portal build`, `pnpm --filter @plant/auth build`, `pnpm --filter @plant/bag-filter build`, atau `pnpm --filter @plant/consumables build`. Dockerfile menerima `--build-arg APP=portal|auth|bag-filter|consumables`. Pembaruan satu aplikasi: build image baru, kemudian `docker compose up -d --no-deps bag-filter` (sesuaikan nama layanan). Pada VPS gunakan fungsi `dc` dan override produksi sesuai runbook. Simpan image/tag lama untuk rollback.
+Build terpisah: `pnpm --filter @plant/portal build`, `pnpm --filter @plant/auth build`, `pnpm --filter @plant/bag-filter build`, atau `pnpm --filter @plant/consumables build`, atau `pnpm --filter @plant/drawings build` (menyalin aset PDF.js ke `apps/drawings/public/pdfjs/`, tidak dikomit). Dockerfile menerima `--build-arg APP=portal|auth|bag-filter|consumables|drawings`. Pembaruan satu aplikasi: build image baru, kemudian `docker compose up -d --no-deps bag-filter` (sesuaikan nama layanan). Pada VPS gunakan fungsi `dc` dan override produksi sesuai runbook. Simpan image/tag lama untuk rollback.
 
 Kebutuhan sebelum go-live: hostname dan sertifikat organisasi, rahasia deployment, salinan backup di luar host, uji orientasi oleh operator, serta restore drill pada server tujuan.
 
@@ -137,3 +137,17 @@ pnpm consumables:reconcile
 ```
 
 CSV penamaan, katalog, PPTX dan dump perusahaan tetap privat di luar Git/image. Impor master tidak membawa saldo SAP. Saldo R22 dikonfirmasi melalui hitung fisik; detail format CSV dan aturan replay ada di runbook R22.
+
+## Drawing Database v1
+
+Aplikasi kelima pada `/drawings`: Drawing Library, Create Drawing, Upload Old Drawing (Legacy Ready), Check dan approval L1/Final dengan stamp di halaman 1, revisi baru tanpa mematikan Final Drawing yang berlaku, Drawing Request, Tugas saya, notifikasi in-app, ringkasan, dan PDF viewer in-page (PDF.js). Role Viewer, Drafter, Draft Leader, Approver L1, Head dan Admin diberikan lewat **Kelola akses**; pembuat drawing tidak dapat memutus Check/Approval atas drawing sendiri. Persyaratan pada [PRD Drawing Database](docs/DRAWING-DATABASE-PRD.md), kontrak pada [API](docs/API.md#drawing-database-v1), operasi pada [OPERATIONS](docs/OPERATIONS.md#drawing-database-instalasi-upgrade-dan-operasi), rilis pada [runbook](docs/deployment/DRAWING-DATABASE-RELEASE.md).
+
+File PDF disimpan di object storage melalui driver `fs` (volume `drawings-files`, bawaan) atau `s3` (S3-compatible). Perintah operator:
+
+```sh
+pnpm drawings:provision            # database/user plant_drawings pada volume MySQL lama
+pnpm drawings:reconcile --hash     # tabel file vs storage, read-only
+pnpm drawings:storage-copy --dry-run
+```
+
+Stack uji memuat layanan S3-compatible (`s3`, SeaweedFS) untuk uji driver `s3`; jalankan `up -d --wait mysql s3` sebelum suite integrasi.

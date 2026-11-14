@@ -199,3 +199,31 @@ Health internal: `/consumables/health/live`, `/consumables/health/ready`. Endpoi
 Backup terbaru menyertakan `plant_auth`, `plant_bag_filter`, dan `plant_consumables` dalam satu dump, retensi 14 hari. Saat restore, verifikasi jumlah master, inventory, ledger, audit/idempotensi, saldo serta rekonsiliasi, selain pemeriksaan Bag Filter/Auth. Provision user runtime pada server tujuan dan cabut sesi hasil restore sebelum membuka akses.
 
 Rilis awal membutuhkan keempat image baru karena kontrak bersama berubah. Sesudahnya setiap layanan dapat dirilis mandiri dengan image/tag per layanan. Simpan image sebelumnya; rollback aplikasi tidak menghapus schema/data Consumables. Jika kembali ke versi sebelum aplikasi tersedia, tutup akses Consumables dan gunakan gateway/image baseline; pertahankan database baru untuk rekonsiliasi. RTO/RPO tetap mengikuti target pilot di bawah, dan perlu diukur pada data aktual.
+
+## Drawing Database: instalasi, upgrade, dan operasi
+
+Rilis ini menambah container `drawings` (port internal 3000, dev 3004), database `plant_drawings` dengan user runtime DML `plant_drawings`, volume `drawings-files` (`/data/drawings`, milik user `node`), dan layanan opsional `drawings-ops` (profile `ops`). Urutan rilis, smoke test, dan rollback: [runbook Drawing Database](deployment/DRAWING-DATABASE-RELEASE.md).
+
+**Environment.** `DRAWINGS_DB_PASSWORD` (wajib), `DRAWINGS_STORAGE_DRIVER` (`fs` bawaan atau `s3`), `DRAWINGS_S3_ENDPOINT`, `DRAWINGS_S3_REGION`, `DRAWINGS_S3_BUCKET`, `DRAWINGS_S3_ACCESS_KEY_ID`, `DRAWINGS_S3_SECRET_ACCESS_KEY`, `DRAWINGS_S3_FORCE_PATH_STYLE`, `DRAWINGS_MAX_PDF_MB` (bawaan 25). Script host juga memakai `DRAWINGS_DATABASE_URL` dan `DRAWINGS_MIGRATION_DATABASE_URL`. Konfigurasi storage yang tidak valid tidak menjatuhkan readiness; operasi file menjawab 503 `STORAGE_UNAVAILABLE`.
+
+**Gateway.** Lokasi `/drawings` memakai header keamanan sendiri dari `infra/nginx/drawings-headers.conf` (CSP global + `'wasm-unsafe-eval'`, `worker-src 'self' blob:`, `img-src`/`font-src` dengan `data:`/`blob:`), juga pada `/drawings/_next/` karena worker PDF.js memakai CSP respons skripnya. `= /drawings/api/uploads` menerima body hingga 30 MB pada gateway dan Nginx host; subrequest `/_verify_drawings` memakai batas yang sama agar Auth tidak menolak upload besar. Batas tepat ditegakkan aplikasi. `/drawings/internal` dan `/drawings/health` diblokir.
+
+**Health.** `/drawings/health/live` dan `/drawings/health/ready` (database termigrasi + Auth).
+
+**Memori.** `mem_limit 768m`, `--max-old-space-size=512` (VPS override). Pengukuran 14 November 2026 pada PDF vektor 24,2 MB/40 halaman: validasi + stamp tiga slot menaikkan RSS sekitar 60 MB dan heap puncak 52 MB; pemrosesan PDF dijalankan satu per satu per proses. PDF dengan sangat banyak objek kecil dapat lebih berat; pantau `docker stats` pada minggu pertama.
+
+**Backup.** Layanan `backup` menyertakan `plant_drawings` bila database tersebut ada, dan pada driver `fs` mengarsipkan volume `drawings-files` setiap hari ke `backups/drawings-files-<stamp>.tar.gz` (retensi 14 hari, read-only mount). File bersifat append-only, sehingga restore database ke waktu T tetap konsisten dengan arsip file yang lebih baru. Pada driver `s3` gunakan versioning dan retensi bucket. Arsip file bisa besar; simpan salinan di luar host bersama dump. `scripts/database-backup.mjs` dan `scripts/database-snapshot.ts` juga mencakup `plant_drawings`.
+
+**Restore.** Pulihkan dump seperti biasa (database ikut dibuat), provision user runtime `plant_drawings` di server tujuan (`pnpm drawings:provision` atau job `migrate`), lalu ekstrak arsip file ke volume `drawings-files` dengan pemilik `node` (UID 1000):
+
+```sh
+docker run --rm -v plant-area-v2_drawings-files:/data/drawings -v "$PWD/backups:/backups:ro" alpine \
+  sh -c 'tar -C /data/drawings -xzf /backups/drawings-files-<stamp>.tar.gz && chown -R 1000:1000 /data/drawings'
+docker compose --profile ops run --rm drawings-ops drawings:reconcile --hash
+```
+
+**Rekonsiliasi dan penyalinan storage.** `drawings:reconcile [--hash]` membandingkan `drawing_files` dengan storage secara read-only (hilang, ukuran/hash beda, objek tak dikenal, objek yatim yang tersisa); exit 1 bila ada file yang dirujuk hilang atau berbeda. `drawings:storage-copy [--dry-run]` menyalin `fs` → `s3`, memverifikasi SHA-256 dengan membaca ulang target, tidak menimpa objek berbeda, dan aman diulang. Keduanya dijalankan lewat `docker compose --profile ops run --rm drawings-ops <script>` (tambahkan override `compose.drawings-s3.yaml` untuk akses keluar ke penyedia).
+
+**Pembersihan.** File `staged` lebih dari 24 jam dan file draft yang diganti sebelum pernah submit dibersihkan otomatis (status `orphaned`, objek dihapus). File yang pernah di-submit, file issued, lampiran, dan seluruh audit tidak pernah dihapus. Void dan pembatalan revisi tidak menghapus data.
+
+**Akses.** Grant hanya role (Viewer, Drafter, Draft Leader, Approver L1, Head, Admin) dari **Kelola akses**. Menonaktifkan aplikasi di Katalog aplikasi menutup akses semua pengguna tanpa menghapus grant. Approver yang dinonaktifkan atau kehilangan role muncul sebagai **Approver tidak aktif** pada Tugas saya Draft Leader/Admin.

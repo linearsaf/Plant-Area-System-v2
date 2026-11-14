@@ -1,6 +1,6 @@
 # Drawing Database v1 — PRD dan prompt implementasi
 
-Disusun 14 November 2026 untuk TQ-CMMS (Plant Area System v2). Status: draf untuk disetujui pemilik produk sebelum implementasi. Drawing Database menjadi aplikasi operasional kelima pada `/drawings`, memakai SSO, grant, UI dan pola operasional yang sama dengan Bag Filter dan Consumable Room.
+Disusun 14 November 2026 untuk TQ-CMMS (Plant Area System v2). Status: diimplementasikan pada branch `feat/drawing-database` (Fase 1–6, November 2026); hasil aktual di [VALIDATION](VALIDATION.md). Area dihapus atas keputusan pemilik 15 November 2026. Drawing Database menjadi aplikasi operasional kelima pada `/drawings`, memakai SSO, grant, UI dan pola operasional yang sama dengan Bag Filter dan Consumable Room.
 
 Sumber penyusunan:
 
@@ -291,7 +291,7 @@ Teknis:
 | `apps/portal`              | Form **Akses Drawing Database** pada Kelola akses; kartu Portal aktif.                                                                                                                                                                      |
 | `compose.yaml`, `infra/`   | Layanan `drawings`, database dan user `plant_drawings`, volume `drawings-files`, route dan CSP Nginx, batas upload, backup, Dockerfile menyiapkan `/data/drawings` milik user `node`.                                                       |
 | `scripts/`                 | Provisioning database untuk volume MySQL yang sudah ada (pola `provisionConsumables`), `migrate.ts`, `bootstrap.ts`, `dev.ts`, `prepare-test.ts`, backup, uji operasi, `drawings:storage-copy`, `drawings:reconcile`, penyalin aset PDF.js. |
-| `.github/workflows/ci.yml` | Log diagnosis dan stack uji memuat `drawings`; MinIO hanya pada stack uji untuk driver `s3`.                                                                                                                                                |
+| `.github/workflows/ci.yml` | Log diagnosis dan stack uji memuat `drawings`; layanan S3-compatible (SeaweedFS; image MinIO tidak lagi tersedia) hanya pada stack uji untuk driver `s3`.                                                                                   |
 
 Migrasi data Auth `drawings-v1` (pola `migrateConsumablesCatalog`): mengubah status katalog `planned → active`, mengisi path, dan memberi role `admin` kepada akun bootstrap. Pengguna lain diatur lewat Kelola akses.
 
@@ -501,7 +501,7 @@ Setiap fase berakhir dalam keadaan dapat dijalankan dan lolos `pnpm typecheck`, 
 
 **Fase 1 — Fondasi dan akses.** Kontrak role/grant/katalog; `auth-core` (grant, verify, direktori); database, user, provisioning dan migrasi kosong; `apps/drawings` dengan layout, Shell, health dan halaman Ringkasan kosong; layanan Compose; route Nginx; form akses di Portal; stack dev dan uji. _Selesai bila:_ login → `/drawings` tampil dengan navigasi sesuai role; tanpa grant 403; aplikasi lain tidak berubah; uji integrasi dan E2E platform yang ada tetap lulus.
 
-**Fase 2 — File dan viewer.** Abstraksi storage dengan driver `fs` dan `s3` (uji `s3` terhadap MinIO pada stack uji); upload dua tahap; endpoint file dengan Range; batas body Nginx gateway dan host; CSP `/drawings`; viewer §7. _Selesai bila:_ PDF contoh dapat diunggah dan dibuka di viewer lewat gateway HTTPS tanpa pelanggaran CSP; kriteria file dan viewer §11 lulus kecuali stamp.
+**Fase 2 — File dan viewer.** Abstraksi storage dengan driver `fs` dan `s3` (uji `s3` terhadap layanan S3-compatible pada stack uji); upload dua tahap; endpoint file dengan Range; batas body Nginx gateway dan host; CSP `/drawings`; viewer §7. _Selesai bila:_ PDF contoh dapat diunggah dan dibuka di viewer lewat gateway HTTPS tanpa pelanggaran CSP; kriteria file dan viewer §11 lulus kecuali stamp.
 
 **Fase 3 — Drawing inti.** Master Discipline; Create Drawing dan edit draft; Upload Old Drawing; Library dengan filter dan pagination; detail dengan riwayat revisi dan jejak aktivitas; void; alih owner; audit. _Selesai bila:_ drawing legacy tampil bagi Viewer dan dapat dicetak/diunduh; aturan visibilitas per role lulus uji integrasi.
 

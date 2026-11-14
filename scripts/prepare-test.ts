@@ -51,8 +51,23 @@ await writeFile(
   // The gateway recovery test occupies old application IPs with sentinel containers.
   // Docker requires an explicitly configured subnet for `docker run --ip`.
   'services:\n  mysql:\n    ports: ["127.0.0.1:13306:3306"]\n    networks: [private, test-host]\n' +
-    // S3-compatible storage for the Drawing Database `s3` driver tests only.
-    '  minio:\n    image: minio/minio:RELEASE.2025-04-22T22-12-26Z\n    command: [server, /data]\n    environment:\n      MINIO_ROOT_USER: ${DRAWINGS_TEST_S3_ACCESS_KEY_ID:?Set DRAWINGS_TEST_S3_ACCESS_KEY_ID}\n      MINIO_ROOT_PASSWORD: ${DRAWINGS_TEST_S3_SECRET_ACCESS_KEY:?Set DRAWINGS_TEST_S3_SECRET_ACCESS_KEY}\n    ports: ["127.0.0.1:19000:9000"]\n    networks: [private, test-host]\n' +
+    // S3-compatible storage for the Drawing Database `s3` driver tests only. The minio/minio image is
+    // no longer available on Docker Hub; SeaweedFS serves the S3 API. Credentials come from stack.env.
+    [
+      '  s3:',
+      '    image: chrislusf/seaweedfs:3.85',
+      '    entrypoint: [sh, -c]',
+      '    command:',
+      '      - >-',
+      `        printf '{"identities":[{"name":"plant","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$$S3_KEY" "$$S3_SECRET" > /tmp/s3.json &&`,
+      '        exec weed server -dir=/data -volume.max=0 -master.volumeSizeLimitMB=64 -s3 -s3.port=8333 -s3.config=/tmp/s3.json',
+      '    environment:',
+      '      S3_KEY: ${DRAWINGS_TEST_S3_ACCESS_KEY_ID:?Set DRAWINGS_TEST_S3_ACCESS_KEY_ID}',
+      '      S3_SECRET: ${DRAWINGS_TEST_S3_SECRET_ACCESS_KEY:?Set DRAWINGS_TEST_S3_SECRET_ACCESS_KEY}',
+      '    ports: ["127.0.0.1:19000:8333"]',
+      '    networks: [private, test-host]',
+      '',
+    ].join('\n') +
     'networks:\n  private:\n    ipam:\n      config:\n        - subnet: ${PLANT_TEST_SUBNET:-172.30.250.0/24}\n  test-host: {}\n',
 );
 // Extend an existing isolated deployment without changing its users, volumes, or secrets.

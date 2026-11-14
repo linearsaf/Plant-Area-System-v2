@@ -125,9 +125,9 @@ test('staged files older than 24 hours are orphaned and removed from storage onc
   assert.equal(await cleanupStagedFiles(Date.now() + 25 * 3_600_000, 1000), 0);
 });
 
-test('s3 driver against MinIO: put, range get, head, no overwrite, delete', async () => {
+test('s3 driver against the S3-compatible test service: put, range get, head, no overwrite, delete', async () => {
   const endpoint = process.env.DRAWINGS_TEST_S3_ENDPOINT;
-  assert.ok(endpoint, 'DRAWINGS_TEST_S3_ENDPOINT diperlukan (MinIO stack uji).');
+  assert.ok(endpoint, 'DRAWINGS_TEST_S3_ENDPOINT diperlukan (layanan s3 stack uji).');
   const bucket = 'drawings-test-' + randomUUID().slice(0, 8);
   const storage = new S3Storage({
     driver: 's3',

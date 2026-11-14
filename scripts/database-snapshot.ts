@@ -19,6 +19,7 @@ const databases = [
   ['plant_auth', 'AUTH_MIGRATION_DATABASE_URL'],
   ['plant_bag_filter', 'BAG_MIGRATION_DATABASE_URL'],
   ['plant_consumables', 'CONSUMABLES_MIGRATION_DATABASE_URL'],
+  ['plant_drawings', 'DRAWINGS_MIGRATION_DATABASE_URL'],
 ] as const;
 const ephemeral = new Set(['plant_auth.sessions', 'plant_auth.verifications', 'plant_auth.login_attempts']);
 const hash = (v: string) => createHash('sha256').update(v).digest('hex');
@@ -38,7 +39,8 @@ async function migrationsHash() {
       else if (/\.(sql|json)$/.test(e.name)) files.push(path);
     }
   }
-  for (const core of ['auth-core', 'bag-core', 'consumables-core']) await walk(`packages/${core}/migrations`);
+  for (const core of ['auth-core', 'bag-core', 'consumables-core', 'drawings-core'])
+    await walk(`packages/${core}/migrations`);
   const h = createHash('sha256');
   for (const file of files.sort((a, b) =>
     a.replaceAll('\\', '/').localeCompare(b.replaceAll('\\', '/'), 'en'),
@@ -69,7 +71,7 @@ async function capture() {
     if (!uri || new URL(uri).pathname !== '/' + database) throw Error(`${env} harus menunjuk ${database}.`);
     const target = new URL(uri);
     const address = target.hostname + ':' + (target.port || '3306');
-    if (endpoint && endpoint !== address) throw Error('Ketiga URL harus menunjuk satu instance MySQL.');
+    if (endpoint && endpoint !== address) throw Error('Semua URL harus menunjuk satu instance MySQL.');
     endpoint = address;
     const connection = await mysql.createConnection({
       uri,

@@ -5,5 +5,7 @@
 services:
   drawings:
     networks: [private, egress]
+  drawings-ops:
+    networks: [private, egress]
 networks:
   egress: {}
