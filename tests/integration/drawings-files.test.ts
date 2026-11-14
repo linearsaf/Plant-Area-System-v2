@@ -138,7 +138,16 @@ test('s3 driver against the S3-compatible test service: put, range get, head, no
     secretAccessKey: process.env.DRAWINGS_TEST_S3_SECRET_ACCESS_KEY!,
     forcePathStyle: true,
   });
-  await storage.rawClient.send(new CreateBucketCommand({ Bucket: bucket }));
+  // The stack waits for the s3 healthcheck; retry briefly in case the gateway is still settling.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await storage.rawClient.send(new CreateBucketCommand({ Bucket: bucket }));
+      break;
+    } catch (error) {
+      if (attempt >= 30) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
   const bytes = await samplePdf(1);
   const input = await body(bytes);
   const key = storageKey(randomUUID(), 'pdf');

@@ -52,10 +52,12 @@ await writeFile(
   // Docker requires an explicitly configured subnet for `docker run --ip`.
   'services:\n  mysql:\n    ports: ["127.0.0.1:13306:3306"]\n    networks: [private, test-host]\n' +
     // S3-compatible storage for the Drawing Database `s3` driver tests only. The minio/minio image is
-    // no longer available on Docker Hub; SeaweedFS serves the S3 API. Credentials come from stack.env.
+    // no longer available on Docker Hub; SeaweedFS serves the S3 API (4.51 supports conditional
+    // PUT If-None-Match, used by the no-overwrite rule). Credentials come from stack.env. The healthcheck
+    // makes `up --wait` block until the S3 port answers; without it the first request was reset.
     [
       '  s3:',
-      '    image: chrislusf/seaweedfs:3.85',
+      '    image: chrislusf/seaweedfs:4.51',
       '    entrypoint: [sh, -c]',
       '    command:',
       '      - >-',
@@ -64,6 +66,12 @@ await writeFile(
       '    environment:',
       '      S3_KEY: ${DRAWINGS_TEST_S3_ACCESS_KEY_ID:?Set DRAWINGS_TEST_S3_ACCESS_KEY_ID}',
       '      S3_SECRET: ${DRAWINGS_TEST_S3_SECRET_ACCESS_KEY:?Set DRAWINGS_TEST_S3_SECRET_ACCESS_KEY}',
+      '    healthcheck:',
+      '      test: [CMD, curl, -fsS, -o, /dev/null, "http://127.0.0.1:8333/healthz"]',
+      '      interval: 2s',
+      '      timeout: 3s',
+      '      retries: 30',
+      '      start_period: 5s',
       '    ports: ["127.0.0.1:19000:8333"]',
       '    networks: [private, test-host]',
       '',
