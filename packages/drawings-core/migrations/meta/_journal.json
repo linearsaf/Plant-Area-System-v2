@@ -15,6 +15,13 @@
       "when": 1794676070284,
       "tag": "0001_drawing_core",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1794679096744,
+      "tag": "0002_remove_area",
+      "breakpoints": true
     }
   ]
 }

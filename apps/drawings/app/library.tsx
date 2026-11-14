@@ -15,13 +15,12 @@ import { LegacyBadge, StatusBadge } from './status-badge';
 type Filters = {
   q: string;
   status: string;
-  areaId: string;
   disciplineId: string;
   revision: string;
   from: string;
   to: string;
 };
-const empty: Filters = { q: '', status: '', areaId: '', disciplineId: '', revision: '', from: '', to: '' };
+const empty: Filters = { q: '', status: '', disciplineId: '', revision: '', from: '', to: '' };
 
 export function Library({
   masters,
@@ -140,7 +139,7 @@ export function Library({
           <span className="sr-only">Cari</span>
           <Input
             type="search"
-            placeholder="Cari nomor, nama, HAC/SAC atau area"
+            placeholder="Cari nomor, nama atau HAC/SAC"
             maxLength={100}
             value={filters.q}
             onChange={set('q')}
@@ -156,17 +155,6 @@ export function Library({
                 {revisionStatuses.map((s) => (
                   <option key={s} value={s}>
                     {revisionStatusLabels[s]}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <label>
-              Area
-              <Select value={filters.areaId} onChange={set('areaId')}>
-                <option value="">Semua area</option>
-                {masters.areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
                   </option>
                 ))}
               </Select>
@@ -241,7 +229,6 @@ export function Library({
                 <th scope="col">Drawing Number</th>
                 <th scope="col">Drawing Name</th>
                 <th scope="col">HAC/SAC</th>
-                <th scope="col">Area</th>
                 <th scope="col">Rev</th>
                 <th scope="col">Status</th>
                 <th scope="col">Drawn by</th>
@@ -261,7 +248,6 @@ export function Library({
                     {d.revising && <small className="muted block">Revisi berikutnya sedang diproses</small>}
                   </td>
                   <td className="code-text">{d.hac}</td>
-                  <td>{d.area}</td>
                   <td>{d.revisionNo}</td>
                   <td>
                     <StatusBadge status={d.status} />
@@ -280,7 +266,7 @@ export function Library({
               <strong className="code-text">{d.number || 'Tanpa nomor'}</strong>
               <span>{d.title || '–'}</span>
               <span className="muted">
-                {d.hac} · {d.area} · Rev {d.revisionNo}
+                {d.hac} · Rev {d.revisionNo}
               </span>
               <span className="drawing-card-badges">
                 <StatusBadge status={d.status} />

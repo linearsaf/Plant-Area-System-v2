@@ -31,7 +31,7 @@ import {
   type TimelineEntry,
 } from '@plant/contracts';
 import { requireActiveMaster } from './masters';
-import { areas, audit, disciplines, drawings, files, revisions } from './schema';
+import { audit, disciplines, drawings, files, revisions } from './schema';
 import {
   db,
   decodeCursor,
@@ -99,7 +99,6 @@ export async function createDrawing(actor: Identity, input: unknown, key: string
   const data = parse(drawingCreateSchema, input);
   try {
     return await idempotent(actor, key, 'drawing.create', data, async (tx) => {
-      await requireActiveMaster(tx, 'areas', data.areaId);
       if (data.disciplineId) await requireActiveMaster(tx, 'disciplines', data.disciplineId);
       const id = randomUUID(),
         revisionId = randomUUID(),
@@ -109,7 +108,6 @@ export async function createDrawing(actor: Identity, input: unknown, key: string
         number: data.number,
         title: data.title,
         hac: data.hac,
-        areaId: data.areaId,
         disciplineId: data.disciplineId ?? null,
         description: data.description,
         ownerId: actor.id,
@@ -162,7 +160,6 @@ export async function createLegacyDrawing(
   }
   try {
     return await idempotent(actor, key, 'drawing.legacy', data, async (tx) => {
-      await requireActiveMaster(tx, 'areas', data.areaId);
       await requireActiveMaster(tx, 'disciplines', data.disciplineId);
       const id = randomUUID(),
         revisionId = randomUUID(),
@@ -172,7 +169,6 @@ export async function createLegacyDrawing(
         number: data.number,
         title: data.title,
         hac: data.hac,
-        areaId: data.areaId,
         disciplineId: data.disciplineId,
         description: data.description,
         ownerId: data.ownerId,
@@ -263,8 +259,6 @@ export async function updateDrawing(actor: Identity, id: string, input: unknown)
           throw new AppError(409, 'Revisi ini tidak dapat diedit.', 'INVALID_TRANSITION');
         if (!permissions.edit) throw new AppError(403, 'Anda tidak dapat mengedit revisi ini.');
       }
-      if (changes.areaId && changes.areaId !== d.areaId)
-        await requireActiveMaster(tx, 'areas', changes.areaId);
       if (changes.disciplineId && changes.disciplineId !== d.disciplineId)
         await requireActiveMaster(tx, 'disciplines', changes.disciplineId);
       const now = new Date();
@@ -446,7 +440,7 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
   if (q) {
     const like = `%${likeEscape(q)}%`;
     where.push(
-      sql`(${drawings.number} LIKE ${like} OR ${drawings.title} LIKE ${like} OR ${drawings.hac} LIKE ${like} OR ${areas.name} LIKE ${like})`,
+      sql`(${drawings.number} LIKE ${like} OR ${drawings.title} LIKE ${like} OR ${drawings.hac} LIKE ${like})`,
     );
   }
   const status = params.get('status');
@@ -456,7 +450,6 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
     where.push(eq(revisions.status, status));
   }
   for (const [param, column] of [
-    ['areaId', drawings.areaId],
     ['disciplineId', drawings.disciplineId],
     ['ownerId', drawings.ownerId],
   ] as const) {
@@ -477,25 +470,22 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
   const rows = await db()
     .select({
       d: drawings,
-      area: areas.name,
       discipline: disciplines.name,
       revisionNo: revisions.revisionNo,
       status: revisions.status,
     })
     .from(drawings)
-    .innerJoin(areas, eq(areas.id, drawings.areaId))
     .leftJoin(disciplines, eq(disciplines.id, drawings.disciplineId))
     .innerJoin(revisions, eq(revisions.id, display))
     .where(and(...where))
     .orderBy(desc(sortTime), desc(drawings.id))
     .limit(PAGE + 1);
   const page = rows.slice(0, PAGE);
-  const items: DrawingListItem[] = page.map(({ d, area, discipline, revisionNo, status }) => ({
+  const items: DrawingListItem[] = page.map(({ d, discipline, revisionNo, status }) => ({
     id: d.id,
     number: d.number,
     title: d.title,
     hac: d.hac,
-    area,
     discipline,
     owner: { id: d.ownerId, name: d.ownerName },
     source: d.source as 'standard' | 'legacy',
@@ -559,7 +549,6 @@ async function loadVisible(actor: Identity, id: string) {
 export async function drawingDetail(actor: Identity, id: string): Promise<DrawingDetail> {
   const d = await loadVisible(actor, id);
   const seeWip = canSeeWip(actor, d);
-  const [area] = await db().select().from(areas).where(eq(areas.id, d.areaId));
   const [discipline] = d.disciplineId
     ? await db().select().from(disciplines).where(eq(disciplines.id, d.disciplineId))
     : [];
@@ -576,8 +565,6 @@ export async function drawingDetail(actor: Identity, id: string): Promise<Drawin
     number: d.number,
     title: d.title,
     hac: d.hac,
-    areaId: d.areaId,
-    area: area?.name ?? '',
     disciplineId: d.disciplineId,
     discipline: discipline?.name ?? null,
     description: d.description,

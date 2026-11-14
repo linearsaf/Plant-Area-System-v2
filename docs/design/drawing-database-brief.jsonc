@@ -68,7 +68,7 @@
     },
     {
       "id": "K10",
-      "text": "Area dan Discipline berupa master terkelola.",
+      "text": "Discipline berupa master terkelola. Area tidak dipakai (dihapus 2026-11-15); lokasi diwakili HAC/SAC.",
       "source": "jawaban pemilik 2026-11-14",
     },
     {
@@ -88,7 +88,7 @@
       "Drawing Request (intake, review, assignment, draft)",
       "Tugas saya, notifikasi in-app, ringkasan, kartu Portal",
       "PDF viewer, print dan download Final Drawing",
-      "Audit, master Area/Discipline, void, pembatalan revisi",
+      "Audit, master Discipline, void, pembatalan revisi",
     ],
     "out": [
       "Autentikasi, Request Access, reset password, account settings, User Management (Auth/Portal)",
@@ -369,7 +369,6 @@
         "drawingNumber",
         "title",
         "hac",
-        "areaId",
         "disciplineId",
         "revisionNo",
         "ownerId (Drawn by)",
@@ -391,7 +390,6 @@
       "numberFormat": "DRQ-YYYY-NNNNNN (tahun WIB, sekuens per tahun)",
       "fields": {
         "hac": "wajib",
-        "areaId": "wajib",
         "description": "1–2000",
         "purpose": "1–1000",
         "images": "maks 3",
@@ -400,7 +398,7 @@
         "viewer/approver/head/admin membuat request → pending_review",
         "leader/admin: reject (alasan) → review_rejected; assign drafter → waiting_drafter_acceptance",
         "drafter: reject (alasan) → drafter_rejected (kembali ke leader); accept → in_progress + drawing draft",
-        "Draft hasil request: hac, area, description terisi; nomor, nama, discipline, file kosong sampai dilengkapi",
+        "Draft hasil request: hac, description terisi; nomor, nama, discipline, file kosong sampai dilengkapi",
         "Revisi pertama completed → closed (selesai). Drawing void → closed (alasan)",
         "Pemohon boleh membatalkan saat pending_review → closed",
       ],
@@ -454,7 +452,6 @@
       "drawingNumber": "1–100, unik di antara drawing tidak void; boleh kosong hanya pada draft hasil request",
       "title": "1–255",
       "hac": "wajib, 1–40, trim + kapital + buang prefiks TQ. (normalizeHec); saran dari nilai yang ada",
-      "areaId": "wajib, master",
       "disciplineId": "wajib saat submit, master",
       "description": "opsional, maks 2000",
       "revisionNo": "1–20 [A-Za-z0-9.-], default 0, unik per drawing di antara revisi tidak cancelled",
@@ -463,7 +460,6 @@
     },
     "masters": {
       "disciplinesSeed": ["Mechanical", "Piping", "Structural", "Electrical", "Instrumentation", "Civil"],
-      "areasSeed": [],
       "deactivated": "tetap tampil pada data lama, tidak dapat dipilih untuk data baru",
     },
     "concurrency": {
@@ -479,14 +475,13 @@
       "noFileIoInTransaction": true,
     },
     "tables": {
-      "areas": "nama unik, aktif, urutan, versi",
       "disciplines": "nama unik, aktif, urutan, versi",
-      "drawings": "nomor, nama, hac, area, discipline, deskripsi, owner, uploader, source, legacy note, currentRevisionId, releasedRevisionId, work status, request asal, void, versi",
+      "drawings": "nomor, nama, hac, discipline, deskripsi, owner, uploader, source, legacy note, currentRevisionId, releasedRevisionId, work status, request asal, void, versi",
       "drawing_revisions": "drawing, nomor revisi, status, siklus, file kerja, file issued, change note, submitter, waktu submit/completed/obsolete, pembatalan",
       "revision_approval_steps": "revisi, level 1/2, assignee, penugas; unik revisi+level",
       "approval_actions": "revisi, siklus, level 0/1/2, keputusan, catatan, actor, role, file ditinjau; unik revisi+siklus+level",
       "drawing_files": "jenis, tujuan, storage key, nama asli, MIME, ukuran, sha256, halaman, status staged/attached/orphaned, pemilik, rujukan",
-      "drawing_requests": "nomor, pemohon, hac, area, deskripsi, keperluan, status, reviewer, drafter, catatan, drawing hasil, alasan tutup, versi",
+      "drawing_requests": "nomor, pemohon, hac, deskripsi, keperluan, status, reviewer, drafter, catatan, drawing hasil, alasan tutup, versi",
       "drawing_sequences": "sekuens nomor request per tahun",
       "drawing_notifications": "penerima, jenis, judul, isi, tautan, source_key unik, dibaca",
       "drawing_audit": "actor, aksi, target, drawing terkait, detail JSON, waktu",
@@ -726,7 +721,7 @@
         "/discovery?q=",
         "/tasks",
         "/tasks/count",
-        "/drawings?tab=&q=&status=&areaId=&disciplineId=&ownerId=&revision=&from=&to=&cursor=",
+        "/drawings?tab=&q=&status=&disciplineId=&ownerId=&revision=&from=&to=&cursor=",
         "/drawings/:id",
         "/drawings/:id/timeline?cursor=",
         "/revisions/:id/file",
@@ -758,7 +753,6 @@
         "POST /requests/:id/drafter-decision",
         "POST /requests/:id/cancel",
         "POST /notifications/read",
-        "POST|PATCH /masters/areas[/:id]",
         "POST|PATCH /masters/disciplines[/:id]",
       ],
       "errorCodes": [
@@ -847,8 +841,8 @@
     },
     "library": {
       "tabs": ["Final", "Dalam proses", "Dibatalkan (admin)"],
-      "search": ["nomor", "nama", "HAC/SAC", "area"],
-      "filters": ["status", "area", "discipline", "owner", "revisi", "rentang tanggal WIB"],
+      "search": ["nomor", "nama", "HAC/SAC"],
+      "filters": ["status", "discipline", "owner", "revisi", "rentang tanggal WIB"],
       "views": { "default": "daftar ringkas", "optional": "kartu" },
     },
     "review": "viewer besar + panel keputusan; vertikal di bawah 960 px",
@@ -1041,7 +1035,6 @@
       "default": "format bebas ternormalisasi, 1–40 karakter",
     },
     { "id": "Q3", "question": "Batas ukuran PDF dan anggaran memori VPS", "default": "25 MB; 768 MB" },
-    { "id": "Q4", "question": "Daftar awal Area", "default": "kosong, diisi admin" },
     {
       "id": "Q5",
       "question": "Penyesuaian terhadap referensi di luar K7–K10 (alur request, owner, admin review)",

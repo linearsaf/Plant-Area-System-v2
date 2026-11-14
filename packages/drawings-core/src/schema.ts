@@ -28,8 +28,6 @@ const master = (name: string) =>
     },
     (t) => [uniqueIndex(`${name}_name_uq`).on(t.name)],
   );
-/** Master Area (K10). Dimulai kosong, diisi Admin. */
-export const areas = master('areas');
 /** Master Discipline (K10). Nilai awal disisipkan migrasi. */
 export const disciplines = master('disciplines');
 
@@ -45,7 +43,6 @@ export const drawings = mysqlTable(
     number: varchar('number', { length: 100 }),
     title: varchar('title', { length: 255 }),
     hac: varchar('hac', { length: 40 }).notNull(),
-    areaId: varchar('area_id', { length: 36 }).notNull(),
     disciplineId: varchar('discipline_id', { length: 36 }),
     description: text('description').notNull(),
     ownerId: varchar('owner_id', { length: 36 }).notNull(),
@@ -78,7 +75,6 @@ export const drawings = mysqlTable(
     index('drawings_released_idx').on(t.releasedAt, t.id),
     index('drawings_updated_idx').on(t.updatedAt, t.id),
     index('drawings_owner_idx').on(t.ownerId),
-    index('drawings_area_idx').on(t.areaId),
     index('drawings_hac_idx').on(t.hac),
   ],
 );

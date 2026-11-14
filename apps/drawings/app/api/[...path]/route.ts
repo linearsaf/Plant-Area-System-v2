@@ -111,18 +111,13 @@ async function mutate(request: Request, context: Context) {
         return replayable(await voidDrawing(actor, segments[1], body, key));
       if (segments.length === 3 && segments[0] === 'drawings' && segments[2] === 'owner')
         return replayable(await transferOwner(actor, segments[1], body, key, directory));
-      if (path === 'masters/areas' || path === 'masters/disciplines')
-        return json(await createMaster(actor, segments[1] as 'areas', body), 201);
+      if (path === 'masters/disciplines') return json(await createMaster(actor, 'disciplines', body), 201);
     }
     if (request.method === 'PATCH') {
       if (segments.length === 2 && segments[0] === 'drawings')
         return json(await updateDrawing(actor, segments[1], body));
-      if (
-        segments.length === 3 &&
-        segments[0] === 'masters' &&
-        (segments[1] === 'areas' || segments[1] === 'disciplines')
-      )
-        return json(await updateMaster(actor, segments[1], segments[2], body));
+      if (segments.length === 3 && segments[0] === 'masters' && segments[1] === 'disciplines')
+        return json(await updateMaster(actor, 'disciplines', segments[2], body));
     }
     throw new AppError(404, 'Endpoint tidak ditemukan.');
   } catch (e) {

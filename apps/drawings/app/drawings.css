@@ -329,7 +329,8 @@
     padding: var(--space-2) 0;
     border-bottom: 1px solid var(--divider);
   }
-  .revision-row {
+  .revision-row,
+  .revision-list li.revision-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;

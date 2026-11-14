@@ -1,4 +1,4 @@
-// Master Area dan Discipline (K10). Hanya admin yang mengubah; nonaktif tetap tampil pada data lama.
+// Master Discipline (K10). Hanya admin yang mengubah; nonaktif tetap tampil pada data lama.
 import { randomUUID } from 'node:crypto';
 import { asc, eq } from 'drizzle-orm';
 import {
@@ -10,13 +10,13 @@ import {
   type Identity,
   type MasterItem,
 } from '@plant/contracts';
-import { areas, disciplines } from './schema';
+import { disciplines } from './schema';
 import { db, mysqlCode, parse, writeAudit, type Tx } from './support';
 
-export type MasterKind = 'areas' | 'disciplines';
-const tables = { areas, disciplines } as const;
-const labels = { areas: 'Area', disciplines: 'Discipline' } as const;
-const toItem = (r: typeof areas.$inferSelect): MasterItem => ({
+export type MasterKind = 'disciplines';
+const tables = { disciplines } as const;
+const labels = { disciplines: 'Discipline' } as const;
+const toItem = (r: typeof disciplines.$inferSelect): MasterItem => ({
   id: r.id,
   name: r.name,
   active: r.active,
@@ -25,11 +25,8 @@ const toItem = (r: typeof areas.$inferSelect): MasterItem => ({
 });
 
 export async function listMasters(): Promise<DrawingsMasters> {
-  const [a, d] = await Promise.all([
-    db().select().from(areas).orderBy(asc(areas.sortOrder), asc(areas.name)),
-    db().select().from(disciplines).orderBy(asc(disciplines.sortOrder), asc(disciplines.name)),
-  ]);
-  return { areas: a.map(toItem), disciplines: d.map(toItem) };
+  const d = await db().select().from(disciplines).orderBy(asc(disciplines.sortOrder), asc(disciplines.name));
+  return { disciplines: d.map(toItem) };
 }
 
 function requireAdmin(actor: Identity) {
@@ -48,14 +45,7 @@ export async function createMaster(actor: Identity, kind: MasterKind, input: unk
       await tx
         .insert(table)
         .values({ id, ...data, active: true, version: 1, createdAt: now, updatedAt: now });
-      await writeAudit(
-        tx,
-        actor,
-        `master.${kind}.created`,
-        kind === 'areas' ? 'area' : 'discipline',
-        id,
-        data,
-      );
+      await writeAudit(tx, actor, `master.${kind}.created`, 'discipline', id, data);
     });
   } catch (e) {
     if (mysqlCode(e) === 'ER_DUP_ENTRY')
@@ -81,7 +71,7 @@ export async function updateMaster(actor: Identity, kind: MasterKind, id: string
         );
       const next = { ...changes, version: row.version + 1, updatedAt: new Date() };
       await tx.update(table).set(next).where(eq(table.id, id));
-      await writeAudit(tx, actor, `master.${kind}.updated`, kind === 'areas' ? 'area' : 'discipline', id, {
+      await writeAudit(tx, actor, `master.${kind}.updated`, 'discipline', id, {
         before: toItem(row),
         changes,
       });

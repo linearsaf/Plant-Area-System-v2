@@ -40,7 +40,6 @@ export function DrawingForm({
     number: drawing?.number ?? '',
     title: drawing?.title ?? '',
     hac: drawing?.hac ?? '',
-    areaId: drawing?.areaId ?? '',
     disciplineId: drawing?.disciplineId ?? '',
     description: drawing?.description ?? '',
     revisionNo: revision?.revisionNo ?? '0',
@@ -75,7 +74,6 @@ export function DrawingForm({
       .then((d) => setPeople(d.people))
       .catch((e) => setError(e.message));
   }, [mode]);
-  const areaOptions = useMemo(() => options(masters.areas, drawing?.areaId), [masters, drawing]);
   const disciplineOptions = useMemo(
     () => options(masters.disciplines, drawing?.disciplineId),
     [masters, drawing],
@@ -95,7 +93,6 @@ export function DrawingForm({
             number: values.number,
             title: values.title,
             hac: values.hac,
-            areaId: values.areaId,
             disciplineId: values.disciplineId || null,
             description: values.description,
             revisionNo: values.revisionNo,
@@ -114,7 +111,6 @@ export function DrawingForm({
             number: values.number,
             title: values.title,
             hac: values.hac,
-            areaId: values.areaId,
             disciplineId: values.disciplineId,
             description: values.description,
             revisionNo: values.revisionNo,
@@ -131,7 +127,6 @@ export function DrawingForm({
           if (values.number !== (drawing.number ?? '')) changes.number = values.number;
           if (values.title !== (drawing.title ?? '')) changes.title = values.title;
           if (values.hac !== drawing.hac) changes.hac = values.hac;
-          if (values.areaId !== drawing.areaId) changes.areaId = values.areaId;
           if (values.disciplineId !== (drawing.disciplineId ?? ''))
             changes.disciplineId = values.disciplineId || null;
           if (values.description !== drawing.description) changes.description = values.description;
@@ -144,7 +139,7 @@ export function DrawingForm({
         if (
           correction &&
           Object.keys(changes).some((k) =>
-            ['number', 'title', 'hac', 'areaId', 'disciplineId', 'description'].includes(k),
+            ['number', 'title', 'hac', 'disciplineId', 'description'].includes(k),
           )
         )
           changes.reason = values.reason;
@@ -200,17 +195,6 @@ export function DrawingForm({
             </datalist>
           </label>
           <label>
-            Area
-            <Select required value={values.areaId} onChange={set('areaId')}>
-              <option value="">Pilih Area</option>
-              {areaOptions.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name + (a.active ? '' : ' (nonaktif)')}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label>
             Discipline{mode === 'legacy' ? '' : ' (wajib saat Submit)'}
             <Select required={mode === 'legacy'} value={values.disciplineId} onChange={set('disciplineId')}>
               <option value="">Pilih Discipline</option>
@@ -225,11 +209,6 @@ export function DrawingForm({
             Description
             <Textarea maxLength={2000} rows={3} value={values.description} onChange={set('description')} />
           </label>
-          {!masters.areas.some((a) => a.active) && (
-            <p className="notice full">
-              Belum ada Area aktif. Admin perlu menambahkan Area pada menu Pengelolaan.
-            </p>
-          )}
         </fieldset>
       )}
       {showRevision && (

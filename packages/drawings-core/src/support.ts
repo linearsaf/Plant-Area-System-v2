@@ -36,7 +36,7 @@ export function parse<T extends z.ZodType>(schema: T, input: unknown): z.output<
   return result.data;
 }
 
-export type AuditTarget = 'drawing' | 'revision' | 'file' | 'area' | 'discipline';
+export type AuditTarget = 'drawing' | 'revision' | 'file' | 'discipline';
 export function auditEntry(
   actor: Pick<Identity, 'id' | 'name'>,
   action: string,

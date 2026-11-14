@@ -67,7 +67,6 @@ export const drawingCreateSchema = z
     number: text('Drawing Number', 1, 100),
     title: text('Drawing Name', 1, 255),
     hac,
-    areaId: id,
     disciplineId: id.nullable().optional(),
     description: text('Description', 0, 2000).default(''),
     revisionNo: revisionNoSchema.default('0'),
@@ -82,7 +81,6 @@ export const legacyCreateSchema = z
     number: text('Drawing Number', 1, 100),
     title: text('Drawing Name', 1, 255),
     hac,
-    areaId: id,
     disciplineId: id,
     description: text('Description', 0, 2000).default(''),
     revisionNo: revisionNoSchema,
@@ -100,7 +98,6 @@ export const drawingUpdateSchema = z
     number: text('Drawing Number', 1, 100).optional(),
     title: text('Drawing Name', 1, 255).optional(),
     hac: hac.optional(),
-    areaId: id.optional(),
     disciplineId: id.nullable().optional(),
     description: text('Description', 0, 2000).optional(),
     revisionNo: revisionNoSchema.optional(),
@@ -110,14 +107,7 @@ export const drawingUpdateSchema = z
   })
   .strict();
 export type DrawingUpdateInput = z.input<typeof drawingUpdateSchema>;
-export const drawingMetadataFields = [
-  'number',
-  'title',
-  'hac',
-  'areaId',
-  'disciplineId',
-  'description',
-] as const;
+export const drawingMetadataFields = ['number', 'title', 'hac', 'disciplineId', 'description'] as const;
 export const revisionDataFields = ['revisionNo', 'changeNote', 'fileId'] as const;
 
 export const voidSchema = z.object({ expectedVersion: version, reason: text('Alasan', 1, 500) }).strict();
@@ -140,7 +130,7 @@ export const libraryTabs = ['released', 'wip', 'void'] as const;
 export type LibraryTab = (typeof libraryTabs)[number];
 
 export type MasterItem = { id: string; name: string; active: boolean; sortOrder: number; version: number };
-export type DrawingsMasters = { areas: MasterItem[]; disciplines: MasterItem[] };
+export type DrawingsMasters = { disciplines: MasterItem[] };
 export type PersonRef = { id: string; name: string };
 export type RevisionSummary = {
   id: string;
@@ -164,7 +154,6 @@ export type DrawingListItem = {
   number: string | null;
   title: string | null;
   hac: string;
-  area: string;
   discipline: string | null;
   owner: PersonRef;
   source: 'standard' | 'legacy';
@@ -190,8 +179,6 @@ export type DrawingDetail = {
   number: string | null;
   title: string | null;
   hac: string;
-  areaId: string;
-  area: string;
   disciplineId: string | null;
   discipline: string | null;
   description: string;

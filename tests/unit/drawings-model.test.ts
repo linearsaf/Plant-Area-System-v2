@@ -90,8 +90,8 @@ test('input schemas validate PRD §5 field rules', () => {
     number: ' DWG-001 ',
     title: 'Pump house',
     hac: ' tq.561-bf1 ',
-    areaId: '11111111-2222-4333-8444-555555555555',
   };
+  const uuid = '11111111-2222-4333-8444-555555555555';
   const parsed = drawingCreateSchema.parse(base);
   assert.equal(parsed.number, 'DWG-001');
   assert.equal(parsed.hac, '561-BF1');
@@ -104,17 +104,19 @@ test('input schemas validate PRD §5 field rules', () => {
     { ...base, hac: 'X'.repeat(41) },
     { ...base, revisionNo: 'A B' },
     { ...base, revisionNo: 'x'.repeat(21) },
-    { ...base, areaId: 'nope' },
+    { ...base, disciplineId: 'nope' },
+    // Area tidak dipakai lagi; isian yang tidak dikenal ditolak.
+    { ...base, areaId: uuid },
     { ...base, submit: true },
   ])
     assert.equal(drawingCreateSchema.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 60));
   assert.equal(
     legacyCreateSchema.safeParse({
       ...base,
-      disciplineId: base.areaId,
+      disciplineId: uuid,
       revisionNo: 'A',
-      ownerId: base.areaId,
-      fileId: base.areaId,
+      ownerId: uuid,
+      fileId: uuid,
       legacyNote: '',
     }).success,
     false,

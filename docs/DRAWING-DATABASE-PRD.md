@@ -12,23 +12,23 @@ Versi terstruktur dokumen ini: [drawing-database-brief.jsonc](design/drawing-dat
 
 ## 1. Keputusan yang sudah dikunci
 
-| #   | Keputusan                                                                                                                                                                                           | Asal                           |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| K1  | Login, sesi, akun, reset password dan grant tetap dikelola Auth/Portal TQ-CMMS. Drawing Database tidak mempunyai tabel user, halaman login, Request Access atau User Management sendiri.            | Instruksi pemilik              |
-| K2  | UI melebur dengan TQ-CMMS: `@plant/ui`, token, shell, tema dan pola halaman yang sama. Tidak ada Tailwind, palet atau brand DrafTerra.                                                              | Instruksi pemilik              |
-| K3  | Teknologi mengikuti platform: Next.js 16.4.2 App Router, React 19.3.1, Drizzle ORM 0.45.4, MySQL 8.4, zod 4.5.4, Node 26.12.1, pnpm 12.14.0.                                                        | Instruksi pemilik              |
-| K4  | File disimpan di object storage eksternal S3-compatible. Layanannya belum disiapkan, sehingga implementasi memakai abstraksi storage dengan driver `s3` (target) dan `fs` (development, sementara). | Jawaban pemilik, 14 Nov 2026   |
-| K5  | Data mulai kosong. Tidak ada migrasi dari database DrafTerra. Drawing lama masuk lewat Upload Old Drawing.                                                                                          | Jawaban pemilik                |
-| K6  | Bukti approval berupa stamp di halaman 1, dibuat satu kali saat revisi Completed dari data approval. File asli tidak diubah. Approver tidak dapat mematikan stamp.                                  | Jawaban pemilik                |
-| K7  | Final Drawing tetap dapat dibuka selama revisi berikutnya diproses.                                                                                                                                 | Jawaban pemilik                |
-| K8  | Maker-checker: pembuat drawing tidak dapat melakukan Check atau Approval atas drawing sendiri, termasuk Admin.                                                                                      | Jawaban pemilik                |
-| K9  | Void dengan alasan menggantikan hapus permanen. Data, file dan audit tidak dihapus.                                                                                                                 | Jawaban pemilik                |
-| K10 | Area dan Discipline berupa master yang dikelola admin, bukan teks bebas.                                                                                                                            | Jawaban pemilik                |
-| K11 | PDF viewer dibangun in-page dengan komponen viewer PDF.js (`pdfjs-dist`), bukan iframe.                                                                                                             | Instruksi pemilik + temuan §12 |
+| #   | Keputusan                                                                                                                                                                                           | Asal                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| K1  | Login, sesi, akun, reset password dan grant tetap dikelola Auth/Portal TQ-CMMS. Drawing Database tidak mempunyai tabel user, halaman login, Request Access atau User Management sendiri.            | Instruksi pemilik                         |
+| K2  | UI melebur dengan TQ-CMMS: `@plant/ui`, token, shell, tema dan pola halaman yang sama. Tidak ada Tailwind, palet atau brand DrafTerra.                                                              | Instruksi pemilik                         |
+| K3  | Teknologi mengikuti platform: Next.js 16.4.2 App Router, React 19.3.1, Drizzle ORM 0.45.4, MySQL 8.4, zod 4.5.4, Node 26.12.1, pnpm 12.14.0.                                                        | Instruksi pemilik                         |
+| K4  | File disimpan di object storage eksternal S3-compatible. Layanannya belum disiapkan, sehingga implementasi memakai abstraksi storage dengan driver `s3` (target) dan `fs` (development, sementara). | Jawaban pemilik, 14 Nov 2026              |
+| K5  | Data mulai kosong. Tidak ada migrasi dari database DrafTerra. Drawing lama masuk lewat Upload Old Drawing.                                                                                          | Jawaban pemilik                           |
+| K6  | Bukti approval berupa stamp di halaman 1, dibuat satu kali saat revisi Completed dari data approval. File asli tidak diubah. Approver tidak dapat mematikan stamp.                                  | Jawaban pemilik                           |
+| K7  | Final Drawing tetap dapat dibuka selama revisi berikutnya diproses.                                                                                                                                 | Jawaban pemilik                           |
+| K8  | Maker-checker: pembuat drawing tidak dapat melakukan Check atau Approval atas drawing sendiri, termasuk Admin.                                                                                      | Jawaban pemilik                           |
+| K9  | Void dengan alasan menggantikan hapus permanen. Data, file dan audit tidak dihapus.                                                                                                                 | Jawaban pemilik                           |
+| K10 | Discipline berupa master yang dikelola admin, bukan teks bebas. Area tidak dipakai; lokasi cukup diwakili HAC/SAC.                                                                                  | Jawaban pemilik; Area dihapus 15 Nov 2026 |
+| K11 | PDF viewer dibangun in-page dengan komponen viewer PDF.js (`pdfjs-dist`), bukan iframe.                                                                                                             | Instruksi pemilik + temuan §12            |
 
 ## 2. Lingkup
 
-**Termasuk rilis v1:** Drawing Library (cari, filter, detail), Create Drawing, edit draft, Submit to Check, Check, approval plan per revisi, Approval L1, Final Approval, reject dengan catatan dan lampiran gambar, revisi baru dari Final Drawing, Upload Old Drawing (Legacy Ready), Drawing Request (intake → review → assignment → draft), Tugas saya, notifikasi in-app, ringkasan/dashboard, kartu Portal, PDF viewer, print dan download Final Drawing, audit, master Area/Discipline, void dan pembatalan revisi.
+**Termasuk rilis v1:** Drawing Library (cari, filter, detail), Create Drawing, edit draft, Submit to Check, Check, approval plan per revisi, Approval L1, Final Approval, reject dengan catatan dan lampiran gambar, revisi baru dari Final Drawing, Upload Old Drawing (Legacy Ready), Drawing Request (intake → review → assignment → draft), Tugas saya, notifikasi in-app, ringkasan/dashboard, kartu Portal, PDF viewer, print dan download Final Drawing, audit, master Discipline, void dan pembatalan revisi.
 
 **Tidak termasuk:**
 
@@ -138,11 +138,11 @@ Setiap Submit menaikkan nomor **siklus** revisi. Keputusan Check/Approval dicata
 - Ketika revisi baru menjadi Completed, penunjuk rilis berpindah dan revisi sebelumnya menjadi `obsolete` dalam transaksi yang sama.
 - Selama revisi baru diproses, halaman detail menampilkan catatan netral **Revisi berikutnya sedang diproses**. Viewer melihat catatan itu tanpa rincian.
 - Hanya satu revisi yang boleh aktif dikerjakan per drawing.
-- Setelah rilis pertama, metadata drawing (nomor, nama, HAC/SAC, area, discipline, deskripsi) hanya dapat dikoreksi Admin dengan alasan, karena metadata itu juga tampil pada Final Drawing yang berlaku. Owner mengubah data revisi: nomor revisi, change note dan file.
+- Setelah rilis pertama, metadata drawing (nomor, nama, HAC/SAC, discipline, deskripsi) hanya dapat dikoreksi Admin dengan alasan, karena metadata itu juga tampil pada Final Drawing yang berlaku. Owner mengubah data revisi: nomor revisi, change note dan file.
 
 ### 4.5 Upload Old Drawing (Legacy Ready)
 
-Draft Leader atau Admin mengisi nomor, nama, HAC/SAC, area, discipline, nomor revisi, **Drawn by**, **Legacy Ready Note** (wajib) dan file PDF. Drawn by harus pengguna aktif ber-role `drafter`, atau pengunggah sendiri. Drawing langsung `completed` dengan sumber `legacy`, tanpa approval digital, approval plan maupun stamp, dan diberi badge **Legacy Ready**. Pengunggah tercatat sebagai **Uploaded by**. Revisi berikutnya masuk alur normal.
+Draft Leader atau Admin mengisi nomor, nama, HAC/SAC, discipline, nomor revisi, **Drawn by**, **Legacy Ready Note** (wajib) dan file PDF. Drawn by harus pengguna aktif ber-role `drafter`, atau pengunggah sendiri. Drawing langsung `completed` dengan sumber `legacy`, tanpa approval digital, approval plan maupun stamp, dan diberi badge **Legacy Ready**. Pengunggah tercatat sebagai **Uploaded by**. Revisi berikutnya masuk alur normal.
 
 ### 4.6 Drawing Request
 
@@ -155,10 +155,10 @@ Draft Leader atau Admin mengisi nomor, nama, HAC/SAC, area, discipline, nomor re
 | `in_progress`                | Diterima; draft drawing sudah dibuat dan sedang dikerjakan     |
 | `closed`                     | Selesai: drawing terbit, dibatalkan pemohon, atau drawing void |
 
-1. Viewer, Approver, Head atau Admin mengisi HAC/SAC, Area, Description, Keperluan, dan maksimal 3 gambar referensi. Nomor `DRQ-YYYY-NNNNNN` dibuat server (tahun WIB, sekuens per tahun).
+1. Viewer, Approver, Head atau Admin mengisi HAC/SAC, Description, Keperluan, dan maksimal 3 gambar referensi. Nomor `DRQ-YYYY-NNNNNN` dibuat server (tahun WIB, sekuens per tahun).
 2. Draft Leader (atau Admin) menolak dengan alasan wajib, atau menyetujui dan menugaskan ke satu Drafter aktif.
 3. Drafter yang ditugaskan menerima, atau menolak dengan alasan wajib. Penolakan mengembalikan request ke Draft Leader untuk ditugaskan ulang atau ditolak.
-4. Saat diterima, sistem membuat drawing `draft` milik Drafter tersebut dengan HAC/SAC, area dan deskripsi dari request. Nomor drawing, nama, discipline dan file masih kosong dan wajib dilengkapi sebelum Submit. Request menjadi `in_progress`.
+4. Saat diterima, sistem membuat drawing `draft` milik Drafter tersebut dengan HAC/SAC dan deskripsi dari request. Nomor drawing, nama, discipline dan file masih kosong dan wajib dilengkapi sebelum Submit. Request menjadi `in_progress`.
 5. Request menjadi `closed` ketika revisi pertama drawing itu Completed. Pemohon mendapat notifikasi dengan tautan Final Drawing. Bila drawing di-void, request ditutup dengan alasannya.
 6. Pemohon dapat membatalkan request miliknya selama masih `pending_review`.
 
@@ -183,7 +183,6 @@ Pemohon melihat request miliknya; Drafter melihat request yang ditugaskan kepada
 | Drawing Number  | 1–100 karakter, unik di antara drawing yang tidak void. Boleh kosong hanya pada draft hasil request.             |
 | Drawing Name    | 1–255 karakter                                                                                                   |
 | HAC/SAC         | Wajib, 1–40 karakter, di-trim, kapital, prefiks `TQ.` dibuang (`normalizeHec`). Saran dari nilai yang sudah ada. |
-| Area            | Wajib, dari master Area                                                                                          |
 | Discipline      | Wajib saat Submit, dari master Discipline                                                                        |
 | Description     | Opsional, maksimal 2000 karakter                                                                                 |
 | Revision Number | 1–20 karakter `[A-Za-z0-9.-]`, default `0`, unik per drawing di antara revisi yang tidak cancelled               |
@@ -196,7 +195,7 @@ Aturan yang dikunci:
 2. Approval plan disusun per revisi: L1 wajib, L2 opsional.
 3. Reject wajib bercatatan dan selalu kembali ke owner.
 4. Legacy import tidak membuat keputusan approval maupun approval plan.
-5. Master yang dinonaktifkan tetap tampil pada drawing lama, tetapi tidak dapat dipilih untuk data baru. Discipline diberi nilai awal Mechanical, Piping, Structural, Electrical, Instrumentation, Civil. Area dimulai kosong dan diisi Admin.
+5. Master yang dinonaktifkan tetap tampil pada drawing lama, tetapi tidak dapat dipilih untuk data baru. Discipline diberi nilai awal Mechanical, Piping, Structural, Electrical, Instrumentation, Civil.
 6. Actor dan waktu ditentukan server. Waktu disimpan UTC dan ditampilkan WIB. Nama actor disimpan sebagai snapshot; tidak ada foreign key lintas database.
 7. Setiap perubahan dicatat pada audit dalam transaksi yang sama.
 
@@ -300,21 +299,21 @@ Migrasi data Auth `drawings-v1` (pola `migrateConsumablesCatalog`): mengubah sta
 
 Kredensial runtime hanya DML; migrasi memakai kredensial DDL lewat job `migrate`. ID `varchar(36)`, waktu `timestamp(3)` UTC.
 
-| Tabel                     | Isi utama                                                                                                                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `areas`, `disciplines`    | Nama unik, aktif, urutan, versi                                                                                                                                        |
-| `drawings`                | Nomor, nama, HAC/SAC, area, discipline, deskripsi, owner, uploader, sumber, legacy note, penunjuk revisi kerja dan rilis, status kerja, request asal, data void, versi |
-| `drawing_revisions`       | Drawing, nomor revisi, status, siklus, file kerja, file issued, change note, submitter, waktu submit/completed/obsolete, data pembatalan                               |
-| `revision_approval_steps` | Revisi, level (1/2), assignee, penugas, waktu; unik per revisi+level                                                                                                   |
-| `approval_actions`        | Revisi, siklus, level (0/1/2), keputusan, catatan, actor, role actor, file yang ditinjau; unik per revisi+siklus+level                                                 |
-| `drawing_files`           | Jenis, tujuan, key storage, nama asli, MIME, ukuran, SHA-256, jumlah halaman, status (`staged`/`attached`/`orphaned`), pemilik, rujukan induk                          |
-| `drawing_requests`        | Nomor, pemohon, HAC/SAC, area, deskripsi, keperluan, status, reviewer, drafter, catatan, drawing hasil, alasan tutup, versi                                            |
-| `drawing_sequences`       | Sekuens nomor request per tahun                                                                                                                                        |
-| `drawing_notifications`   | Penerima, jenis, judul, isi, tautan, `source_key` unik, waktu dibaca                                                                                                   |
-| `drawing_audit`           | Actor, aksi, target, drawing terkait, detail JSON, waktu                                                                                                               |
-| `drawing_idempotency`     | Actor, key, hash payload, respons tersimpan; unik per actor+key                                                                                                        |
+| Tabel                     | Isi utama                                                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `disciplines`             | Nama unik, aktif, urutan, versi                                                                                                                                  |
+| `drawings`                | Nomor, nama, HAC/SAC, discipline, deskripsi, owner, uploader, sumber, legacy note, penunjuk revisi kerja dan rilis, status kerja, request asal, data void, versi |
+| `drawing_revisions`       | Drawing, nomor revisi, status, siklus, file kerja, file issued, change note, submitter, waktu submit/completed/obsolete, data pembatalan                         |
+| `revision_approval_steps` | Revisi, level (1/2), assignee, penugas, waktu; unik per revisi+level                                                                                             |
+| `approval_actions`        | Revisi, siklus, level (0/1/2), keputusan, catatan, actor, role actor, file yang ditinjau; unik per revisi+siklus+level                                           |
+| `drawing_files`           | Jenis, tujuan, key storage, nama asli, MIME, ukuran, SHA-256, jumlah halaman, status (`staged`/`attached`/`orphaned`), pemilik, rujukan induk                    |
+| `drawing_requests`        | Nomor, pemohon, HAC/SAC, deskripsi, keperluan, status, reviewer, drafter, catatan, drawing hasil, alasan tutup, versi                                            |
+| `drawing_sequences`       | Sekuens nomor request per tahun                                                                                                                                  |
+| `drawing_notifications`   | Penerima, jenis, judul, isi, tautan, `source_key` unik, waktu dibaca                                                                                             |
+| `drawing_audit`           | Actor, aksi, target, drawing terkait, detail JSON, waktu                                                                                                         |
+| `drawing_idempotency`     | Actor, key, hash payload, respons tersimpan; unik per actor+key                                                                                                  |
 
-Keunikan nomor drawing di antara yang tidak void dan nomor revisi di antara yang tidak cancelled memakai kolom generated (`generatedAlwaysAs`) berindeks unik, karena MySQL tidak mempunyai partial index. Indeks lain mengikuti kueri daftar: status+waktu, owner, area, assignee+level, penerima+waktu.
+Keunikan nomor drawing di antara yang tidak void dan nomor revisi di antara yang tidak cancelled memakai kolom generated (`generatedAlwaysAs`) berindeks unik, karena MySQL tidak mempunyai partial index. Indeks lain mengikuti kueri daftar: status+waktu, owner, HAC/SAC, assignee+level, penerima+waktu.
 
 ### 8.3 API
 
@@ -324,7 +323,7 @@ Base `/drawings/api`. Mengikuti kontrak platform: identitas dari cookie sesi, `O
 | ---------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | GET        | `/portal-summary`, `/dashboard?year=`, `/activity`, `/discovery?q=`                                   | Kartu Portal, ringkasan, lonceng, command palette         |
 | GET        | `/tasks`, `/tasks/count`                                                                              | Tugas saya                                                |
-| GET        | `/drawings?tab=&q=&status=&areaId=&disciplineId=&ownerId=&revision=&from=&to=&cursor=`                | Library; `tab` = `released`, `wip`, `void`                |
+| GET        | `/drawings?tab=&q=&status=&disciplineId=&ownerId=&revision=&from=&to=&cursor=`                        | Library; `tab` = `released`, `wip`, `void`                |
 | GET        | `/drawings/:id`, `/drawings/:id/timeline?cursor=`                                                     | Detail, revisi, approval plan, riwayat, izin actor; audit |
 | GET        | `/revisions/:id/file`, `/attachments/:id`                                                             | Biner; lihat §6.3                                         |
 | GET        | `/requests?scope=&status=&cursor=`, `/requests/:id`                                                   | Drawing Request                                           |
@@ -337,7 +336,7 @@ Base `/drawings/api`. Mengikuti kontrak platform: identitas dari cookie sesi, `O
 | PATCH      | `/revisions/:id/approval-plan`                                                                        | Ganti approver                                            |
 | POST       | `/requests`, `/requests/:id/review`, `/requests/:id/drafter-decision`, `/requests/:id/cancel`         | Alur request                                              |
 | POST       | `/notifications/read`                                                                                 | Tandai dibaca                                             |
-| POST/PATCH | `/masters/areas[/:id]`, `/masters/disciplines[/:id]`                                                  | Master                                                    |
+| POST/PATCH | `/masters/disciplines[/:id]`                                                                          | Master                                                    |
 
 Kode galat khusus: `VERSION_CONFLICT`, `INVALID_TRANSITION`, `NOT_ASSIGNEE`, `MAKER_CHECKER`, `FILE_REQUIRED`, `FILE_INVALID`, `STORAGE_UNAVAILABLE`. Kontrak rinci ditambahkan ke `docs/API.md` saat implementasi.
 
@@ -366,7 +365,7 @@ Semua halaman memakai `Shell`, `Heading`, `Select`, `Input`, `Textarea`, `Overla
 Halaman lain: detail `/drawings/library/[id]`, edit `/drawings/library/[id]/edit`, ruang tinjau Check/Approval `/drawings/library/[id]/review`, viewer penuh `/drawings/view/[revisionId]`, `/drawings/requests/new`, `/drawings/requests/[id]`.
 
 - **Ringkasan** memakai `.dashboard-grid`: hero grafik Final Drawing terbit per kuartal (tahun WIB, pilihan tahun), KPI (Final Drawing, dalam proses, menunggu tindakan, ditolak), antrean tugas, dan aktivitas terbaru. Viewer hanya melihat angka Final Drawing.
-- **Drawing Library**: tab Final / Dalam proses (dan Dibatalkan untuk admin), pencarian nomor/nama/HAC/area, filter status, area, discipline, owner, revisi dan rentang tanggal WIB. Daftar ringkas sebagai bawaan, tampilan kartu sebagai pilihan yang diingat browser.
+- **Drawing Library**: tab Final / Dalam proses (dan Dibatalkan untuk admin), pencarian nomor/nama/HAC/SAC, filter status, discipline, owner, revisi dan rentang tanggal WIB. Daftar ringkas sebagai bawaan, tampilan kartu sebagai pilihan yang diingat browser.
 - **Detail**: metadata, Current Revision, panel viewer, riwayat revisi, riwayat approval (dengan thumbnail lampiran), jejak aktivitas, dan tombol aksi sesuai izin. Form memakai sheet kanan/bawah; keputusan dan aksi destruktif memakai dialog konfirmasi; hasil memakai toast.
 - **Ruang tinjau**: viewer besar berdampingan dengan panel keputusan (ringkasan, pemilihan approver saat Check, catatan, lampiran reject). Di bawah 960 px tersusun vertikal.
 - **Status** tidak menambah palet: Draft netral; Waiting netral dengan ikon jam; Rejected memakai warna perhatian (pumpkin); Completed lime; Obsolete dan Cancelled teredam. Arti selalu dibawa label teks, bukan warna saja.
@@ -421,7 +420,7 @@ Halaman lain: detail `/drawings/library/[id]`, edit `/drawings/library/[id]/edit
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------- |
 | Visibilitas Consumer/Drafter memakai `currentStatus`; begitu revisi baru dibuat status menjadi DRAFT dan drawing hilang dari Consumer.                     | Penunjuk rilis terpisah dari revisi kerja.                                     | K7                                             |
 | `deleteDrawing` menghapus drawing, file, dan audit log terkait.                                                                                            | Void tanpa penghapusan.                                                        | K9                                             |
-| Area dan Discipline teks bebas.                                                                                                                            | Master.                                                                        | K10                                            |
+| Discipline teks bebas.                                                                                                                                     | Master.                                                                        | K10                                            |
 | Tidak ada pemeriksaan pembuat ≠ pemutus. Admin dapat membuat drawing lalu melakukan Check, dan Approval bila menjadi assignee.                             | Maker-checker.                                                                 | K8                                             |
 | Stamp ditulis ke salinan file pada setiap approval, di dalam transaksi database; approver dapat mematikannya.                                              | Stamp sekali saat Completed, di luar transaksi, selalu aktif, tanpa catatan.   | K6                                             |
 | File berada di `public/uploads` dan route `/uploads/[...path]` menyajikannya tanpa pemeriksaan sesi.                                                       | Storage privat, semua akses lewat API berizin.                                 | Keamanan dokumen                               |
@@ -439,7 +438,7 @@ Halaman lain: detail `/drawings/library/[id]`, edit `/drawings/library/[id]/edit
 
 ## 13. Saran lanjutan (belum masuk lingkup)
 
-1. Metadata per revisi (nama, area, discipline ikut versi), bila judul sering berubah antar revisi.
+1. Metadata per revisi (nama, discipline ikut versi), bila judul sering berubah antar revisi.
 2. Satu orang hanya boleh memutus satu tahap pada revisi yang sama (lebih ketat dari K8).
 3. Field WO opsional pada request dan drawing, seperti Bag Filter dan Consumables.
 4. Ukuran kertas, skala dan jenis drawing sebagai metadata dan filter.
@@ -457,7 +456,7 @@ Nilai bawaan di bawah dipakai sampai ada keputusan lain.
 | Q1  | Penyedia object storage, region, kredensial dan kebijakan egress. Bolehkah go-live sementara dengan driver `fs`?   | Development dengan `fs`; produksi menunggu keputusan |
 | Q2  | Apakah HAC/SAC wajib berformat `XXX-XXX` seperti Consumables? Drawing umum/area mungkin tidak punya kode tersebut. | Format bebas ternormalisasi, 1–40 karakter           |
 | Q3  | Batas ukuran PDF dan anggaran memori VPS.                                                                          | 25 MB; 768 MB                                        |
-| Q4  | Daftar awal Area.                                                                                                  | Kosong, diisi Admin                                  |
+| Q4  | (Dihapus 15 Nov 2026: Area tidak dipakai.)                                                                         | –                                                    |
 | Q5  | Penyesuaian §12 yang bukan K7–K10 (alur request, owner, admin review).                                             | Diterapkan seperti tertulis                          |
 
 ## 15. Prompt implementasi untuk developer
@@ -504,7 +503,7 @@ Setiap fase berakhir dalam keadaan dapat dijalankan dan lolos `pnpm typecheck`, 
 
 **Fase 2 — File dan viewer.** Abstraksi storage dengan driver `fs` dan `s3` (uji `s3` terhadap MinIO pada stack uji); upload dua tahap; endpoint file dengan Range; batas body Nginx gateway dan host; CSP `/drawings`; viewer §7. _Selesai bila:_ PDF contoh dapat diunggah dan dibuka di viewer lewat gateway HTTPS tanpa pelanggaran CSP; kriteria file dan viewer §11 lulus kecuali stamp.
 
-**Fase 3 — Drawing inti.** Master Area/Discipline; Create Drawing dan edit draft; Upload Old Drawing; Library dengan filter dan pagination; detail dengan riwayat revisi dan jejak aktivitas; void; alih owner; audit. _Selesai bila:_ drawing legacy tampil bagi Viewer dan dapat dicetak/diunduh; aturan visibilitas per role lulus uji integrasi.
+**Fase 3 — Drawing inti.** Master Discipline; Create Drawing dan edit draft; Upload Old Drawing; Library dengan filter dan pagination; detail dengan riwayat revisi dan jejak aktivitas; void; alih owner; audit. _Selesai bila:_ drawing legacy tampil bagi Viewer dan dapat dicetak/diunduh; aturan visibilitas per role lulus uji integrasi.
 
 **Fase 4 — Alur approval.** Submit, Check dan approval plan, Approval L1, Final Approval, reject dengan lampiran, siklus, maker-checker, ganti approver, stamp dan file issued, obsolete, revisi baru, pembatalan revisi, Tugas saya. _Selesai bila:_ kriteria alur dan integritas §11 lulus, termasuk uji konkurensi.
 

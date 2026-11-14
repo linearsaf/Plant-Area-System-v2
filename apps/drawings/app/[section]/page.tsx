@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic';
 const pages: Record<string, { title: string; description: string }> = {
   library: {
     title: 'Drawing Library',
-    description:
-      'Cari Final Drawing dan drawing yang sedang diproses berdasarkan nomor, nama, HAC/SAC atau area.',
+    description: 'Cari Final Drawing dan drawing yang sedang diproses berdasarkan nomor, nama atau HAC/SAC.',
   },
   tasks: {
     title: 'Tugas saya',
@@ -31,7 +30,7 @@ const pages: Record<string, { title: string; description: string }> = {
     description:
       'Unggah drawing lama langsung sebagai Final Drawing berlabel Legacy Ready, tanpa approval digital.',
   },
-  manage: { title: 'Pengelolaan', description: 'Kelola master Area dan Discipline Drawing Database.' },
+  manage: { title: 'Pengelolaan', description: 'Kelola master Discipline Drawing Database.' },
   audit: {
     title: 'Audit',
     description: 'Telusuri perubahan drawing, revisi, file dan master beserta pencatatnya.',

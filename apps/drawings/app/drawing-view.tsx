@@ -109,8 +109,6 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
               <dd>{drawing.title || 'Belum diisi'}</dd>
               <dt>HAC/SAC</dt>
               <dd className="code-text">{drawing.hac}</dd>
-              <dt>Area</dt>
-              <dd>{drawing.area}</dd>
               <dt>Discipline</dt>
               <dd>{drawing.discipline ?? 'Belum diisi'}</dd>
               <dt>Drawn by</dt>

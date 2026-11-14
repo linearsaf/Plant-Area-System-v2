@@ -5,14 +5,13 @@ import type { DrawingsMasters, MasterItem } from '@plant/contracts';
 import { getJson, sendJson } from './client-api';
 
 const kinds = [
-  { id: 'areas', label: 'Area', hint: 'Area dimulai kosong. Tambahkan area pabrik sebelum drawing dibuat.' },
   { id: 'disciplines', label: 'Discipline', hint: 'Discipline wajib dipilih saat Submit.' },
 ] as const;
 
-/** Master Area/Discipline. Nonaktifkan, bukan hapus: data lama tetap menampilkan nilainya. */
+/** Master Discipline. Nonaktifkan, bukan hapus: data lama tetap menampilkan nilainya. */
 export function MastersManager({ initial }: { initial: DrawingsMasters }) {
   const [masters, setMasters] = useState(initial),
-    [names, setNames] = useState({ areas: '', disciplines: '' }),
+    [names, setNames] = useState({ disciplines: '' }),
     [busy, setBusy] = useState(''),
     [error, setError] = useState(''),
     [toast, setToast] = useState('');
