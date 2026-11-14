@@ -19,7 +19,7 @@ jobs:
       - name: Prepare isolated MySQL
         run: |
           node --import tsx scripts/prepare-test.ts
-          docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml up -d --wait mysql
+          docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml up -d --wait mysql minio
           node --env-file=.test-runtime/host.env --import tsx scripts/migrate.ts
           node --env-file=.test-runtime/host.env --import tsx scripts/bootstrap.ts
       - name: MySQL integration tests

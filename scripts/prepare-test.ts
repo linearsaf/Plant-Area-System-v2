@@ -50,7 +50,10 @@ await writeFile(
   `${directory}/compose.yaml`,
   // The gateway recovery test occupies old application IPs with sentinel containers.
   // Docker requires an explicitly configured subnet for `docker run --ip`.
-  'services:\n  mysql:\n    ports: ["127.0.0.1:13306:3306"]\n    networks: [private, test-host]\nnetworks:\n  private:\n    ipam:\n      config:\n        - subnet: ${PLANT_TEST_SUBNET:-172.30.250.0/24}\n  test-host: {}\n',
+  'services:\n  mysql:\n    ports: ["127.0.0.1:13306:3306"]\n    networks: [private, test-host]\n' +
+    // S3-compatible storage for the Drawing Database `s3` driver tests only.
+    '  minio:\n    image: minio/minio:RELEASE.2025-04-22T22-12-26Z\n    command: [server, /data]\n    environment:\n      MINIO_ROOT_USER: ${DRAWINGS_TEST_S3_ACCESS_KEY_ID:?Set DRAWINGS_TEST_S3_ACCESS_KEY_ID}\n      MINIO_ROOT_PASSWORD: ${DRAWINGS_TEST_S3_SECRET_ACCESS_KEY:?Set DRAWINGS_TEST_S3_SECRET_ACCESS_KEY}\n    ports: ["127.0.0.1:19000:9000"]\n    networks: [private, test-host]\n' +
+    'networks:\n  private:\n    ipam:\n      config:\n        - subnet: ${PLANT_TEST_SUBNET:-172.30.250.0/24}\n  test-host: {}\n',
 );
 // Extend an existing isolated deployment without changing its users, volumes, or secrets.
 const stackPath = `${directory}/stack.env`,
@@ -59,9 +62,16 @@ let stack = await readFile(stackPath, 'utf8'),
   host = await readFile(hostPath, 'utf8');
 const secret = /^CONSUMABLES_DB_PASSWORD=(.+)$/m.exec(stack)?.[1] || randomBytes(24).toString('hex');
 const drawingsSecret = /^DRAWINGS_DB_PASSWORD=(.+)$/m.exec(stack)?.[1] || randomBytes(24).toString('hex');
+const s3Key =
+  /^DRAWINGS_TEST_S3_ACCESS_KEY_ID=(.+)$/m.exec(stack)?.[1] || 'plant' + randomBytes(8).toString('hex');
+const s3Secret =
+  /^DRAWINGS_TEST_S3_SECRET_ACCESS_KEY=(.+)$/m.exec(stack)?.[1] || randomBytes(24).toString('hex');
 const rootPassword = /^MYSQL_ROOT_PASSWORD=(.+)$/m.exec(stack)![1];
 if (!/^CONSUMABLES_DB_PASSWORD=/m.test(stack)) stack += `CONSUMABLES_DB_PASSWORD=${secret}\n`;
 if (!/^DRAWINGS_DB_PASSWORD=/m.test(stack)) stack += `DRAWINGS_DB_PASSWORD=${drawingsSecret}\n`;
+if (!/^DRAWINGS_TEST_S3_ACCESS_KEY_ID=/m.test(stack)) stack += `DRAWINGS_TEST_S3_ACCESS_KEY_ID=${s3Key}\n`;
+if (!/^DRAWINGS_TEST_S3_SECRET_ACCESS_KEY=/m.test(stack))
+  stack += `DRAWINGS_TEST_S3_SECRET_ACCESS_KEY=${s3Secret}\n`;
 await writeFile(stackPath, stack);
 const extra: Record<string, string> = {
   CONSUMABLES_DB_PASSWORD: secret,
@@ -70,6 +80,9 @@ const extra: Record<string, string> = {
   DRAWINGS_DB_PASSWORD: drawingsSecret,
   DRAWINGS_DATABASE_URL: `mysql://plant_drawings:${drawingsSecret}@127.0.0.1:13306/plant_drawings`,
   DRAWINGS_MIGRATION_DATABASE_URL: `mysql://root:${rootPassword}@127.0.0.1:13306/plant_drawings`,
+  DRAWINGS_TEST_S3_ENDPOINT: 'http://127.0.0.1:19000',
+  DRAWINGS_TEST_S3_ACCESS_KEY_ID: s3Key,
+  DRAWINGS_TEST_S3_SECRET_ACCESS_KEY: s3Secret,
 };
 for (const [k, v] of Object.entries(extra)) if (!new RegExp(`^${k}=`, 'm').test(host)) host += `${k}=${v}\n`;
 await writeFile(hostPath, host);

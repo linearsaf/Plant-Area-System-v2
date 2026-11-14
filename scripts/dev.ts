@@ -207,11 +207,24 @@ async function setup() {
   // These generated files derive from production routing; only dev-specific behavior differs.
   let template = await readFile('infra/nginx/default.conf.template', 'utf8');
   template = "map $http_upgrade $dev_connection_upgrade { default upgrade; '' ''; }\n" + template;
-  template = template
-    .replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'")
-    .replace("connect-src 'self'", "connect-src 'self' wss://localhost:9443")
-    .replace(/^.*add_header Strict-Transport-Security.*\r?\n/m, '');
+  const developmentHeaders = (text: string) =>
+    text
+      .replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'")
+      .replace("connect-src 'self'", "connect-src 'self' wss://localhost:9443")
+      .replace(/^.*add_header Strict-Transport-Security.*\r?\n/m, '');
+  template = developmentHeaders(template);
   await writeFile(`${directory}/default.conf.template`, template, { mode: 0o600 });
+  await writeFile(
+    `${directory}/drawings-headers.conf`,
+    developmentHeaders(await readFile('infra/nginx/drawings-headers.conf', 'utf8')),
+    { mode: 0o600 },
+  );
+  // Dev containers mount apps/*/public read-only, so PDF.js assets are copied on the host.
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, ['scripts/copy-pdfjs-assets.mjs'], { cwd: root, stdio: 'inherit' });
+    child.once('error', reject);
+    child.once('close', (code) => (code === 0 ? resolve() : reject(Error('Salin aset PDF.js gagal.'))));
+  });
   const proxy = (await readFile('infra/nginx/proxy.conf', 'utf8'))
     .replace(
       'proxy_set_header Connection "";',
@@ -253,6 +266,7 @@ ${services}  nginx:
     volumes:
       - ./.deploy/dev/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./.deploy/dev/proxy.conf:/etc/nginx/plant-proxy.conf:ro
+      - ./.deploy/dev/drawings-headers.conf:/etc/nginx/plant-drawings-headers.conf:ro
       - ./.deploy/dev/certs:/etc/nginx/certs:ro
 networks:
   dev-host: {}

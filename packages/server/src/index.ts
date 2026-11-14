@@ -1,4 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { open, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AppError, safeReturnTo, hasPermission, type Identity } from '@plant/contracts';
@@ -58,6 +61,74 @@ export async function readJson(request: Request, maxBytes = 128_000): Promise<Re
   } catch {
     throw new AppError(400, 'JSON tidak valid.');
   }
+}
+const DRAIN_LIMIT = 64 * 1024 * 1024;
+export type BinaryBody = { path: string; size: number; sha256: string; head: Buffer };
+/**
+ * Streams a binary request body to a temporary file while counting bytes and computing
+ * SHA-256. The body is never held in memory. Requires `Content-Length`; rejects bodies
+ * larger than `maxBytes` (413) or whose length differs from the header (400).
+ * The caller owns `path` and must remove it.
+ */
+export async function readBinaryBody(
+  request: Request,
+  { maxBytes, directory = tmpdir() }: { maxBytes: number; directory?: string },
+): Promise<BinaryBody> {
+  const declared = request.headers.get('content-length');
+  if (!declared || !/^\d{1,12}$/.test(declared)) throw new AppError(411, 'Content-Length diperlukan.');
+  const expected = Number(declared);
+  const reader = request.body?.getReader();
+  if (!reader) throw new AppError(400, 'Body diperlukan.');
+  // Closing the socket while a proxy still streams the body turns a 413 into a 502 at the
+  // gateway. Discard (never store) a bounded oversized body before answering.
+  const reject = async (error: AppError) => {
+    let drained = 0;
+    try {
+      while (drained < DRAIN_LIMIT) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        drained += value.length;
+      }
+    } catch {}
+    await reader.cancel().catch(() => undefined);
+    return error;
+  };
+  if (expected > maxBytes) throw await reject(new AppError(413, 'File terlalu besar.', 'FILE_INVALID'));
+  if (expected === 0) throw new AppError(400, 'File kosong.', 'FILE_INVALID');
+  const path = join(directory, `plant-upload-${randomUUID()}`);
+  const hash = createHash('sha256');
+  const handle = await open(path, 'wx', 0o600);
+  const head: Buffer[] = [];
+  let size = 0,
+    headSize = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > expected || size > maxBytes)
+        throw await reject(
+          new AppError(
+            size > maxBytes ? 413 : 400,
+            size > maxBytes ? 'File terlalu besar.' : 'Ukuran body tidak sesuai.',
+            'FILE_INVALID',
+          ),
+        );
+      if (headSize < 64) {
+        head.push(Buffer.from(value.subarray(0, 64 - headSize)));
+        headSize += Math.min(value.length, 64 - headSize);
+      }
+      hash.update(value);
+      await handle.write(value);
+    }
+    if (size !== expected) throw new AppError(400, 'Ukuran body tidak sesuai.', 'FILE_INVALID');
+  } catch (e) {
+    await handle.close().catch(() => undefined);
+    await rm(path, { force: true });
+    throw e;
+  }
+  await handle.close();
+  return { path, size, sha256: hash.digest('hex'), head: Buffer.concat(head) };
 }
 export function verifyInternal(request: Request) {
   const actual = request.headers.get('x-plant-service-token') || '',

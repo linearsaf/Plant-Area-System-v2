@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { pageIdentity } from '@plant/server';
 import { canOpenDrawingsSection, drawingsSections } from '@plant/contracts';
 import { Shell, Heading, EmptyState } from '@plant/ui';
+import { maxPdfBytes } from '@plant/drawings-core';
+import { PdfUpload } from '../pdf-upload';
 export const dynamic = 'force-dynamic';
 const pages: Record<string, { title: string; description: string }> = {
   library: {
@@ -37,12 +39,23 @@ export default async function Page({ params }: { params: Promise<{ section: stri
     <Shell identity={identity} active="drawings" activePath={`/drawings/${section}`}>
       <Heading eyebrow="Drawing Database" title={page.title} description={page.description} />
       {canOpenDrawingsSection(identity, section) ? (
-        <section className="panel">
-          <EmptyState
-            title="Halaman sedang disiapkan"
-            description="Fitur ini tersedia pada tahap implementasi berikutnya."
-          />
-        </section>
+        section === 'new' || section === 'legacy' ? (
+          <section className="panel">
+            <h2>File PDF</h2>
+            <p className="fine">
+              PDF diperiksa server (format, halaman, enkripsi, uji stamp) lalu disimpan sebagai file sementara
+              milik Anda selama 24 jam. Isian data drawing tersedia pada tahap berikutnya.
+            </p>
+            <PdfUpload maxMb={maxPdfBytes() / 1024 / 1024} />
+          </section>
+        ) : (
+          <section className="panel">
+            <EmptyState
+              title="Halaman sedang disiapkan"
+              description="Fitur ini tersedia pada tahap implementasi berikutnya."
+            />
+          </section>
+        )
       ) : (
         <p className="notice error" role="alert">
           Anda tidak memiliki akses untuk halaman ini.

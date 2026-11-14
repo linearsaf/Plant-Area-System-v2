@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import '@plant/ui/styles.css';
+import './drawings.css';
 import { brandIcon, ThemeProvider, ThemeScript } from '@plant/ui';
 
 const inter = localFont({

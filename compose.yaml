@@ -150,6 +150,18 @@ services:
     environment:
       <<: *app-env
       DRAWINGS_DATABASE_URL: mysql://plant_drawings:${DRAWINGS_DB_PASSWORD}@mysql:3306/plant_drawings
+      DRAWINGS_STORAGE_DRIVER: ${DRAWINGS_STORAGE_DRIVER:-fs}
+      DRAWINGS_STORAGE_PATH: /data/drawings
+      DRAWINGS_S3_ENDPOINT: ${DRAWINGS_S3_ENDPOINT:-}
+      DRAWINGS_S3_REGION: ${DRAWINGS_S3_REGION:-}
+      DRAWINGS_S3_BUCKET: ${DRAWINGS_S3_BUCKET:-}
+      DRAWINGS_S3_ACCESS_KEY_ID: ${DRAWINGS_S3_ACCESS_KEY_ID:-}
+      DRAWINGS_S3_SECRET_ACCESS_KEY: ${DRAWINGS_S3_SECRET_ACCESS_KEY:-}
+      DRAWINGS_S3_FORCE_PATH_STYLE: ${DRAWINGS_S3_FORCE_PATH_STYLE:-true}
+      DRAWINGS_MAX_PDF_MB: ${DRAWINGS_MAX_PDF_MB:-25}
+    volumes:
+      # Driver fs: append-only file storage outside public/. Never removed by `down`.
+      - drawings-files:/data/drawings
     depends_on:
       { auth: { condition: service_healthy }, migrate: { condition: service_completed_successfully } }
     healthcheck:
@@ -175,6 +187,7 @@ services:
     volumes:
       - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./infra/nginx/proxy.conf:/etc/nginx/plant-proxy.conf:ro
+      - ./infra/nginx/drawings-headers.conf:/etc/nginx/plant-drawings-headers.conf:ro
       - ./infra/certs:/etc/nginx/certs:ro
     networks: [private, gateway]
     depends_on:
@@ -201,3 +214,4 @@ networks:
     internal: true
 volumes:
   mysql-data:
+  drawings-files:

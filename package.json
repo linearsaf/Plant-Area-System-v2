@@ -36,6 +36,8 @@
     "drawings:provision": "tsx scripts/provision-drawings.ts"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "3.1160.0",
+    "@cantoo/pdf-lib": "2.11.1",
     "@playwright/test": "1.64.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
@@ -48,12 +50,12 @@
   "dependencies": {
     "@plant/auth-core": "workspace:*",
     "@plant/bag-core": "workspace:*",
+    "@plant/consumables-core": "workspace:*",
     "@plant/contracts": "workspace:*",
+    "@plant/drawings-core": "workspace:*",
     "@plant/server": "workspace:*",
     "better-auth": "1.7.12",
     "drizzle-orm": "0.45.4",
-    "mysql2": "3.24.6",
-    "@plant/consumables-core": "workspace:*",
-    "@plant/drawings-core": "workspace:*"
+    "mysql2": "3.24.6"
   }
 }

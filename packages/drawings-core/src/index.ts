@@ -3,6 +3,47 @@ import { AppError, canDraw, wibWeekStarts, type Identity, type PortalSummary } f
 import { getDrawingsDb } from './database';
 export { getDrawingsDb, closeDrawingsDb } from './database';
 export * as drawingsSchema from './schema';
+export { maxPdfBytes, storageConfig, IMAGE_MAX_BYTES, STAGED_TTL_MS, type StorageConfig } from './config';
+export {
+  createStorage,
+  getStorage,
+  withStorage,
+  storageKey,
+  FsStorage,
+  S3Storage,
+  StorageUnavailable,
+  type Storage,
+  type ByteRange,
+} from './storage';
+export {
+  validatePdf,
+  stampPdf,
+  stampPlacement,
+  stampWidth,
+  formatStampTime,
+  winAnsiSafe,
+  normalizeRotation,
+  detectImage,
+  serialPdfJob,
+  STAMP_HEIGHT,
+  STAMP_MARGIN,
+  STAMP_GAP,
+  type StampSlot,
+} from './pdf';
+export {
+  stageUpload,
+  stagedFileForOwner,
+  cleanupStagedFiles,
+  serveFile,
+  parseRange,
+  contentDisposition,
+  requireUpload,
+  requireContentType,
+  fileNameFromHeader,
+  uploadLimit,
+  type UploadKind,
+  type StagedFile,
+} from './files';
 
 /** Menolak identitas tanpa grant Drawing Database (403). */
 export function requireDrawings(actor: Identity) {
