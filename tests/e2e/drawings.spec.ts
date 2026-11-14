@@ -371,10 +371,6 @@ for (const [width, theme] of [
     await expect(page.locator('.pdfViewer .page canvas').first()).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole('link', { name: 'Download' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Jejak aktivitas' })).toHaveCount(0);
-    const search = page.getByLabel('Cari teks dalam PDF');
-    await search.fill('PUMP-HOUSE');
-    await search.press('Enter');
-    await expect(page.locator('.pdf-matches')).toContainText('/1', { timeout: 15000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
     // pdfjs global `.sidebar` / `:root` rules must not leak into the shell.
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(theme);

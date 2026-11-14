@@ -1,11 +1,11 @@
 'use client';
 // PDF viewer in-page (PRD §7, K11) dari komponen resmi pdfjs-dist/web/pdf_viewer
-// (PDFViewer, EventBus, PDFLinkService, PDFFindController), mengikuti contoh simpleviewer.
+// (PDFViewer, EventBus, PDFLinkService), mengikuti contoh simpleviewer.
 import 'pdfjs-dist/web/pdf_viewer.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@plant/ui';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist';
-import type { EventBus, PDFFindController, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import type { EventBus, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs';
 
 export type PdfViewerProps = {
   /** Endpoint file same-origin yang mendukung Range. */
@@ -60,8 +60,7 @@ export default function PdfViewerCore({
     container = useRef<HTMLDivElement>(null),
     viewerElement = useRef<HTMLDivElement>(null);
   const viewer = useRef<PDFViewer | null>(null),
-    eventBus = useRef<EventBus | null>(null),
-    finder = useRef<PDFFindController | null>(null);
+    eventBus = useRef<EventBus | null>(null);
   const [attempt, setAttempt] = useState(0),
     [progress, setProgress] = useState<number | null>(0),
     [failure, setFailure] = useState<Failure | null>(null),
@@ -71,8 +70,6 @@ export default function PdfViewerCore({
     [pages, setPages] = useState(0),
     [scale, setScale] = useState(1),
     [preset, setPreset] = useState('auto'),
-    [query, setQuery] = useState(''),
-    [matches, setMatches] = useState<{ current: number; total: number } | null>(null),
     [fullscreen, setFullscreen] = useState(false),
     [panning, setPanning] = useState(true);
 
@@ -83,7 +80,6 @@ export default function PdfViewerCore({
     setFailure(null);
     setReady(false);
     setProgress(0);
-    setMatches(null);
     (async () => {
       const lib = await import('pdfjs-dist');
       // pdf_viewer.mjs reads the core library from globalThis.pdfjsLib.
@@ -96,13 +92,11 @@ export default function PdfViewerCore({
       ).toString();
       const bus = new components.EventBus();
       const links = new components.PDFLinkService({ eventBus: bus });
-      const find = new components.PDFFindController({ eventBus: bus, linkService: links });
       const instance = new components.PDFViewer({
         container: container.current,
         viewer: viewerElement.current,
         eventBus: bus,
         linkService: links,
-        findController: find,
         removePageBorders: false,
         enableDetailCanvas: true,
         maxCanvasPixels: 16_777_216,
@@ -112,7 +106,6 @@ export default function PdfViewerCore({
       links.setViewer(instance);
       viewer.current = instance;
       eventBus.current = bus;
-      finder.current = find;
       bus.on('pagesinit', () => {
         instance.currentScaleValue = 'auto';
         setPages(instance.pagesCount);
@@ -127,14 +120,6 @@ export default function PdfViewerCore({
         setScale(value);
         setPreset(presetValue && presets.some((p) => p.value === presetValue) ? presetValue : '');
       });
-      bus.on(
-        'updatefindmatchescount',
-        ({ matchesCount }: { matchesCount: { current: number; total: number } }) => setMatches(matchesCount),
-      );
-      bus.on(
-        'updatefindcontrolstate',
-        ({ matchesCount }: { matchesCount: { current: number; total: number } }) => setMatches(matchesCount),
-      );
       task = lib.getDocument({
         url,
         cMapUrl: ASSETS + 'cmaps/',
@@ -164,7 +149,6 @@ export default function PdfViewerCore({
       viewer.current?.cleanup();
       viewer.current = null;
       eventBus.current = null;
-      finder.current = null;
       // Destroying the loading task also destroys the document and its worker.
       void task?.destroy();
       if (viewerElement.current) viewerElement.current.replaceChildren();
@@ -187,18 +171,6 @@ export default function PdfViewerCore({
     const instance = viewer.current;
     if (!instance || !pages) return;
     instance.currentPageNumber = Math.min(pages, Math.max(1, Math.round(value)));
-  };
-  const find = (findPrevious = false, again = true) => {
-    eventBus.current?.dispatch('find', {
-      source: null,
-      type: again ? 'again' : '',
-      query,
-      caseSensitive: false,
-      entireWord: false,
-      highlightAll: true,
-      findPrevious,
-      matchDiacritics: false,
-    });
   };
   const rotate = () => {
     if (viewer.current) viewer.current.pagesRotation = (viewer.current.pagesRotation + 90) % 360;
@@ -429,51 +401,6 @@ export default function PdfViewerCore({
             <span aria-hidden="true">{panning ? 'T' : '✋'}</span>
           </button>
         </div>
-        <form
-          className="pdf-toolbar-group pdf-search"
-          role="search"
-          onSubmit={(e) => {
-            e.preventDefault();
-            find(false, false);
-          }}
-        >
-          <input
-            type="search"
-            aria-label="Cari teks dalam PDF"
-            placeholder="Cari teks"
-            value={query}
-            maxLength={200}
-            disabled={!ready}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && matches?.total) {
-                e.preventDefault();
-                find(e.shiftKey);
-              }
-            }}
-          />
-          <span className="pdf-matches" aria-live="polite">
-            {matches && query ? (matches.total ? `${matches.current}/${matches.total}` : '0 hasil') : ''}
-          </span>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Hasil sebelumnya"
-            disabled={!matches?.total}
-            onClick={() => find(true)}
-          >
-            <Icon name="chevron" style={{ transform: 'rotate(180deg)' }} />
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Hasil berikutnya"
-            disabled={!matches?.total}
-            onClick={() => find(false)}
-          >
-            <Icon name="chevron" />
-          </button>
-        </form>
         <div className="pdf-toolbar-group pdf-actions">
           <button
             type="button"

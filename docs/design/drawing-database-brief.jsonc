@@ -592,7 +592,7 @@
   // ───────────────────────── PDF VIEWER ─────────────────────────
   "viewer": {
     "library": "pdfjs-dist (referensi memakai 5.6.205); pin persis",
-    "components": ["PDFViewer", "EventBus", "PDFLinkService", "PDFFindController"],
+    "components": ["PDFViewer", "EventBus", "PDFLinkService"],
     "notUsed": {
       "react-pdf": "hanya render halaman + skala",
       "iframe": "diblokir X-Frame-Options: DENY dan frame-ancestors 'none'",
@@ -626,7 +626,6 @@
       ],
       "tools": [
         "putar 90°",
-        "cari teks + jumlah hasil",
         "layar penuh",
         "buka di tab baru",
         "download (sesuai izin)",

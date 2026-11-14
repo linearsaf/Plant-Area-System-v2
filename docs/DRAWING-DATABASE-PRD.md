@@ -252,7 +252,7 @@ Library: referensi memakai `pdf-lib` 1.17.1. Bandingkan dengan fork terpelihara 
 
 ## 7. PDF viewer (K11)
 
-Dibangun sebagai Client Component in-page dari komponen resmi `pdfjs-dist/web/pdf_viewer` (`PDFViewer`, `EventBus`, `PDFLinkService`, `PDFFindController`), mengikuti contoh `simpleviewer` PDF.js. `react-pdf` tidak dipakai karena hanya menyediakan render halaman dan skala; pan, virtualisasi dan pencarian harus dibuat sendiri.
+Dibangun sebagai Client Component in-page dari komponen resmi `pdfjs-dist/web/pdf_viewer` (`PDFViewer`, `EventBus`, `PDFLinkService`), mengikuti contoh `simpleviewer` PDF.js. `react-pdf` tidak dipakai karena hanya menyediakan render halaman dan skala; pan dan virtualisasi harus dibuat sendiri. Pencarian teks di dalam PDF tidak disediakan (keputusan pengguna, 15 Nov 2026); teks tetap dapat dipilih dan disalin melalui text layer.
 
 | Aspek         | Ketentuan                                                                                                                                                                                          |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -260,7 +260,7 @@ Dibangun sebagai Client Component in-page dari komponen resmi `pdfjs-dist/web/pd
 | Render        | Hanya halaman terlihat yang dirender (antrean render bawaan). Text layer aktif. Zoom tinggi memakai mekanisme detail view bawaan, bukan memperbesar kanvas penuh.                                  |
 | Zoom          | 10%–800%, preset Otomatis, Fit lebar, Fit halaman, 100%. Ctrl/Cmd+scroll dan pinch berpusat di kursor. Tombol `+`, `-`, `0`.                                                                       |
 | Navigasi      | Indikator dan lompat halaman, sebelumnya/berikutnya, PgUp/PgDn, Home/End. Geser dengan drag saat diperbesar.                                                                                       |
-| Fitur         | Putar 90°, cari teks dengan jumlah hasil dan berikut/sebelumnya, layar penuh, buka di tab baru, download dan print sesuai izin.                                                                    |
+| Fitur         | Putar 90°, layar penuh, buka di tab baru, download dan print sesuai izin.                                                                                                                          |
 | Watermark     | Overlay CSS non-interaktif untuk revisi belum final, Obsolete dan Cancelled. File tidak diubah.                                                                                                    |
 | Print         | Membuka file Completed di tab baru (`disposition=inline&intent=print`) agar pencetakan memakai PDF asli berbasis vektor.                                                                           |
 | State         | Skeleton saat memuat, pesan khusus untuk 403/404/413/503 dan PDF rusak, tombol coba lagi, state kosong bila revisi belum berfile.                                                                  |
@@ -406,7 +406,7 @@ Halaman lain: detail `/drawings/library/[id]`, edit `/drawings/library/[id]/edit
 - Upload 25 MB berhasil melalui gateway; lebih besar ditolak dengan pesan jelas; bukan PDF, PDF terenkripsi dan SVG ditolak.
 - Range request menghasilkan 206 yang benar pada driver `fs` dan `s3`.
 - Stamp benar pada halaman berotasi 0/90/180/270 dan waktu tertulis WIB; SHA-256 file asli tidak berubah.
-- Viewer: PDF multi-halaman dan lembar A1/A0 dapat di-zoom sampai 800% tanpa membekukan tab; pencarian teks, rotasi, layar penuh dan keyboard berfungsi; tidak ada pelanggaran CSP pada konsol; berjalan di Chromium dan WebKit, terang/gelap, 390 px dan 1440 px.
+- Viewer: PDF multi-halaman dan lembar A1/A0 dapat di-zoom sampai 800% tanpa membekukan tab; rotasi, layar penuh dan keyboard berfungsi; tidak ada pelanggaran CSP pada konsol; berjalan di Chromium dan WebKit, terang/gelap, 390 px dan 1440 px.
 - Print dan download hanya untuk Completed dan tercatat di audit. Membuka file di tab baru berfungsi di Chrome, Edge, Firefox dan Safari dengan header keamanan gateway.
 
 **Operasi**

@@ -67,16 +67,6 @@
     min-height: 44px;
     min-width: 8.5em;
   }
-  .pdf-search input {
-    min-height: 44px;
-    width: min(220px, 40vw);
-  }
-  .pdf-matches {
-    min-width: 4.5em;
-    color: var(--textSecondary);
-    font-size: var(--type-footnote);
-    font-variant-numeric: tabular-nums;
-  }
   .pdf-stage {
     position: relative;
     height: var(--pdf-height);
@@ -460,14 +450,14 @@
   .pdf-frame {
     container-type: inline-size;
   }
-  @container (max-width: 1079px) {
-    /* Two rows: navigation, zoom tools, file actions; then search across the full width. */
+  @container (max-width: 699px) {
+    /* Two rows: page controls + file actions, then zoom tools. */
     .pdf-toolbar {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr);
       grid-template-areas:
-        'nav tools actions'
-        'search search search';
+        'nav actions'
+        'tools tools';
       align-items: center;
       gap: var(--space-1) var(--space-2);
       padding: var(--space-2);
@@ -481,41 +471,10 @@
     }
     .pdf-tools {
       grid-area: tools;
-      justify-content: center;
     }
     .pdf-actions {
       grid-area: actions;
       justify-content: flex-end;
-    }
-    .pdf-search {
-      grid-area: search;
-    }
-    .pdf-search input {
-      flex: 1;
-      width: auto;
-      min-width: 0;
-    }
-    .pdf-matches {
-      min-width: 0;
-    }
-    .pdf-matches:empty {
-      display: none;
-    }
-    .pdf-zoom {
-      min-width: 7.5em;
-    }
-  }
-  @container (max-width: 679px) {
-    /* Three rows: page + file actions, zoom tools, search. */
-    .pdf-toolbar {
-      grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas:
-        'nav actions'
-        'tools tools'
-        'search search';
-    }
-    .pdf-tools {
-      justify-content: flex-start;
     }
     .pdf-toolbar .icon-button {
       width: 40px;
@@ -532,9 +491,6 @@
       min-width: 0;
       min-height: 40px;
     }
-    .pdf-search input {
-      min-height: 40px;
-    }
   }
   @container (max-width: 339px) {
     /* Page controls and file actions no longer share a row on the narrowest phones. */
@@ -543,8 +499,7 @@
       grid-template-areas:
         'nav'
         'actions'
-        'tools'
-        'search';
+        'tools';
     }
     .pdf-nav,
     .pdf-actions {
