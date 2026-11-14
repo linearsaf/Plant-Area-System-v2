@@ -215,6 +215,27 @@ export default function PdfViewerCore({
     return () => document.removeEventListener('fullscreenchange', update);
   }, []);
 
+  // Keep preset zoom (auto / fit) correct when the container changes size (layout, rotation, fullscreen).
+  const presetRef = useRef(preset);
+  presetRef.current = preset;
+  useEffect(() => {
+    const element = container.current;
+    if (!element || !ready) return;
+    let frameId = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(() => {
+        const value = presetRef.current;
+        if (viewer.current && value && value !== '1') viewer.current.currentScaleValue = value;
+      });
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frameId);
+    };
+  }, [ready]);
+
   // Ctrl/Cmd + wheel (and trackpad pinch, reported as ctrl+wheel) zooms around the cursor.
   useEffect(() => {
     const element = container.current;
@@ -327,7 +348,7 @@ export default function PdfViewerCore({
             disabled={!ready || page <= 1}
             onClick={() => goTo(page - 1)}
           >
-            <Icon name="chevron" style={{ transform: 'rotate(90deg)' }} />
+            <Icon name="chevron" style={{ transform: 'rotate(-90deg)' }} />
           </button>
           <label className="pdf-page">
             <span className="sr-only">Nomor halaman</span>
@@ -351,7 +372,7 @@ export default function PdfViewerCore({
             disabled={!ready || page >= pages}
             onClick={() => goTo(page + 1)}
           >
-            <Icon name="chevron" style={{ transform: 'rotate(-90deg)' }} />
+            <Icon name="chevron" style={{ transform: 'rotate(90deg)' }} />
           </button>
         </div>
         <div className="pdf-toolbar-group">

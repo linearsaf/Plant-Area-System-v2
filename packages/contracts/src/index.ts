@@ -12,6 +12,7 @@ export type BagGrant = { appId: 'bag-filter'; role: BagRole; equipment: Equipmen
 export type Grant = BagGrant | import('./consumables').ConsumablesGrant | import('./drawings').DrawingsGrant;
 export * from './consumables';
 export * from './drawings';
+export * from './drawings-model';
 export type Identity = {
   id: string;
   name: string;

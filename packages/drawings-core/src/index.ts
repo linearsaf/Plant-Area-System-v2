@@ -81,3 +81,20 @@ export async function drawingsPortalSummary(actor: Identity, now = Date.now()): 
     recent: [],
   };
 }
+export { listMasters, createMaster, updateMaster, type MasterKind } from './masters';
+export {
+  createDrawing,
+  createLegacyDrawing,
+  updateDrawing,
+  voidDrawing,
+  transferOwner,
+  listDrawings,
+  drawingDetail,
+  drawingTimeline,
+  auditList,
+  hacSuggestions,
+  revisionFile,
+  revisionContext,
+  type DirectoryPerson,
+  type FileIntent,
+} from './drawings';

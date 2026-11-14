@@ -3,14 +3,22 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@plant/ui';
 import { PdfViewer } from './pdf-viewer';
 
-type Staged = { fileId: string; name: string; size: number; sha256: string; pageCount: number | null };
+export type Staged = { fileId: string; name: string; size: number; sha256: string; pageCount: number | null };
 const formatSize = (bytes: number) =>
   bytes >= 1024 * 1024
     ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`
     : `${Math.ceil(bytes / 1024)} KB`;
 
 /** Unggah PDF ke tahap `staged` (POST biner) lalu pratinjau lewat viewer. */
-export function PdfUpload({ maxMb }: { maxMb: number }) {
+export function PdfUpload({
+  maxMb,
+  onStaged,
+  label = 'File PDF',
+}: {
+  maxMb: number;
+  onStaged?: (file: Staged | null) => void;
+  label?: string;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null),
     [error, setError] = useState(''),
@@ -35,8 +43,10 @@ export function PdfUpload({ maxMb }: { maxMb: number }) {
       try {
         body = JSON.parse(request.responseText);
       } catch {}
-      if (request.status === 201 && body.fileId) setStaged(body as Staged);
-      else
+      if (request.status === 201 && body.fileId) {
+        setStaged(body as Staged);
+        onStaged?.(body as Staged);
+      } else
         setError(
           body.error ||
             (request.status === 413 ? `File melebihi batas ${maxMb} MB.` : 'Unggahan gagal. Coba lagi.'),
@@ -53,7 +63,7 @@ export function PdfUpload({ maxMb }: { maxMb: number }) {
     <div className="upload-drop">
       <div className="form-stack">
         <label>
-          File PDF (maksimal {maxMb} MB)
+          {label} (maksimal {maxMb} MB)
           <input
             ref={input}
             type="file"
@@ -100,6 +110,7 @@ export function PdfUpload({ maxMb }: { maxMb: number }) {
               className="small secondary"
               onClick={() => {
                 setStaged(null);
+                onStaged?.(null);
                 if (input.current) input.current.value = '';
               }}
             >

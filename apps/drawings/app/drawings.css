@@ -4,6 +4,8 @@
     --pdf-height: min(78vh, 900px);
     display: grid;
     grid-template-rows: auto 1fr;
+    /* Grid items default to min-width:auto and would grow to the toolbar's content width. */
+    grid-template-columns: minmax(0, 1fr);
     border: 1px solid var(--border);
     border-radius: var(--radius-panel);
     background: var(--surface);
@@ -26,6 +28,7 @@
   }
   .pdf-toolbar-group {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-1);
   }
@@ -42,6 +45,11 @@
   }
   .pdf-toolbar .icon-button[aria-pressed='true'] {
     background: var(--surfaceMuted);
+  }
+  .pdf-toolbar .pdf-page {
+    flex-direction: row;
+    white-space: nowrap;
+    font-weight: var(--weight-regular);
   }
   .pdf-page {
     display: inline-flex;
@@ -149,6 +157,217 @@
   .upload-meta code {
     word-break: break-all;
   }
+
+  /* Library */
+  .library-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .segmented {
+    display: inline-flex;
+    gap: var(--space-half);
+    padding: var(--space-half);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--surfaceSunken);
+  }
+  .segmented button {
+    min-height: 40px;
+    padding: 0 var(--space-4);
+    border: 0;
+    border-radius: calc(var(--radius-control) - 2px);
+    background: transparent;
+    color: var(--textSecondary);
+    font-weight: var(--weight-medium);
+  }
+  .segmented button.is-active {
+    background: var(--surface);
+    color: var(--textPrimary);
+    box-shadow: var(--shadow-panel);
+  }
+  .library-filters {
+    display: grid;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .library-filters summary {
+    cursor: pointer;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    color: var(--textSecondary);
+  }
+  .table-scroll {
+    overflow-x: auto;
+  }
+  .drawing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--type-footnote);
+  }
+  .drawing-table th,
+  .drawing-table td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--divider);
+    text-align: left;
+    vertical-align: top;
+  }
+  .drawing-table th {
+    color: var(--textSecondary);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+  .drawing-table td a {
+    font-weight: var(--weight-semibold);
+  }
+  .block {
+    display: block;
+  }
+  .drawing-status svg {
+    width: 14px;
+    height: 14px;
+  }
+  .badge.muted {
+    opacity: 0.75;
+  }
+  .drawing-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-3);
+  }
+  .drawing-card {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--textPrimary);
+    text-decoration: none;
+  }
+  .drawing-card:hover {
+    background: var(--surfaceMuted);
+  }
+  .drawing-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  /* Detail */
+  .drawing-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    gap: var(--space-4);
+    align-items: start;
+  }
+  .drawing-detail > * {
+    min-width: 0;
+  }
+  .detail-side {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .meta-list {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-2) var(--space-4);
+    margin: 0;
+  }
+  .meta-list dt {
+    color: var(--textSecondary);
+  }
+  .meta-list dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .panel > .detail-actions {
+    margin-top: var(--space-4);
+  }
+  /* Link styled as a button (shared CSS styles button elements and .secondary only). */
+  a.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+  a.button.primary {
+    background: var(--buttonPrimaryBg);
+    color: var(--buttonPrimaryText);
+  }
+  a.button.primary:hover {
+    background: var(--buttonPrimaryHover);
+  }
+  a.button.secondary:hover {
+    background: var(--surfaceMuted);
+  }
+  .revision-list,
+  .timeline-list {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .revision-list li,
+  .timeline-list li {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .revision-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .drawing-form fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .drawing-form legend {
+    font-weight: var(--weight-semibold);
+    margin-bottom: var(--space-2);
+  }
+  .masters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+    gap: var(--space-4);
+  }
+  .master-add {
+    display: flex;
+    gap: var(--space-2);
+    align-items: end;
+    margin-bottom: var(--space-3);
+  }
+  .master-add label,
+  .master-name {
+    flex: 1;
+  }
+  .audit-details {
+    font-size: var(--type-caption);
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 959px) {
+    .drawing-detail {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   @media (max-width: 767px) {
     .pdf-frame {
       --pdf-height: 70vh;
@@ -160,6 +379,20 @@
     .pdf-search input {
       flex: 1;
       width: auto;
+      min-width: 0;
+    }
+    .pdf-search {
+      flex-wrap: nowrap;
+    }
+    .pdf-zoom {
+      min-width: 0;
+      max-width: 9em;
+    }
+    .pdf-toolbar {
+      justify-content: flex-start;
+    }
+    .drawing-detail > .panel:first-child {
+      padding: var(--space-2);
     }
   }
   @media (prefers-reduced-motion: reduce) {

@@ -12,6 +12,7 @@
     "@cantoo/pdf-lib": "2.11.1",
     "@plant/contracts": "workspace:*",
     "drizzle-orm": "0.45.4",
-    "mysql2": "3.24.6"
+    "mysql2": "3.24.6",
+    "zod": "4.5.4"
   }
 }

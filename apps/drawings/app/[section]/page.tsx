@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import { pageIdentity } from '@plant/server';
-import { canOpenDrawingsSection, drawingsSections } from '@plant/contracts';
+import { canOpenDrawingsSection, canSeeWip, drawingsRole, drawingsSections } from '@plant/contracts';
 import { Shell, Heading, EmptyState } from '@plant/ui';
-import { maxPdfBytes } from '@plant/drawings-core';
-import { PdfUpload } from '../pdf-upload';
+import { listMasters, maxPdfBytes } from '@plant/drawings-core';
+import { Library } from '../library';
+import { DrawingForm } from '../drawing-form';
+import { MastersManager } from '../masters-manager';
+import { AuditList } from '../audit-list';
 export const dynamic = 'force-dynamic';
 const pages: Record<string, { title: string; description: string }> = {
   library: {
@@ -19,10 +22,14 @@ const pages: Record<string, { title: string; description: string }> = {
     title: 'Drawing Requests',
     description: 'Permintaan drawing baru beserta status review dan pengerjaannya.',
   },
-  new: { title: 'Create Drawing', description: 'Buat drawing baru sebagai draft lalu kirim ke Check.' },
+  new: {
+    title: 'Create Drawing',
+    description: 'Buat drawing baru sebagai draft. Submit to Check tersedia setelah draft lengkap.',
+  },
   legacy: {
     title: 'Upload Old Drawing',
-    description: 'Unggah drawing lama sebagai Final Drawing berlabel Legacy Ready.',
+    description:
+      'Unggah drawing lama langsung sebagai Final Drawing berlabel Legacy Ready, tanpa approval digital.',
   },
   manage: { title: 'Pengelolaan', description: 'Kelola master Area dan Discipline Drawing Database.' },
   audit: {
@@ -35,31 +42,50 @@ export default async function Page({ params }: { params: Promise<{ section: stri
   if (!drawingsSections.includes(section) || !pages[section]) notFound();
   const identity = await pageIdentity(`/drawings/${section}`);
   const page = pages[section];
+  const allowed = canOpenDrawingsSection(identity, section);
+  const masters =
+    allowed && ['library', 'new', 'legacy', 'manage'].includes(section) ? await listMasters() : null;
+  const maxMb = maxPdfBytes() / 1024 / 1024;
+  const actor = { id: identity.id, name: identity.name };
   return (
     <Shell identity={identity} active="drawings" activePath={`/drawings/${section}`}>
-      <Heading eyebrow="Drawing Database" title={page.title} description={page.description} />
-      {canOpenDrawingsSection(identity, section) ? (
-        section === 'new' || section === 'legacy' ? (
-          <section className="panel">
-            <h2>File PDF</h2>
-            <p className="fine">
-              PDF diperiksa server (format, halaman, enkripsi, uji stamp) lalu disimpan sebagai file sementara
-              milik Anda selama 24 jam. Isian data drawing tersedia pada tahap berikutnya.
-            </p>
-            <PdfUpload maxMb={maxPdfBytes() / 1024 / 1024} />
-          </section>
-        ) : (
-          <section className="panel">
-            <EmptyState
-              title="Halaman sedang disiapkan"
-              description="Fitur ini tersedia pada tahap implementasi berikutnya."
-            />
-          </section>
-        )
-      ) : (
+      <Heading eyebrow="Drawing Database" title={page.title} description={page.description}>
+        {section === 'library' && allowed && canOpenDrawingsSection(identity, 'new') && (
+          <a className="button primary" href="/drawings/new">
+            Create Drawing
+          </a>
+        )}
+      </Heading>
+      {!allowed ? (
         <p className="notice error" role="alert">
           Anda tidak memiliki akses untuk halaman ini.
         </p>
+      ) : section === 'library' && masters ? (
+        <Library
+          masters={masters}
+          canSeeWip={canSeeWip(identity, { ownerId: identity.id })}
+          isAdmin={drawingsRole(identity) === 'admin'}
+        />
+      ) : (section === 'new' || section === 'legacy') && masters ? (
+        <section className="panel">
+          <DrawingForm
+            mode={section === 'new' ? 'create' : 'legacy'}
+            masters={masters}
+            maxMb={maxMb}
+            actor={actor}
+          />
+        </section>
+      ) : section === 'manage' && masters ? (
+        <MastersManager initial={masters} />
+      ) : section === 'audit' ? (
+        <AuditList />
+      ) : (
+        <section className="panel">
+          <EmptyState
+            title="Halaman sedang disiapkan"
+            description="Fitur ini tersedia pada tahap implementasi berikutnya."
+          />
+        </section>
       )}
     </Shell>
   );

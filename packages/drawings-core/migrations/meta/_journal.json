@@ -8,6 +8,13 @@
       "when": 1794674222240,
       "tag": "0000_file_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1794676070284,
+      "tag": "0001_drawing_core",
+      "breakpoints": true
     }
   ]
 }
