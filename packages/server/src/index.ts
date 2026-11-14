@@ -97,6 +97,27 @@ export async function fetchIdentity(cookie: string, allowPasswordChange = false)
     );
   return body.identity as Identity;
 }
+export type DirectoryPerson = { id: string; name: string; position: string; role: string };
+/** Direktori pengguna aktif ber-grant pada aplikasi, dibaca dari Auth dengan token layanan. */
+export async function fetchDirectory(app: 'drawings', roles?: readonly string[]): Promise<DirectoryPerson[]> {
+  const base = process.env.AUTH_INTERNAL_URL,
+    token = process.env.SERVICE_TOKEN;
+  if (!base || !token) throw new AppError(503, 'Konfigurasi autentikasi belum tersedia.');
+  const query = new URLSearchParams({ app });
+  if (roles?.length) query.set('roles', roles.join(','));
+  let response: Response;
+  try {
+    response = await fetch(`${base}/auth/internal/directory?${query}`, {
+      headers: { 'x-plant-service-token': token },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    throw new AppError(503, 'Layanan autentikasi tidak tersedia.');
+  }
+  if (!response.ok) throw new AppError(503, 'Direktori pengguna tidak tersedia.');
+  return ((await response.json()) as { people: DirectoryPerson[] }).people;
+}
 export async function pageIdentity(returnTo: string, allowPasswordChange = false) {
   try {
     return await fetchIdentity((await headers()).get('cookie') || '', allowPasswordChange);

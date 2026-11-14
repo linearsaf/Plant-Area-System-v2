@@ -40,7 +40,7 @@ jobs:
         run: |
           if [ -f .test-runtime/stack.env ]; then
             docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml ps -a
-            docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml logs --no-color --tail=160 mysql auth portal bag-filter consumables nginx
+            docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml logs --no-color --tail=160 mysql auth portal bag-filter consumables drawings nginx
           fi
       - name: Stop test stack
         if: always()

@@ -4,6 +4,7 @@ import {
   equipment,
   formatDate,
   canConsume,
+  drawingsNavigation,
   formatQuantity,
   type Movement,
   type StockDocument,
@@ -44,7 +45,7 @@ export function Workspace({
   children,
 }: {
   identity: Identity;
-  active: 'portal' | 'bag-filter' | 'consumables' | 'profile' | 'admin';
+  active: 'portal' | 'bag-filter' | 'consumables' | 'drawings' | 'profile' | 'admin';
   activePath?: string;
   activeEquipment?: string;
   children: React.ReactNode;
@@ -109,6 +110,12 @@ export function Workspace({
           })),
       ]
     : [];
+  const drawingLinks: LinkItem[] = drawingsNavigation(identity).map(({ label, href }) => ({
+    label,
+    href,
+    icon: 'drawing',
+    group: 'Drawing Database',
+  }));
   const sourceIds = [...(grant ? ['bag-filter'] : []), ...(stockGrant ? ['consumables'] : [])];
   const normalizeStock = (m: StockDocument): Activity => ({
     id: m.id,
@@ -129,6 +136,9 @@ export function Workspace({
     ...(grant ? [{ label: 'Bag Filter', href: '/bag-filter', icon: 'grid' as const, group: 'Halaman' }] : []),
     ...(stockGrant
       ? [{ label: 'Consumable Room', href: '/consumables', icon: 'grid' as const, group: 'Halaman' }]
+      : []),
+    ...(drawingLinks.length
+      ? [{ label: 'Drawing Database', href: '/drawings', icon: 'drawing' as const, group: 'Halaman' }]
       : []),
     { label: 'Profil saya', href: '/profile', icon: 'user', group: 'Halaman' },
     ...(identity.portalAdmin
@@ -347,6 +357,7 @@ export function Workspace({
     ...links.filter((l) => l.label.toLowerCase().includes(query.toLowerCase())),
     ...equipmentLinks.filter((l) => l.label.toLowerCase().includes(query.toLowerCase())),
     ...stockLinks.filter((l) => l.label.toLowerCase().includes(query.toLowerCase())),
+    ...drawingLinks.filter((l) => l.label.toLowerCase().includes(query.toLowerCase())),
     ...materialResults,
     ...results.map((item) => ({
       label: `${item.wo || 'Tanpa WO'} · ${item.equipmentCode}`,
@@ -381,6 +392,7 @@ export function Workspace({
         compact={collapsed && !mobile}
         equipmentLinks={equipmentLinks}
         stockLinks={stockLinks}
+        drawingLinks={drawingLinks}
       />
       <div className="sidebar-bottom">
         <button

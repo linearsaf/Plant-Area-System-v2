@@ -5,7 +5,7 @@ import { Icon, type IconName } from './icon';
 import { Overlay } from './overlay';
 
 type Item = { label: string; href: string; count?: number };
-type App = 'bag-filter' | 'consumables';
+type App = 'bag-filter' | 'consumables' | 'drawings';
 function NavigationTree({
   id,
   label,
@@ -30,6 +30,7 @@ export function SidebarNavigation({
   compact,
   equipmentLinks,
   stockLinks,
+  drawingLinks = [],
 }: {
   identity: Identity;
   activeHref: string;
@@ -37,6 +38,7 @@ export function SidebarNavigation({
   compact: boolean;
   equipmentLinks: Item[];
   stockLinks: Item[];
+  drawingLinks?: Item[];
 }) {
   const [openApp, setOpenApp] = useState<string | null>(context),
     [equipmentOpen, setEquipmentOpen] = useState(true),
@@ -60,6 +62,16 @@ export function SidebarNavigation({
       : []),
     ...(canConsume(identity, 'read')
       ? [{ id: 'consumables' as const, label: 'Consumable Room', icon: 'box' as const, items: stockLinks }]
+      : []),
+    ...(drawingLinks.length
+      ? [
+          {
+            id: 'drawings' as const,
+            label: 'Drawing Database',
+            icon: 'drawing' as const,
+            items: drawingLinks,
+          },
+        ]
       : []),
   ];
   const link = (item: Item) => (
@@ -146,7 +158,7 @@ export function SidebarNavigation({
                   id={`navigation-${app.id}`}
                   label={`Submenu ${app.label}`}
                 >
-                  {app.id === 'consumables' ? (
+                  {app.id !== 'bag-filter' ? (
                     app.items.map(link)
                   ) : (
                     <>
@@ -215,7 +227,15 @@ export function SidebarNavigation({
               href={item.href}
               aria-current={activeHref === item.href ? 'page' : undefined}
             >
-              <Icon name={item.href.includes('/equipment/') ? 'filter' : 'grid'} />
+              <Icon
+                name={
+                  item.href.includes('/equipment/')
+                    ? 'filter'
+                    : item.href.startsWith('/drawings')
+                      ? 'drawing'
+                      : 'grid'
+                }
+              />
               {item.label}
             </a>
           ))}

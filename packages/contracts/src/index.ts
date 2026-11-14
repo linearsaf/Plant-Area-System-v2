@@ -9,8 +9,9 @@ export const bagAgeScaleDays = 6 * bagAgeIntervalDays;
 export const bagRoles = ['viewer', 'operator', 'admin'] as const;
 export type BagRole = (typeof bagRoles)[number];
 export type BagGrant = { appId: 'bag-filter'; role: BagRole; equipment: EquipmentCode[] };
-export type Grant = BagGrant | import('./consumables').ConsumablesGrant;
+export type Grant = BagGrant | import('./consumables').ConsumablesGrant | import('./drawings').DrawingsGrant;
 export * from './consumables';
+export * from './drawings';
 export type Identity = {
   id: string;
   name: string;
@@ -331,7 +332,9 @@ export const appCatalog = [
     icon: 'drawing',
     name: 'Drawing Database',
     description: 'Request, pemeriksaan, dan revisi drawing.',
-    status: 'planned',
+    path: '/drawings',
+    portalSummary: '/drawings/api/portal-summary',
+    status: 'active',
   },
   {
     id: 'rca',

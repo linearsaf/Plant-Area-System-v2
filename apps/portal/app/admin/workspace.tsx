@@ -1,7 +1,15 @@
 'use client';
 import { Select, Input, Button, useConfirmation } from '@plant/ui';
 import { useCallback, useEffect, useState } from 'react';
-import { equipmentCodes, formatDate, type Grant } from '@plant/contracts';
+import {
+  equipmentCodes,
+  formatDate,
+  drawingsRoles,
+  drawingsRoleLabels,
+  drawingsRoleDescriptions,
+  type DrawingsRole,
+  type Grant,
+} from '@plant/contracts';
 type ManagedUser = {
   id: string;
   name: string;
@@ -322,6 +330,8 @@ function UserRow({
       </details>
       <hr className="divider" />
       <ConsumablesAccess user={u} busy={busy} act={act} />
+      <hr className="divider" />
+      <DrawingsAccess user={u} busy={busy} act={act} />
     </details>
   );
 }
@@ -363,6 +373,53 @@ function ConsumablesAccess({
       <div>
         <Button className="primary" busy={busy}>
           Simpan akses Consumable Room
+        </Button>
+      </div>
+    </form>
+  );
+}
+function DrawingsAccess({
+  user,
+  busy,
+  act,
+}: {
+  user: ManagedUser;
+  busy: boolean;
+  act: (p: string, b: unknown, s: string) => Promise<boolean>;
+}) {
+  const grant = user.grants.find((g): g is Extract<Grant, { appId: 'drawings' }> => g.appId === 'drawings'),
+    [role, setRole] = useState<DrawingsRole | ''>(grant?.role || '');
+  return (
+    <form
+      className="form-stack"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void act(
+          `users/${user.id}/grants/drawings`,
+          { grant: role ? { appId: 'drawings', role } : null },
+          'Akses Drawing Database diperbarui.',
+        );
+      }}
+    >
+      <h3>Akses Drawing Database</h3>
+      <label>
+        Role Drawing Database
+        <Select name="drawingsRole" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
+          <option value="">Tidak diberi akses</option>
+          {drawingsRoles.map((r) => (
+            <option key={r} value={r}>
+              {drawingsRoleLabels[r]} — {drawingsRoleDescriptions[r]}
+            </option>
+          ))}
+        </Select>
+      </label>
+      <p className="fine">
+        Satu role per pengguna. Status admin portal dan jabatan tidak otomatis memberi hak. Pembuat drawing
+        tidak dapat melakukan Check atau Approval atas drawing sendiri.
+      </p>
+      <div>
+        <Button className="primary" busy={busy}>
+          Simpan akses Drawing Database
         </Button>
       </div>
     </form>

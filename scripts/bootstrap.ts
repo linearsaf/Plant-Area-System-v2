@@ -63,6 +63,9 @@ try {
       equipment: '[]',
       scope: null,
     });
+    await tx
+      .insert(grants)
+      .values({ userId: id, appId: 'drawings', role: 'admin', equipment: '[]', scope: null });
     await tx.insert(audit).values({
       id: randomUUID(),
       actorId: id,

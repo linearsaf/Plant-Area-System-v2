@@ -11,8 +11,37 @@ process.chdir(root);
 const directory = '.deploy/dev';
 const project = 'plant-v2-dev';
 const origin = 'https://localhost:9443';
-const apps = ['auth', 'portal', 'bag-filter', 'consumables'];
-const cores = ['auth-core', 'bag-core', 'consumables-core', 'contracts', 'server', 'ui'];
+const apps = ['auth', 'portal', 'bag-filter', 'consumables', 'drawings'];
+const cores = ['auth-core', 'bag-core', 'consumables-core', 'drawings-core', 'contracts', 'server', 'ui'];
+const databases = [
+  ['AUTH', 'plant_auth', 'plant_auth'],
+  ['BAG', 'plant_bag_filter', 'plant_bag'],
+  ['CONSUMABLES', 'plant_consumables', 'plant_consumables'],
+  ['DRAWINGS', 'plant_drawings', 'plant_drawings'],
+] as const;
+const secrets = [
+  'MYSQL_ROOT_PASSWORD',
+  'AUTH_DB_PASSWORD',
+  'BAG_DB_PASSWORD',
+  'CONSUMABLES_DB_PASSWORD',
+  'DRAWINGS_DB_PASSWORD',
+  'AUTH_SECRET',
+  'SERVICE_TOKEN',
+];
+const render = (data: Record<string, string>) =>
+  Object.entries(data)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n') + '\n';
+const databaseUrls = (values: Record<string, string>) =>
+  Object.fromEntries(
+    databases.flatMap(([key, database, user]) => [
+      [`${key}_DATABASE_URL`, `mysql://${user}:${values[`${key}_DB_PASSWORD`]}@127.0.0.1:14306/${database}`],
+      [
+        `${key}_MIGRATION_DATABASE_URL`,
+        `mysql://root:${values.MYSQL_ROOT_PASSWORD}@127.0.0.1:14306/${database}`,
+      ],
+    ]),
+  );
 const run = promisify(execFile);
 const command = process.argv[2] || 'status';
 async function exists(path: string) {
@@ -72,18 +101,43 @@ async function profile() {
   );
   if (values.PUBLIC_ORIGIN !== origin || values.RELEASE_TAG !== 'dev' || values.TEST_DATABASE !== '0')
     throw Error('Environment development tidak sesuai profil.');
-  for (const key of [
-    'MYSQL_ROOT_PASSWORD',
-    'AUTH_DB_PASSWORD',
-    'BAG_DB_PASSWORD',
-    'CONSUMABLES_DB_PASSWORD',
-    'AUTH_SECRET',
-    'SERVICE_TOKEN',
-  ])
+  for (const key of secrets)
     if (!/^[a-f0-9]{64}$/.test(values[key] || '')) throw Error('Credential development tidak valid.');
   return values;
 }
+// Adds secrets introduced after an environment was created (Drawing Database). Existing
+// values, users and volumes are never changed; only missing keys are appended.
+async function extendEnvironment() {
+  const marker = JSON.parse(await readFile(`${directory}/profile.json`, 'utf8'));
+  if (marker.kind !== 'plant-local-development' || marker.project !== project || marker.origin !== origin)
+    throw Error('Profil development tidak sesuai; tidak akan menyentuh deployment existing.');
+  const stackPath = `${directory}/stack.env`,
+    hostPath = `${directory}/host.env`;
+  const has = (text: string, key: string) => new RegExp(`^${key}=`, 'm').test(text);
+  let stack = await readFile(stackPath, 'utf8');
+  if (!has(stack, 'DRAWINGS_DB_PASSWORD')) {
+    stack += (stack.endsWith('\n') ? '' : '\n') + `DRAWINGS_DB_PASSWORD=${randomBytes(32).toString('hex')}\n`;
+    await writeFile(stackPath, stack, { mode: 0o600 });
+  }
+  if (!(await exists(hostPath))) return;
+  const values: Record<string, string> = Object.fromEntries(
+    stack
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]),
+  );
+  let host = await readFile(hostPath, 'utf8');
+  const additions = Object.entries({
+    DRAWINGS_DB_PASSWORD: values.DRAWINGS_DB_PASSWORD,
+    ...databaseUrls(values),
+  }).filter(([key]) => !has(host, key));
+  if (additions.length) {
+    host += (host.endsWith('\n') ? '' : '\n') + render(Object.fromEntries(additions));
+    await writeFile(hostPath, host, { mode: 0o600 });
+  }
+}
 async function verifyConfig() {
+  await extendEnvironment();
   await profile();
   const config = JSON.parse((await docker(compose(['config', '--format', 'json']))).stdout);
   if (config.name !== project || config.volumes?.['mysql-data']?.name !== `${project}_mysql-data`)
@@ -138,34 +192,9 @@ async function setup() {
       BOOTSTRAP_NAME: 'Developer',
       BOOTSTRAP_PASSWORD: randomBytes(24).toString('hex'),
     };
-    for (const key of [
-      'MYSQL_ROOT_PASSWORD',
-      'AUTH_DB_PASSWORD',
-      'BAG_DB_PASSWORD',
-      'CONSUMABLES_DB_PASSWORD',
-      'AUTH_SECRET',
-      'SERVICE_TOKEN',
-    ])
-      values[key] = randomBytes(32).toString('hex');
-    const render = (data: Record<string, string>) =>
-      Object.entries(data)
-        .map(([key, value]) => `${key}=${value}`)
-        .join('\n') + '\n';
+    for (const key of secrets) values[key] = randomBytes(32).toString('hex');
     await writeFile(`${directory}/stack.env`, render(values), { flag: 'wx', mode: 0o600 });
-    const host = {
-      ...values,
-      AUTH_INTERNAL_URL: 'http://localhost:3001',
-    };
-    for (const [key, database, user, password] of [
-      ['AUTH', 'plant_auth', 'plant_auth', values.AUTH_DB_PASSWORD],
-      ['BAG', 'plant_bag_filter', 'plant_bag', values.BAG_DB_PASSWORD],
-      ['CONSUMABLES', 'plant_consumables', 'plant_consumables', values.CONSUMABLES_DB_PASSWORD],
-    ]) {
-      Object.assign(host, {
-        [`${key}_DATABASE_URL`]: `mysql://${user}:${password}@127.0.0.1:14306/${database}`,
-        [`${key}_MIGRATION_DATABASE_URL`]: `mysql://root:${values.MYSQL_ROOT_PASSWORD}@127.0.0.1:14306/${database}`,
-      });
-    }
+    const host = { ...values, AUTH_INTERNAL_URL: 'http://localhost:3001', ...databaseUrls(values) };
     await writeFile(`${directory}/host.env`, render(host), { flag: 'wx', mode: 0o600 });
     await writeFile(
       `${directory}/profile.json`,
@@ -173,6 +202,7 @@ async function setup() {
       { flag: 'wx', mode: 0o600 },
     );
   }
+  await extendEnvironment();
   await profile();
   // These generated files derive from production routing; only dev-specific behavior differs.
   let template = await readFile('infra/nginx/default.conf.template', 'utf8');

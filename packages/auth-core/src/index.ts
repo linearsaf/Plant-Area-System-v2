@@ -10,6 +10,9 @@ import {
   type BagRole,
   type BagGrant,
   consumablesRoles,
+  drawingsRoles,
+  isDrawingsRole,
+  type DrawingsRole,
 } from '@plant/contracts';
 import { getAuth, publicOrigin } from './auth';
 import { getAuthDb } from './database';
@@ -63,6 +66,7 @@ function decodeGrant(g: {
     if (g.appId === 'consumables' && consumablesRoles.includes(g.role as (typeof consumablesRoles)[number])) {
       return { appId: 'consumables', role: g.role as (typeof consumablesRoles)[number] };
     }
+    if (g.appId === 'drawings' && isDrawingsRole(g.role)) return { appId: 'drawings', role: g.role };
   } catch {}
   return null;
 }
@@ -72,18 +76,30 @@ export async function setAppGrant(actor: Identity, id: string, appId: string, in
     await setGrant(actor, id, input);
     return;
   }
-  if (appId !== 'consumables') throw new AppError(400, 'Aplikasi tidak dikenal.');
-  let grant: Extract<Grant, { appId: 'consumables' }> | null = null;
+  // Role-only grants: Consumable Room and Drawing Database have no equipment or location scope.
+  const roleOnly = {
+    consumables: {
+      roles: consumablesRoles as readonly string[],
+      error: 'Role Consumable Room tidak valid. Scope lokasi tidak digunakan.',
+    },
+    drawings: {
+      roles: drawingsRoles as readonly string[],
+      error: 'Role Drawing Database tidak valid. Grant hanya berisi satu role tanpa scope.',
+    },
+  } as const;
+  if (appId !== 'consumables' && appId !== 'drawings') throw new AppError(400, 'Aplikasi tidak dikenal.');
+  let grant: { appId: typeof appId; role: string } | null = null;
   if (input !== null) {
     if (!input || typeof input !== 'object') throw new AppError(400, 'Grant tidak valid.');
-    const g = input as Extract<Grant, { appId: 'consumables' }>;
+    const g = input as { appId?: unknown; role?: unknown };
     if (
       g.appId !== appId ||
-      !consumablesRoles.includes(g.role) ||
+      typeof g.role !== 'string' ||
+      !roleOnly[appId].roles.includes(g.role) ||
       Object.keys(g).some((k) => !['appId', 'role'].includes(k))
     )
-      throw new AppError(400, 'Role Consumable Room tidak valid. Scope lokasi tidak digunakan.');
-    grant = { appId: 'consumables', role: g.role };
+      throw new AppError(400, roleOnly[appId].error);
+    grant = { appId, role: g.role };
   }
   await getAuthDb().transaction(async (tx) => {
     const [target] = await tx.select().from(user).where(eq(user.id, id)).for('update');
@@ -137,7 +153,10 @@ export async function listApplications(actor: Identity) {
 }
 export async function setApplicationStatus(actor: Identity, id: string, status: unknown) {
   requireAdmin(actor);
-  if (!['bag-filter', 'consumables'].includes(id) || (status !== 'active' && status !== 'disabled'))
+  if (
+    !['bag-filter', 'consumables', 'drawings'].includes(id) ||
+    (status !== 'active' && status !== 'disabled')
+  )
     throw new AppError(400, 'Hanya aplikasi yang telah dirilis dapat diaktifkan atau dinonaktifkan.');
   await getAuthDb().transaction(async (tx) => {
     await tx.update(applications).set({ status }).where(eq(applications.id, id));
@@ -394,6 +413,26 @@ export async function login(request: Request, body: Record<string, unknown>) {
     responseHeaders.delete('content-length');
     return Response.json({ ok: true }, { headers: responseHeaders });
   });
+}
+export type DirectoryEntry = { id: string; name: string; position: string; role: DrawingsRole };
+/**
+ * Direktori pengguna aktif ber-grant pada aplikasi (dipakai Drawing Database untuk
+ * memilih approver, drafter dan owner). Hanya untuk endpoint internal bertoken layanan;
+ * email dan status admin portal tidak ikut dikirim. Aplikasi nonaktif menghasilkan daftar kosong.
+ */
+export async function appDirectory(appId: string, roles?: readonly string[]): Promise<DirectoryEntry[]> {
+  if (appId !== 'drawings') throw new AppError(400, 'Direktori hanya tersedia untuk Drawing Database.');
+  if (roles?.some((r) => !isDrawingsRole(r))) throw new AppError(400, 'Role direktori tidak valid.');
+  const rows = await getAuthDb()
+    .select({ id: user.id, name: user.name, position: user.position, role: grants.role })
+    .from(grants)
+    .innerJoin(user, eq(grants.userId, user.id))
+    .innerJoin(applications, eq(grants.appId, applications.id))
+    .where(and(eq(grants.appId, appId), eq(applications.status, 'active'), eq(user.active, true)))
+    .orderBy(user.name, user.id);
+  return rows
+    .filter((r): r is DirectoryEntry => isDrawingsRole(r.role) && (!roles || roles.includes(r.role)))
+    .map(({ id, name, position, role }) => ({ id, name, position, role }));
 }
 export function mysqlCode(e: unknown): string | undefined {
   if (!e || typeof e !== 'object') return undefined;

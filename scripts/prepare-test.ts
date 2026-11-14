@@ -58,15 +58,18 @@ const stackPath = `${directory}/stack.env`,
 let stack = await readFile(stackPath, 'utf8'),
   host = await readFile(hostPath, 'utf8');
 const secret = /^CONSUMABLES_DB_PASSWORD=(.+)$/m.exec(stack)?.[1] || randomBytes(24).toString('hex');
+const drawingsSecret = /^DRAWINGS_DB_PASSWORD=(.+)$/m.exec(stack)?.[1] || randomBytes(24).toString('hex');
 const rootPassword = /^MYSQL_ROOT_PASSWORD=(.+)$/m.exec(stack)![1];
-if (!/^CONSUMABLES_DB_PASSWORD=/m.test(stack)) {
-  stack += `CONSUMABLES_DB_PASSWORD=${secret}\n`;
-  await writeFile(stackPath, stack);
-}
+if (!/^CONSUMABLES_DB_PASSWORD=/m.test(stack)) stack += `CONSUMABLES_DB_PASSWORD=${secret}\n`;
+if (!/^DRAWINGS_DB_PASSWORD=/m.test(stack)) stack += `DRAWINGS_DB_PASSWORD=${drawingsSecret}\n`;
+await writeFile(stackPath, stack);
 const extra: Record<string, string> = {
   CONSUMABLES_DB_PASSWORD: secret,
   CONSUMABLES_DATABASE_URL: `mysql://plant_consumables:${secret}@127.0.0.1:13306/plant_consumables`,
   CONSUMABLES_MIGRATION_DATABASE_URL: `mysql://root:${rootPassword}@127.0.0.1:13306/plant_consumables`,
+  DRAWINGS_DB_PASSWORD: drawingsSecret,
+  DRAWINGS_DATABASE_URL: `mysql://plant_drawings:${drawingsSecret}@127.0.0.1:13306/plant_drawings`,
+  DRAWINGS_MIGRATION_DATABASE_URL: `mysql://root:${rootPassword}@127.0.0.1:13306/plant_drawings`,
 };
 for (const [k, v] of Object.entries(extra)) if (!new RegExp(`^${k}=`, 'm').test(host)) host += `${k}=${v}\n`;
 await writeFile(hostPath, host);
