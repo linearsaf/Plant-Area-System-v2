@@ -359,6 +359,8 @@ for (const [width, theme] of [
   }) => {
     const violations = watchCsp(page);
     await page.setViewportSize({ width, height: 900 });
+    // OS scheme opposite to the app theme: pdf_viewer.css once forced light-dark() onto the shell.
+    await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' });
     await login(page, people.viewer!, theme);
     await page.goto('/drawings/library');
     await page.getByPlaceholder('Cari nomor, nama atau HAC/SAC').fill(`DWG-${suffix}`);
@@ -374,6 +376,28 @@ for (const [width, theme] of [
     await search.press('Enter');
     await expect(page.locator('.pdf-matches')).toContainText('/1', { timeout: 15000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    // pdfjs global `.sidebar` / `:root` rules must not leak into the shell.
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(theme);
+    if (width > 767)
+      expect(await page.evaluate(() => getComputedStyle(document.querySelector('.sidebar')!).position)).toBe(
+        'sticky',
+      );
+    // Toolbar controls never overlap each other.
+    expect(
+      await page.evaluate(() => {
+        const r = [...document.querySelectorAll('.pdf-toolbar :is(button, input, select, a)')].map((e) =>
+          e.getBoundingClientRect(),
+        );
+        return r.some((a, i) =>
+          r
+            .slice(i + 1)
+            .some(
+              (b) =>
+                a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1,
+            ),
+        );
+      }),
+    ).toBe(false);
     expect(violations).toEqual([]);
   });
 

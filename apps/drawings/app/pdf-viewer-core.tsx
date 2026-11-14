@@ -340,7 +340,7 @@ export default function PdfViewerCore({
       onKeyDown={keyDown}
     >
       <div className="pdf-toolbar" role="toolbar" aria-label={`Kontrol viewer ${title}`}>
-        <div className="pdf-toolbar-group">
+        <div className="pdf-toolbar-group pdf-nav">
           <button
             type="button"
             className="icon-button"
@@ -375,7 +375,7 @@ export default function PdfViewerCore({
             <Icon name="chevron" style={{ transform: 'rotate(90deg)' }} />
           </button>
         </div>
-        <div className="pdf-toolbar-group">
+        <div className="pdf-toolbar-group pdf-tools">
           <button
             type="button"
             className="icon-button"
@@ -474,7 +474,7 @@ export default function PdfViewerCore({
             <Icon name="chevron" />
           </button>
         </form>
-        <div className="pdf-toolbar-group">
+        <div className="pdf-toolbar-group pdf-actions">
           <button
             type="button"
             className="icon-button"
