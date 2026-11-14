@@ -54,7 +54,8 @@ await writeFile(
     // S3-compatible storage for the Drawing Database `s3` driver tests only. The minio/minio image is
     // no longer available on Docker Hub; SeaweedFS serves the S3 API (4.51 supports conditional
     // PUT If-None-Match, used by the no-overwrite rule). Credentials come from stack.env. The healthcheck
-    // makes `up --wait` block until the S3 port answers; without it the first request was reset.
+    // makes `up --wait` block until the S3 port answers. -ip.bind=0.0.0.0 is required: by default
+    // every weed port binds to 127.0.0.1 only, so the published port reset each host connection.
     [
       '  s3:',
       '    image: chrislusf/seaweedfs:4.51',
@@ -62,7 +63,7 @@ await writeFile(
       '    command:',
       '      - >-',
       `        printf '{"identities":[{"name":"plant","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$$S3_KEY" "$$S3_SECRET" > /tmp/s3.json &&`,
-      '        exec weed server -dir=/data -volume.max=0 -master.volumeSizeLimitMB=64 -s3 -s3.port=8333 -s3.config=/tmp/s3.json',
+      '        exec weed server -ip.bind=0.0.0.0 -dir=/data -volume.max=0 -master.volumeSizeLimitMB=64 -s3 -s3.port=8333 -s3.config=/tmp/s3.json',
       '    environment:',
       '      S3_KEY: ${DRAWINGS_TEST_S3_ACCESS_KEY_ID:?Set DRAWINGS_TEST_S3_ACCESS_KEY_ID}',
       '      S3_SECRET: ${DRAWINGS_TEST_S3_SECRET_ACCESS_KEY:?Set DRAWINGS_TEST_S3_SECRET_ACCESS_KEY}',
