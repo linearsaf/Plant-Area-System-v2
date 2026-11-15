@@ -191,10 +191,18 @@ export default function PdfViewerCore({
   const presetRef = useRef(preset);
   presetRef.current = preset;
   useEffect(() => {
-    const element = container.current;
+    // Observe the fixed-size stage, not the scroll container: the container's content box shrinks when
+    // its scrollbar appears, and refitting on that change toggles the scrollbar again in an endless loop.
+    const element = container.current?.parentElement;
     if (!element || !ready) return;
-    let frameId = 0;
-    const observer = new ResizeObserver(() => {
+    let frameId = 0,
+      lastWidth = -1,
+      lastHeight = -1;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width === lastWidth && height === lastHeight) return;
+      lastWidth = width;
+      lastHeight = height;
       cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
         const value = presetRef.current;
@@ -355,7 +363,7 @@ export default function PdfViewerCore({
             disabled={!ready || scale <= MIN_SCALE}
             onClick={() => zoom(-1)}
           >
-            <span aria-hidden="true">−</span>
+            <Icon name="minus" />
           </button>
           <select
             aria-label="Zoom"
@@ -387,18 +395,18 @@ export default function PdfViewerCore({
             disabled={!ready}
             onClick={rotate}
           >
-            <span aria-hidden="true">⟳</span>
+            <Icon name="rotate" />
           </button>
           <button
             type="button"
             className="icon-button"
-            aria-label={panning ? 'Mode pilih teks' : 'Mode geser'}
-            aria-pressed={!panning}
-            title={panning ? 'Pilih teks' : 'Geser halaman'}
+            aria-label="Mode geser"
+            aria-pressed={panning}
+            title="Geser halaman"
             disabled={!ready}
             onClick={() => setPanning((v) => !v)}
           >
-            <span aria-hidden="true">{panning ? 'T' : '✋'}</span>
+            <Icon name="move" />
           </button>
         </div>
         <div className="pdf-toolbar-group pdf-actions">
@@ -408,7 +416,7 @@ export default function PdfViewerCore({
             aria-label={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
             onClick={() => void toggleFullscreen()}
           >
-            <span aria-hidden="true">{fullscreen ? '⤡' : '⤢'}</span>
+            <Icon name={fullscreen ? 'shrink' : 'expand'} />
           </button>
           {url && (
             <a
@@ -423,12 +431,12 @@ export default function PdfViewerCore({
           )}
           {printUrl && (
             <a className="icon-button" href={printUrl} target="_blank" rel="noopener" aria-label="Print">
-              <span aria-hidden="true">⎙</span>
+              <Icon name="print" />
             </a>
           )}
           {downloadUrl && (
             <a className="icon-button" href={downloadUrl} aria-label="Download">
-              <span aria-hidden="true">⤓</span>
+              <Icon name="download" />
             </a>
           )}
         </div>

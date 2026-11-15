@@ -50,6 +50,18 @@ type Snapshot = {
 };
 type Batch = BatchRecord;
 type Page<T> = { items: T[]; nextCursor: string | null };
+type MarqueeDrag = {
+  x: number;
+  y: number;
+  pointX: number;
+  pointY: number;
+  active: boolean;
+  base: Position[];
+  items: Position[];
+  cells: { rect: DOMRect; column: number; row: number }[];
+  pickedKey: string;
+  frame: number | null;
+};
 async function read<T>(url: string, signal?: AbortSignal): Promise<T> {
   const r = await fetch(url, { cache: 'no-store', signal });
   const d = await r.json();
@@ -95,13 +107,50 @@ export default function BagMonitor({
     [timelineError, setTimelineError] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false),
     [bucket, setBucket] = useState<number | 'empty' | null>(null);
-  const [hovered, setHovered] = useState<{ position: Position; x: number; y: number } | null>(null),
-    [marquee, setMarquee] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [hovered, setHovered] = useState<{ position: Position; x: number; y: number } | null>(null);
   const anchorSelection = useRef<Position | null>(null),
-    drag = useRef<{ x: number; y: number; active: boolean; base: Position[]; items: Position[] } | null>(
-      null,
-    ),
+    drag = useRef<MarqueeDrag | null>(null),
+    marqueeBox = useRef<HTMLDivElement>(null),
     suppressClick = useRef(false);
+  // The marquee box is positioned directly so a drag does not re-render the whole map each frame.
+  const hideMarquee = () => {
+    if (marqueeBox.current) marqueeBox.current.hidden = true;
+  };
+  const applyMarquee = (d: MarqueeDrag) => {
+    d.frame = null;
+    if (!d.active) return;
+    const left = Math.min(d.x, d.pointX),
+      top = Math.min(d.y, d.pointY),
+      right = Math.max(d.x, d.pointX),
+      bottom = Math.max(d.y, d.pointY);
+    const box = marqueeBox.current;
+    if (box) {
+      box.hidden = false;
+      box.style.left = `${left}px`;
+      box.style.top = `${top}px`;
+      box.style.width = `${right - left}px`;
+      box.style.height = `${bottom - top}px`;
+    }
+    const picked = d.cells.filter(
+      ({ rect: r }) => r.right >= left && r.left <= right && r.bottom >= top && r.top <= bottom,
+    );
+    const key = picked.map((cell) => `${cell.column}:${cell.row}`).join(',');
+    if (key === d.pickedKey) return;
+    d.pickedKey = key;
+    d.items = picked.map(({ column, row }) => ({ side, compartment, column, row }));
+    dispatchSelection({ type: 'preview', positions: d.items, base: d.base });
+  };
+  const flushMarquee = (d: MarqueeDrag) => {
+    if (d.frame === null) return;
+    cancelAnimationFrame(d.frame);
+    applyMarquee(d);
+  };
+  useEffect(
+    () => () => {
+      if (drag.current?.frame != null) cancelAnimationFrame(drag.current.frame);
+    },
+    [],
+  );
   const retry = useRef<{ key: string; payload: string } | null>(null);
   const recordButton = useRef<HTMLButtonElement>(null);
   const [cancelTarget, setCancelTarget] = useState<Batch | null>(null);
@@ -575,7 +624,9 @@ export default function BagMonitor({
                             className={`overview-line${rowDividerBefore(eq, band, row) ? ' overview-stiffener' : ''}`}
                             key={row}
                           >
-                            <span className="overview-row-number">{row}</span>
+                            <span className="overview-row-number" data-even={row % 2 === 0 || undefined}>
+                              {row}
+                            </span>
                             {Array.from({ length: 8 }, (_, c) => {
                               const p = { side: band, compartment: local, column: c + 1, row },
                                 key = positionKey(p),
@@ -707,45 +758,42 @@ export default function BagMonitor({
                 aria-label={`Detail kompartemen ${currentComp}`}
                 onPointerDown={(e) => {
                   if (writable && !busy && e.pointerType === 'mouse' && e.button === 0)
-                    drag.current = { x: e.clientX, y: e.clientY, active: false, base: selected, items: [] };
+                    drag.current = {
+                      x: e.clientX,
+                      y: e.clientY,
+                      pointX: e.clientX,
+                      pointY: e.clientY,
+                      active: false,
+                      base: selected,
+                      items: [],
+                      cells: [],
+                      pickedKey: '',
+                      frame: null,
+                    };
                 }}
                 onPointerMove={(e) => {
                   const d = drag.current;
                   if (!d) return;
-                  if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) {
+                  d.pointX = e.clientX;
+                  d.pointY = e.clientY;
+                  if (!d.active) {
+                    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 5) return;
                     d.active = true;
                     e.currentTarget.setPointerCapture(e.pointerId);
-                    const rect = {
-                      x: Math.min(d.x, e.clientX),
-                      y: Math.min(d.y, e.clientY),
-                      width: Math.abs(e.clientX - d.x),
-                      height: Math.abs(e.clientY - d.y),
-                    };
-                    setMarquee(rect);
-                    const cells = Array.from(
+                    // Measure once per drag; reading layout on every move forces a reflow per frame.
+                    d.cells = Array.from(
                       e.currentTarget.querySelectorAll<HTMLButtonElement>('.bag-cell'),
-                    );
-                    const picked = cells
-                      .filter((el) => {
-                        const r = el.getBoundingClientRect();
-                        return (
-                          r.right >= rect.x &&
-                          r.left <= rect.x + rect.width &&
-                          r.bottom >= rect.y &&
-                          r.top <= rect.y + rect.height
-                        );
-                      })
-                      .map((el) => ({
-                        side,
-                        compartment,
+                      (el) => ({
+                        rect: el.getBoundingClientRect(),
                         column: Number(el.dataset.column),
                         row: Number(el.dataset.row),
-                      }));
-                    d.items = picked;
-                    dispatchSelection({ type: 'preview', positions: picked, base: d.base });
+                      }),
+                    );
                   }
+                  if (d.frame === null) d.frame = requestAnimationFrame(() => applyMarquee(d));
                 }}
                 onPointerUp={(e) => {
+                  if (drag.current) flushMarquee(drag.current);
                   if (drag.current?.active) {
                     dispatchSelection({
                       type: 'add',
@@ -758,15 +806,16 @@ export default function BagMonitor({
                     }, 0);
                   }
                   drag.current = null;
-                  setMarquee(null);
+                  hideMarquee();
                   if (e.currentTarget.hasPointerCapture(e.pointerId))
                     e.currentTarget.releasePointerCapture(e.pointerId);
                 }}
                 onPointerCancel={() => {
+                  if (drag.current?.frame != null) cancelAnimationFrame(drag.current.frame);
                   if (drag.current?.active)
                     dispatchSelection({ type: 'cancel-drag', base: drag.current.base });
                   drag.current = null;
-                  setMarquee(null);
+                  hideMarquee();
                 }}
               >
                 <span />
@@ -1218,12 +1267,7 @@ export default function BagMonitor({
           </button>
         </div>
       )}
-      {marquee && (
-        <div
-          className="selection-marquee"
-          style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }}
-        />
-      )}
+      <div ref={marqueeBox} className="selection-marquee" hidden />
       {hovered &&
         !sheetOpen &&
         !bulkOpen &&

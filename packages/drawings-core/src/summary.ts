@@ -182,7 +182,7 @@ export async function drawingsPortalSummary(
       href: '/drawings/requests',
     });
   const attention: PortalSummary['attention'] = [];
-  const group = { key: 'drawings', label: 'Drawing Database', unit: 'drawing' };
+  const group = { key: 'drawings', label: 'Drawing perlu tindakan', unit: 'drawing' };
   if (c.rejected)
     attention.push({
       key: 'rejected',

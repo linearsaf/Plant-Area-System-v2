@@ -97,7 +97,7 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
       )}
       {drawing.revising && <p className="notice">Revisi berikutnya sedang diproses.</p>}
       <div className="drawing-detail">
-        <section className="panel" aria-label="Viewer drawing">
+        <section className="panel viewer-panel" aria-label="Viewer drawing">
           {selected ? (
             <PdfViewer
               url={selected.hasFile ? fileUrl(selected) : null}

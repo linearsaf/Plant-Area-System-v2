@@ -27,6 +27,21 @@
   .user-row .form-stack {
     margin-top: var(--space-5);
   }
+  /* Inside a panel the rows are list items separated by rules, not cards within the card. */
+  .panel .user-list {
+    gap: 0;
+  }
+  .panel .user-row {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--divider);
+    border-radius: 0;
+    padding: var(--space-4) 0;
+  }
+  .panel .user-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
   .audit-table {
     width: 100%;
     border-collapse: collapse;

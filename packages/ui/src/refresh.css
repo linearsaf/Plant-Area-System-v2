@@ -195,6 +195,12 @@
     padding: var(--space-1) var(--space-3);
     font-size: var(--type-footnote);
   }
+  /* Compact on desktop; touch gets the 44 px target used across the platform. */
+  @media (pointer: coarse) {
+    button.small {
+      min-height: 44px;
+    }
+  }
   button:disabled,
   button.primary:disabled,
   button.accent:disabled,
@@ -548,8 +554,7 @@
   .notice.error {
     background: var(--danger-bg);
     color: var(--danger-text);
-    border: 0;
-    border-left: 3px solid var(--danger);
+    border: 1px solid var(--danger-border);
     animation: overlay-in var(--duration-base) var(--ease-enter);
   }
   .error-text {
@@ -655,6 +660,14 @@
     width: 32px;
     height: 32px;
     min-height: 32px;
+  }
+  /* Compact on desktop; touch gets the 44 px target used across the platform. */
+  @media (pointer: coarse) {
+    .overlay-heading .icon-button {
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
+    }
   }
   .overlay-dialog {
     width: 480px;

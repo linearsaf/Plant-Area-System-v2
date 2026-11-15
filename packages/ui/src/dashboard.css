@@ -188,6 +188,12 @@
     padding: var(--space-1) var(--space-2);
     font-size: var(--type-footnote);
   }
+  /* Compact on desktop; touch gets the 44 px target used across the platform. */
+  @media (pointer: coarse) {
+    .chart-panel .select-trigger {
+      min-height: 44px;
+    }
+  }
   .chart-panel .sr-label {
     font-size: 0;
   }
@@ -1026,7 +1032,8 @@
   .portal-planned-copy span {
     font-size: var(--type-caption);
     line-height: var(--leading-caption);
-    color: var(--textMuted);
+    /* textMuted on surfaceMuted is 4.3:1 in light mode; secondary keeps AA. */
+    color: var(--textSecondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1042,7 +1049,7 @@
   .portal-quick-actions .eyebrow {
     margin: 0;
     color: var(--gray-950);
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
     letter-spacing: 0.05em;
   }
   .portal-action-list {
@@ -1216,6 +1223,12 @@
     font-size: var(--type-caption);
     font-weight: var(--weight-medium);
     cursor: pointer;
+  }
+  /* Compact on desktop; touch gets the 44 px target used across the platform. */
+  @media (pointer: coarse) {
+    .portal-filter-chip {
+      min-height: 44px;
+    }
   }
   .portal-filter-chip.is-active {
     background: var(--buttonPrimaryBg);

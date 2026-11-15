@@ -73,7 +73,8 @@
     border: 0;
     background: var(--surfaceSunken);
     color: var(--textPrimary);
-    font-size: clamp(6px, 0.7vw, 11px);
+    /* Sized from the map's width per compartment, not the viewport, so the sidebar cannot shrink it. */
+    font-size: clamp(10px, calc(100cqi / var(--overview-compartments, 12) / 7.5), 12px);
     font-weight: 500;
     border-radius: 6px;
   }
@@ -112,7 +113,7 @@
     z-index: 3;
   }
   .overview-compartment[data-active='true'] {
-    outline: 1px solid var(--emty-edge);
+    outline: 1px solid var(--empty-edge);
     outline-offset: 3px;
     border-radius: 4px;
   }
@@ -139,11 +140,21 @@
     margin-top: 8px;
   }
   .overview-row-number {
-    font-size: clamp(6px, 0.5vw, 10px);
+    /* Matches the narrow overview; "17" still fits the 12 px gutter. */
+    font-size: 10px;
     color: var(--textSecondary);
     min-width: 0;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+    /* Zero layout height: the label centres on its row without making rows taller than the cells. */
+    height: 0;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+  }
+  /* The row pitch is narrower than a legible label, so the dense desktop map labels every other row. */
+  .overview-row-number[data-even] {
+    visibility: hidden;
   }
   .equipment-workspace {
     container: bag-workspace / inline-size;
@@ -455,20 +466,6 @@
     .overview-line,
     .overview-matrix {
       gap: 1px;
-    }
-    .overview-title {
-      min-height: 24px;
-      font-size: clamp(6px, 0.7vw, 11px);
-      padding: 4px 0;
-    }
-    .overview-title-full {
-      display: none;
-    }
-    .overview-row-number {
-      font-size: 6px;
-    }
-    .overview-labels {
-      font-size: 6px;
     }
     .bag-layout {
       grid-template-columns: 1fr;
@@ -826,8 +823,8 @@
     gap: 4px;
     margin: 10px 0;
     padding: 10px 12px;
-    border-left: 2px solid var(--danger-border);
-    border-radius: 6px;
+    border: 1px solid var(--danger-border);
+    border-radius: var(--radius-input);
     background: var(--danger-bg);
     color: var(--danger-text);
     overflow-wrap: anywhere;
@@ -1011,6 +1008,9 @@
     }
     .overview-matrix {
       gap: 2px;
+    }
+    .overview-row-number[data-even] {
+      visibility: visible;
     }
     .overview-row-number {
       font-size: 10px;
