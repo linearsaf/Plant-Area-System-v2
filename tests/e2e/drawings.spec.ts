@@ -65,6 +65,9 @@ async function login(page: Page, person: Person, theme: 'light' | 'dark' = 'ligh
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: /^Masuk/ }).click();
   await page.waitForURL((u) => u.pathname === '/');
+  // Let the Portal finish its summary/activity requests; WebKit reports requests cut off by the next
+  // navigation as page errors, which watchCsp would count as violations.
+  await page.waitForLoadState('networkidle');
 }
 function watchCsp(page: Page) {
   const violations: string[] = [];
@@ -371,7 +374,8 @@ for (const [width, theme] of [
     await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' });
     await login(page, people.viewer!, theme);
     await page.goto('/drawings/library');
-    await page.getByPlaceholder('Cari nomor, nama atau HAC/SAC').fill(`DWG-${suffix}`);
+    // By role: a streamed, still-hidden copy of the page can briefly share the placeholder.
+    await page.getByRole('searchbox', { name: 'Cari', exact: true }).fill(`DWG-${suffix}`);
     await page
       .getByRole('link', { name: `DWG-${suffix}` })
       .first()
