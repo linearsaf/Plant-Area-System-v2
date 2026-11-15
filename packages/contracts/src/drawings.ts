@@ -20,8 +20,8 @@ export const drawingsRoleDescriptions: Record<DrawingsRole, string> = {
   viewer: 'Membaca, print dan download Final Drawing; membuat Drawing Request',
   drafter: 'Membuat drawing, mengedit dan submit draft miliknya, menjawab assignment',
   leader: 'Check, menyusun approval plan, review request, Upload Old Drawing',
-  approver: 'Approval level 1 untuk revisi yang ditugaskan',
-  head: 'Final Approval untuk revisi yang ditugaskan',
+  approver: 'Approval level 1 untuk revisi yang ditugaskan; membuat Drawing Request',
+  head: 'Final Approval untuk revisi yang ditugaskan; membuat Drawing Request',
   admin: 'Seluruh hak operasional, void, master, audit; tetap tunduk pada maker-checker',
 };
 

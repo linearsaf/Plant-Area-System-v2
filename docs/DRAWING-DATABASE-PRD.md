@@ -46,8 +46,8 @@ Grant berbentuk `{ appId: "drawings", role }`, satu role per pengguna, diatur ad
 | Viewer       | `viewer`   | CONSUMER          | Membaca, print dan download Final Drawing; membuat Drawing Request            |
 | Drafter      | `drafter`  | DRAFTER           | Membuat drawing, mengedit dan submit draft miliknya, menjawab assignment      |
 | Draft Leader | `leader`   | DRAFT_LEADER      | Check, menyusun approval plan, review request, Upload Old Drawing             |
-| Approver L1  | `approver` | APPROVER_L1       | Approval level 1 untuk revisi yang ditugaskan                                 |
-| Head         | `head`     | HEAD              | Final Approval untuk revisi yang ditugaskan                                   |
+| Approver L1  | `approver` | APPROVER_L1       | Approval level 1 untuk revisi yang ditugaskan; membuat Drawing Request        |
+| Head         | `head`     | HEAD              | Final Approval untuk revisi yang ditugaskan; membuat Drawing Request          |
 | Admin        | `admin`    | ADMIN             | Seluruh hak operasional, void, master, audit; tetap tunduk pada maker-checker |
 
 ### Matriks izin
