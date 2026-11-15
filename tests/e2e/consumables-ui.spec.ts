@@ -228,7 +228,12 @@ for (const value of ['light', 'dark']) {
             exact: true,
           });
           await toggle.click();
-          await expect(children).toHaveCount(0);
+          // Closed submenus stay mounted for the height animation, then leave the a11y tree.
+          await expect(children).toBeHidden();
+          await expect(
+            nav.locator(`.nav-application[data-app="${path.slice(1)}"] > .nav-collapse`),
+          ).toHaveAttribute('inert');
+          await expect(children.getByRole('link')).toHaveCount(0);
           await nav
             .getByRole('button', {
               name: `Buka menu ${path === '/bag-filter' ? 'Bag Filter' : 'Consumable Room'}`,
