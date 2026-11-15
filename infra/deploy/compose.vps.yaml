@@ -45,6 +45,13 @@ services:
     <<: *app-budget
     environment:
       NODE_OPTIONS: --max-old-space-size=320
+  drawings:
+    # PDF processing (validation, stamp) needs more headroom; confirm with a 25 MB PDF in Fase 2/4.
+    mem_limit: 768m
+    cpus: 0.75
+    logging: *bounded-logging
+    environment:
+      NODE_OPTIONS: --max-old-space-size=512
   nginx:
     mem_limit: 128m
     cpus: 0.5

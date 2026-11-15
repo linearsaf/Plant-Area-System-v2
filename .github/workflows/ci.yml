@@ -19,7 +19,7 @@ jobs:
       - name: Prepare isolated MySQL
         run: |
           node --import tsx scripts/prepare-test.ts
-          docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml up -d --wait mysql
+          docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml up -d --wait mysql s3
           node --env-file=.test-runtime/host.env --import tsx scripts/migrate.ts
           node --env-file=.test-runtime/host.env --import tsx scripts/bootstrap.ts
       - name: MySQL integration tests
@@ -32,6 +32,8 @@ jobs:
       - run: pnpm test:e2e
       - name: WebKit menu focus regression
         run: pnpm exec playwright test tests/e2e/menu-focus.spec.ts --browser=webkit
+      - name: Drawing Database on WebKit
+        run: pnpm exec playwright test tests/e2e/drawings.spec.ts --browser=webkit
       - run: node --env-file=.test-runtime/host.env --import tsx scripts/test-operations.ts
       - name: Gateway recovery after application IP changes
         run: node --env-file=.test-runtime/host.env --import tsx scripts/test-gateway-recovery.ts
@@ -40,7 +42,7 @@ jobs:
         run: |
           if [ -f .test-runtime/stack.env ]; then
             docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml ps -a
-            docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml logs --no-color --tail=160 mysql auth portal bag-filter consumables nginx
+            docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml logs --no-color --tail=160 mysql auth portal bag-filter consumables drawings nginx
           fi
       - name: Stop test stack
         if: always()

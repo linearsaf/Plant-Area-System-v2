@@ -83,6 +83,8 @@ async function verifyIsolatedRuntime() {
     'AUTH_MIGRATION_DATABASE_URL',
     'BAG_MIGRATION_DATABASE_URL',
     'CONSUMABLES_MIGRATION_DATABASE_URL',
+    'DRAWINGS_DATABASE_URL',
+    'DRAWINGS_MIGRATION_DATABASE_URL',
   ]) {
     const value = hostEnv[key] || '';
     assert.ok(value.includes('@127.0.0.1:14306/plant_'), `${key} harus menuju 127.0.0.1:14306`);
@@ -124,6 +126,7 @@ async function verifyIsolatedRuntime() {
     ['plant-v2-dev-portal-1', true],
     ['plant-v2-dev-bag-filter-1', true],
     ['plant-v2-dev-consumables-1', true],
+    ['plant-v2-dev-drawings-1', true],
     ['plant-v2-dev-nginx-1', false],
   ] as const;
 
@@ -159,6 +162,7 @@ async function verifyIsolatedRuntime() {
     ['auth', '/auth/health/ready'],
     ['bag-filter', '/bag-filter/health/ready'],
     ['consumables', '/consumables/health/ready'],
+    ['drawings', '/drawings/health/ready'],
   ] as const) {
     await docker([
       'exec',
@@ -174,6 +178,7 @@ async function verifyIsolatedRuntime() {
     '/auth/_next/hmr',
     '/bag-filter/_next/hmr',
     '/consumables/_next/hmr',
+    '/drawings/_next/hmr',
   ]) {
     await new Promise<void>((resolveUpgrade, rejectUpgrade) => {
       const req = https.request(
@@ -240,7 +245,12 @@ try {
     assert.equal(httpRedirect.status(), 308);
     assert.equal(httpRedirect.headers().location, `${origin}/bag-filter`);
 
-    for (const faviconPath of ['/favicon.svg', '/bag-filter/favicon.svg', '/consumables/favicon.svg']) {
+    for (const faviconPath of [
+      '/favicon.svg',
+      '/bag-filter/favicon.svg',
+      '/consumables/favicon.svg',
+      '/drawings/favicon.svg',
+    ]) {
       const fav = await api.get(faviconPath, { maxRedirects: 0 });
       assert.equal(fav.status(), 200, `${faviconPath} status`);
       assert.match(fav.headers()['content-type'] || '', /image\/svg\+xml/);
@@ -253,6 +263,9 @@ try {
       '/_verify_portal',
       '/_verify_bag',
       '/_verify_consumables',
+      '/_verify_drawings',
+      '/drawings/internal/x',
+      '/drawings/health/ready',
       '/health/ready',
       '/auth/health/ready',
       '/bag-filter/health/ready',
@@ -265,7 +278,11 @@ try {
     assert.equal(unauthPage.status(), 303);
     assert.match(unauthPage.headers().location || '', /^\/auth\/login\?returnTo=/);
 
-    for (const protectedApi of ['/bag-filter/api/equipment', '/consumables/api/inventory']) {
+    for (const protectedApi of [
+      '/bag-filter/api/equipment',
+      '/consumables/api/inventory',
+      '/drawings/api/me',
+    ]) {
       const res = await api.get(protectedApi, {
         headers: {
           'x-user-role': 'admin',

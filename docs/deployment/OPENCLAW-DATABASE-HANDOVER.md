@@ -7,7 +7,7 @@ Gunakan untuk memindahkan data perusahaan dari Docker lokal ke VPS `tq-cmms.com`
 ```text
 Lanjutkan penyiapan Plant Area System v2 pada VPS ini dan pulihkan database
 aktual dari Docker lokal pemilik. Target publik https://tq-cmms.com.
-Repository: https://github.com/safain-commits/Plant-Area-System-v2.git
+Repository: https://github.com/linearsaf/Plant-Area-System-v2.git
 Directory / Compose project: /opt/tq-cmms / tq-cmms.
 
 Baca dokumen berikut dari release repository:

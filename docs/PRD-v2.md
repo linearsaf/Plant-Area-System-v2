@@ -131,3 +131,7 @@ Kompartemen yang dibuka mempunyai bingkai dan penanda judul berbeda dari garis s
 Pada layar sentuh, tap bag memilih/membatalkan posisi tanpa membuka tooltip dan memperbarui panel **Riwayat koordinat** existing, tanpa menggulir halaman otomatis. Tidak ada ringkasan atau sheet info tambahan. Viewer memakai panel yang sama tanpa kontrol pencatatan. Hover mouse dan fokus keyboard tetap menampilkan tooltip, mengikuti jenis input dan bukan lebar viewport. Swipe peta tidak memilih bag; pilihan dan draft tetap dipertahankan.
 
 Satu CTA **Catat penggantian** pada bilah bawah hanya muncul setelah ada pilihan dan disembunyikan selama sheet terbuka. Pilih banyak adalah aksi sekunder; Undo dan Bersihkan semua adalah aksi ringan. Pilihan/draft tetap tersimpan saat sheet ditutup. Hak viewer, batas 500, transaksi dan idempotensi tetap berlaku. Penghapusan tampilan sesi/sidebar logout tidak mengubah sesi absolut delapan jam atau pencabutannya.
+
+# Perluasan rilis: Drawing Database v1
+
+Mulai November 2026, Drawing Database menjadi aplikasi operasional kelima pada `/drawings`, memakai SSO, grant role-only, shell, tema dan pola operasional yang sama. Persyaratan lengkap pada [PRD Drawing Database](DRAWING-DATABASE-PRD.md). Data dimulai kosong; drawing lama masuk lewat Upload Old Drawing. Kartu Portal, lonceng aktivitas dan pencarian cepat memuat data Drawing Database hanya bagi pengguna ber-grant; perilaku Bag Filter dan Consumable Room tidak berubah.

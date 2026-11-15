@@ -137,7 +137,7 @@ Gunakan akun deployment non-root yang sudah disepakati; contoh ini memakai pemil
 ```bash
 DEPLOY_USER=$(id -un) # pastikan ini akun deployment yang benar
 sudo install -d -m 0750 -o "$DEPLOY_USER" -g "$(id -gn)" /opt/tq-cmms
-git clone https://github.com/safain-commits/Plant-Area-System-v2.git /opt/tq-cmms
+git clone https://github.com/linearsaf/Plant-Area-System-v2.git /opt/tq-cmms
 cd /opt/tq-cmms
 git status --short
 git rev-parse HEAD

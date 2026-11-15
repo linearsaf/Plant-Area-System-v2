@@ -6,11 +6,13 @@ import { getAuthDb, closeAuthDb, authSchema } from '@plant/auth-core';
 import { seedEquipment, closeBagDb } from '@plant/bag-core';
 import { closeConsumablesDb } from '@plant/consumables-core';
 import { migrateConsumablesCatalog, provisionConsumables } from './consumables-migration';
+import { migrateDrawingsCatalog, provisionDrawings } from './drawings-migration';
 import { migrateEquipmentData } from './equipment-migration';
 import { preflightSingleRoom } from './consumables-room-migration';
 
 try {
   await provisionConsumables();
+  await provisionDrawings();
   const preflight = await mysql.createConnection(process.env.CONSUMABLES_MIGRATION_DATABASE_URL!);
   try {
     const result = await preflightSingleRoom(preflight);
@@ -25,6 +27,7 @@ try {
     ['AUTH_MIGRATION_DATABASE_URL', 'auth-core'],
     ['BAG_MIGRATION_DATABASE_URL', 'bag-core'],
     ['CONSUMABLES_MIGRATION_DATABASE_URL', 'consumables-core'],
+    ['DRAWINGS_MIGRATION_DATABASE_URL', 'drawings-core'],
   ] as const) {
     const url = process.env[key];
     if (!url) throw new Error(`${key} diperlukan untuk migrasi.`);
@@ -35,8 +38,11 @@ try {
       );
       if (rows[0].acquired !== 1) throw new Error('Migrasi lain masih berjalan.');
       await migrate(drizzle(connection), { migrationsFolder: `packages/${folder}/migrations` });
-      if (folder !== 'consumables-core') await migrateEquipmentData(connection, folder);
-      if (folder === 'auth-core') await migrateConsumablesCatalog(connection);
+      if (folder === 'auth-core' || folder === 'bag-core') await migrateEquipmentData(connection, folder);
+      if (folder === 'auth-core') {
+        await migrateConsumablesCatalog(connection);
+        await migrateDrawingsCatalog(connection);
+      }
       await connection.query("SELECT RELEASE_LOCK('plant_schema_migration')");
       console.log(JSON.stringify({ event: 'migration.complete', database: folder }));
     } finally {

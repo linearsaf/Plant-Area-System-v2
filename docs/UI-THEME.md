@@ -134,3 +134,14 @@ Tabel material Picklist memakai urutan material, jumlah diminta, satuan input, h
 Cascade dideklarasikan sebagai `tokens, base, components, app, utilities`. Aturan aktif `legacy.css` sudah dipindahkan ke `base.css`, `auth.css`, `admin.css`, `workspace.css`, `dashboard.css`, dan `map-base.css`. Pembungkus `@layer` berada dalam file CSS, sementara `styles.css` memakai import biasa agar diproses oleh bundler Next.js. Aturan peta dalam `map.css` dipertahankan di dalam layer yang sama. Hasil pengujian, matriks gambar, dan pengukuran ada di [laporan audit UI](testing/ui-audit-2026-11/REPORT.md).
 
 Subrequest autentikasi gateway hanya meneruskan cookie dan header layanan/aplikasi/URI yang ditetapkan eksplisit. Header RSC/Next dari browser tetap menuju aplikasi tujuan dan tidak ikut memengaruhi route Auth internal. Ini mencegah redirect framework pada subrequest menjadi 503 tanpa mengubah sesi, grant, atau kontrak API. Perubahan template memerlukan recreate Nginx saat rilis agar entrypoint merender konfigurasi baru.
+
+# Perluasan Drawing Database
+
+Komponen khusus drawing berada di `apps/drawings/app` dan memakai token `@plant/ui`; tidak ada palet baru.
+
+- **Status revisi dan request** memakai badge yang ada: netral (Draft), netral + ikon jam (Waiting …), `orange`/pumpkin (… Rejected, request ditolak), `success`/lime (Completed, request selesai), netral redup (Obsolete, Cancelled). Arti selalu dibawa label teks.
+- **PDF viewer** in-page dari komponen PDF.js: toolbar dengan target sentuh 44 px, kertas tetap putih pada tema gelap, watermark overlay CSS untuk revisi belum final/Obsolete/Cancelled, shortcut hanya saat fokus di dalam viewer (Ctrl/Cmd+K dan Ctrl/Cmd+B tetap milik shell). Frame viewer memakai `grid-template-columns: minmax(0, 1fr)` agar toolbar tidak melebar melampaui kolom pada 390 px.
+- **Ruang tinjau**: viewer besar berdampingan dengan panel keputusan; di bawah 960 px tersusun vertikal. Lampiran reject maksimal tiga gambar dengan thumbnail.
+- **Ringkasan** memakai `.dashboard-grid`, `hero-chart-card`, `kpi-rail` dan `QuarterlyChart` (satuan `drawing`); viewer hanya melihat angka Final Drawing (rail ringkas).
+- Tautan berbentuk tombol (`a.button.primary/secondary`) diberi gaya lokal aplikasi karena gaya bersama hanya menargetkan elemen `button` dan `.secondary`.
+- Badge jumlah tugas pada sidebar memakai label aksesibilitas "n tugas menunggu"; label keranjang Consumables tidak berubah.

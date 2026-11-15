@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1794674222240,
+      "tag": "0000_file_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1794676070284,
+      "tag": "0001_drawing_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1794679096744,
+      "tag": "0002_remove_area",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1794680329886,
+      "tag": "0003_approval_workflow",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1794682491274,
+      "tag": "0004_requests_notifications",
+      "breakpoints": true
+    }
+  ]
+}

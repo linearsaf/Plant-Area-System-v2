@@ -23,7 +23,7 @@ Kondisi produksi yang terakhir dikonfirmasi: Consumables baru memiliki master. *
 ```text
 Perbarui TQ-CMMS yang sudah live di https://tq-cmms.com ke full commit SHA
 yang saya berikan pada pesan pengantar. Repo:
-https://github.com/safain-commits/Plant-Area-System-v2.git
+https://github.com/linearsaf/Plant-Area-System-v2.git
 
 Baca docs/deployment/OPENCLAW-R22-UPDATE.md, R22-UPGRADE.md,
 DEVELOPMENT-TO-VPS.md dan VPS-TQ-CMMS.md pada SHA target tersebut.

@@ -39,6 +39,7 @@ export function Heading({
 }
 
 export { Dashboard, AnimatedNumber } from './dashboard';
+export { QuarterlyChart, type ChartSeries, type ChartQuarter } from './quarterly-chart';
 
 export { useConfirmation, type ConfirmationOptions, type ConfirmFunction } from './confirm';
 export { StockSummary } from './stock-summary';

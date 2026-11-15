@@ -26,13 +26,19 @@ const countsSql =
   'SELECT (SELECT COUNT(*) FROM plant_auth.users),(SELECT COUNT(*) FROM plant_auth.sessions),(SELECT COUNT(*) FROM plant_bag_filter.replacement_batches),(SELECT COUNT(*) FROM plant_bag_filter.installations),(SELECT COUNT(*) FROM plant_bag_filter.bag_audit),(SELECT COUNT(*) FROM plant_bag_filter.coordinates),(SELECT COUNT(*) FROM plant_consumables.materials),(SELECT COUNT(*) FROM plant_consumables.inventory),(SELECT COUNT(*) FROM plant_consumables.stock_movements),(SELECT COUNT(*) FROM plant_consumables.consumables_audit),(SELECT COALESCE(SUM(quantity),0) FROM plant_consumables.inventory),(SELECT COALESCE(SUM(quantity),0) FROM plant_consumables.stock_movements),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),id,quantity,balance_after,actor_id))) FROM plant_consumables.stock_movements),(SELECT COUNT(*) FROM plant_consumables.locations),(SELECT COUNT(*) FROM plant_consumables.stock_idempotency),(SELECT COUNT(*) FROM plant_consumables.catalog_imports),(SELECT COUNT(*) FROM plant_auth.app_grants),(SELECT COUNT(*) FROM plant_consumables.stock_documents),(SELECT COUNT(*) FROM plant_consumables.stock_document_sequences),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),id,number,type,hec,line_count,actor_id))) FROM plant_consumables.stock_documents),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),type,year,`last_value`))) FROM plant_consumables.stock_document_sequences)';
 const persistedSql = countsSql.replace(
   'SELECT ',
-  'SELECT (SELECT COUNT(*) FROM plant_bag_filter.batch_cancellations),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),batch_id,reason,actor_id,actor_name,cancelled_at,idempotency_key,request_hash))) FROM plant_bag_filter.batch_cancellations),',
+  'SELECT (SELECT COUNT(*) FROM plant_drawings.drawings),(SELECT COUNT(*) FROM plant_drawings.drawing_revisions),(SELECT COUNT(*) FROM plant_drawings.drawing_files),(SELECT COUNT(*) FROM plant_drawings.approval_actions),(SELECT COUNT(*) FROM plant_drawings.drawing_requests),(SELECT COUNT(*) FROM plant_drawings.drawing_notifications),(SELECT COUNT(*) FROM plant_drawings.drawing_audit),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),id,status,cycle,working_file_id,issued_file_id))) FROM plant_drawings.drawing_revisions),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),id,storage_key,sha256,status))) FROM plant_drawings.drawing_files),(SELECT COUNT(*) FROM plant_bag_filter.batch_cancellations),(SELECT BIT_XOR(CRC32(CONCAT_WS(CHAR(31),batch_id,reason,actor_id,actor_name,cancelled_at,idempotency_key,request_hash))) FROM plant_bag_filter.batch_cancellations),',
 );
 const source = await mysql.createConnection(process.env.BAG_MIGRATION_DATABASE_URL!);
 let restored = false;
 try {
   const [before] = await source.query<mysql.RowDataPacket[]>(persistedSql);
-  await docker([...compose, 'restart', 'mysql', 'bag-filter', 'consumables']);
+  // Drawing Database files live in the drawings-files volume and must survive a restart.
+  const countFiles = async () =>
+    (
+      await docker([...compose, 'exec', '-T', 'drawings', 'sh', '-c', 'find /data/drawings -type f | wc -l'])
+    ).stdout.trim();
+  const filesBefore = await countFiles();
+  await docker([...compose, 'restart', 'mysql', 'bag-filter', 'consumables', 'drawings']);
   await source.end();
   let connection: mysql.Connection | undefined;
   for (let i = 0; i < 60; i++) {
@@ -50,7 +56,18 @@ try {
   const [after] = await connection.query<mysql.RowDataPacket[]>(persistedSql);
   await connection.end();
   assert.deepEqual(after, before);
-  console.log(JSON.stringify({ event: 'test.restart_persistence', result: 'passed' }));
+  for (let i = 0; i < 60; i++) {
+    try {
+      assert.equal(await countFiles(), filesBefore);
+      break;
+    } catch (e) {
+      if (i === 59) throw e;
+      await delay();
+    }
+  }
+  console.log(
+    JSON.stringify({ event: 'test.restart_persistence', result: 'passed', drawingFiles: filesBefore }),
+  );
   await docker([...compose, 'stop', 'auth']);
   try {
     for (const path of [
@@ -59,6 +76,8 @@ try {
       '/bag-filter/api/equipment',
       '/consumables',
       '/consumables/api/inventory',
+      '/drawings',
+      '/drawings/api/me',
       '/api/admin/users',
     ]) {
       const response = await client.get(path, { maxRedirects: 0 });
@@ -88,6 +107,13 @@ try {
   ]);
   await docker([
     'exec',
+    'plant-v2-test-drawings-1',
+    'node',
+    '-e',
+    "fetch('http://127.0.0.1:3000/drawings/api/me',{headers:{'x-user-role':'admin','x-user-id':'forged'}}).then(r=>{if(r.status!==401)process.exit(1)})",
+  ]);
+  await docker([
+    'exec',
     'plant-v2-test-auth-1',
     'node',
     '-e',
@@ -114,6 +140,8 @@ try {
     'BAG_DB_PASSWORD',
     '-e',
     'CONSUMABLES_DB_PASSWORD',
+    '-e',
+    'DRAWINGS_DB_PASSWORD',
     '-v',
     `${resolve('infra/mysql/init.sh')}:/docker-entrypoint-initdb.d/01-plant.sh:ro`,
     '-v',

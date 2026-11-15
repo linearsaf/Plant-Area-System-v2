@@ -48,7 +48,7 @@ export function Applications() {
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
           >
             <strong>{app.name}</strong>
-            {['bag-filter', 'consumables'].includes(app.id) ? (
+            {['bag-filter', 'consumables', 'drawings'].includes(app.id) ? (
               <Button
                 className={`small ${app.status === 'active' ? 'danger' : 'secondary'}`}
                 busy={busy}

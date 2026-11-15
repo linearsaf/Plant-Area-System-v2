@@ -24,6 +24,10 @@ upstream consumables_upstream {
     zone consumables_backend 64k;
     server consumables:3000 resolve;
 }
+upstream drawings_upstream {
+    zone drawings_backend 64k;
+    server drawings:3000 resolve;
+}
 server {
     listen 80;
     server_name _;
@@ -50,6 +54,8 @@ server {
     location ^~ /bag-filter/health { return 404; }
     location ^~ /consumables/internal { return 404; }
     location ^~ /consumables/health { return 404; }
+    location ^~ /drawings/internal { return 404; }
+    location ^~ /drawings/health { return 404; }
     location ^~ /health/ { return 404; }
     location = /gateway-health { access_log off; return 204; }
     # Public artwork only: favicon requests must not redirect to the login page.
@@ -64,6 +70,11 @@ server {
     location = /consumables/favicon.svg {
         include /etc/nginx/plant-proxy.conf;
         proxy_pass http://consumables_upstream;
+    }
+    location = /drawings/favicon.svg {
+        include /etc/nginx/plant-drawings-headers.conf;
+        include /etc/nginx/plant-proxy.conf;
+        proxy_pass http://drawings_upstream;
     }
     location = /auth { return 308 /auth/login; }
     location = /_verify_consumables {
@@ -100,6 +111,63 @@ server {
         error_page 500 502 504 = @unavailable;
         include /etc/nginx/plant-proxy.conf;
         proxy_pass http://consumables_upstream;
+    }
+    location = /_verify_drawings {
+        internal;
+        proxy_pass http://auth_upstream/auth/internal/verify;
+        proxy_pass_request_body off;
+        # Auth subrequests accept only the explicit cookie and service headers below.
+        proxy_pass_request_headers off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header X-Plant-Service-Token "${SERVICE_TOKEN}";
+        proxy_set_header X-Plant-App drawings;
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 5s;
+        # The subrequest inherits the parent's Content-Length; without this the server-level
+        # 128k limit rejects it on uploads (413 → "auth request unexpected status" → 500).
+        # The body itself is never forwarded (proxy_pass_request_body off).
+        client_max_body_size 30m;
+    }
+    location ^~ /drawings/_next/ {
+        include /etc/nginx/plant-drawings-headers.conf;
+        include /etc/nginx/plant-proxy.conf;
+        proxy_pass http://drawings_upstream;
+    }
+    # Binary PDF/image upload. The application enforces the exact limit (DRAWINGS_MAX_PDF_MB).
+    location = /drawings/api/uploads {
+        auth_request /_verify_drawings;
+        error_page 401 = @api_unauthorized;
+        error_page 403 = @api_forbidden;
+        error_page 413 = @api_too_large;
+        error_page 500 502 504 = @api_unavailable;
+        client_max_body_size 30m;
+        client_body_timeout 120s;
+        include /etc/nginx/plant-drawings-headers.conf;
+        include /etc/nginx/plant-proxy.conf;
+        # Stream the body to the app (proxy timeouts come from plant-proxy.conf).
+        proxy_request_buffering off;
+        proxy_pass http://drawings_upstream;
+    }
+    location ^~ /drawings/api/ {
+        auth_request /_verify_drawings;
+        error_page 401 = @api_unauthorized;
+        error_page 403 = @api_forbidden;
+        error_page 500 502 504 = @api_unavailable;
+        include /etc/nginx/plant-drawings-headers.conf;
+        include /etc/nginx/plant-proxy.conf;
+        proxy_pass http://drawings_upstream;
+    }
+    location ~ ^/drawings(?:/|$) {
+        auth_request /_verify_drawings;
+        auth_request_set $login_target $upstream_http_x_auth_redirect;
+        error_page 401 = @login;
+        error_page 403 = @forbidden;
+        error_page 500 502 504 = @unavailable;
+        include /etc/nginx/plant-drawings-headers.conf;
+        include /etc/nginx/plant-proxy.conf;
+        proxy_pass http://drawings_upstream;
     }
     location ^~ /auth/ {
         include /etc/nginx/plant-proxy.conf;
@@ -180,5 +248,6 @@ server {
     location @unavailable { default_type text/html; return 503 '<!doctype html><html lang="id"><meta charset="utf-8"><title>Layanan belum tersedia</title><h1>Layanan sementara tidak tersedia</h1><p>Coba lagi beberapa saat kemudian.</p></html>'; }
     location @api_unauthorized { default_type application/json; return 401 '{"error":"Silakan login atau ganti password sementara.","code":"UNAUTHENTICATED"}'; }
     location @api_forbidden { default_type application/json; return 403 '{"error":"Akses aplikasi belum diberikan.","code":"FORBIDDEN"}'; }
+    location @api_too_large { default_type application/json; return 413 '{"error":"File terlalu besar. Batas PDF 25 MB dan gambar 5 MB.","code":"FILE_INVALID"}'; }
     location @api_unavailable { default_type application/json; return 503 '{"error":"Layanan autentikasi tidak tersedia.","code":"AUTH_UNAVAILABLE"}'; }
 }

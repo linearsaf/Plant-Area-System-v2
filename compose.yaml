@@ -30,6 +30,7 @@ services:
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD}
       BAG_DB_PASSWORD: ${BAG_DB_PASSWORD:?Set BAG_DB_PASSWORD}
       CONSUMABLES_DB_PASSWORD: ${CONSUMABLES_DB_PASSWORD:?Set CONSUMABLES_DB_PASSWORD}
+      DRAWINGS_DB_PASSWORD: ${DRAWINGS_DB_PASSWORD:?Set DRAWINGS_DB_PASSWORD}
     command:
       [--character-set-server=utf8mb4, --collation-server=utf8mb4_0900_ai_ci, --default-time-zone=+00:00]
     volumes:
@@ -57,6 +58,8 @@ services:
       BAG_DATABASE_URL: mysql://plant_bag:${BAG_DB_PASSWORD}@mysql:3306/plant_bag_filter
       CONSUMABLES_DATABASE_URL: mysql://plant_consumables:${CONSUMABLES_DB_PASSWORD}@mysql:3306/plant_consumables
       CONSUMABLES_MIGRATION_DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/plant_consumables
+      DRAWINGS_DATABASE_URL: mysql://plant_drawings:${DRAWINGS_DB_PASSWORD}@mysql:3306/plant_drawings
+      DRAWINGS_MIGRATION_DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/plant_drawings
       AUTH_MIGRATION_DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/plant_auth
       BAG_MIGRATION_DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/plant_bag_filter
     networks: [private]
@@ -140,6 +143,58 @@ services:
       timeout: 8s
       retries: 3
       start_period: 30s
+  drawings:
+    <<: *runtime
+    build: { context: ., dockerfile: infra/Dockerfile, args: { APP: drawings } }
+    image: plant-drawings:${RELEASE_TAG:-local}
+    environment:
+      <<: *app-env
+      DRAWINGS_DATABASE_URL: mysql://plant_drawings:${DRAWINGS_DB_PASSWORD}@mysql:3306/plant_drawings
+      DRAWINGS_STORAGE_DRIVER: ${DRAWINGS_STORAGE_DRIVER:-fs}
+      DRAWINGS_STORAGE_PATH: /data/drawings
+      DRAWINGS_S3_ENDPOINT: ${DRAWINGS_S3_ENDPOINT:-}
+      DRAWINGS_S3_REGION: ${DRAWINGS_S3_REGION:-}
+      DRAWINGS_S3_BUCKET: ${DRAWINGS_S3_BUCKET:-}
+      DRAWINGS_S3_ACCESS_KEY_ID: ${DRAWINGS_S3_ACCESS_KEY_ID:-}
+      DRAWINGS_S3_SECRET_ACCESS_KEY: ${DRAWINGS_S3_SECRET_ACCESS_KEY:-}
+      DRAWINGS_S3_FORCE_PATH_STYLE: ${DRAWINGS_S3_FORCE_PATH_STYLE:-true}
+      DRAWINGS_MAX_PDF_MB: ${DRAWINGS_MAX_PDF_MB:-25}
+    volumes:
+      # Driver fs: append-only file storage outside public/. Never removed by `down`.
+      - drawings-files:/data/drawings
+    depends_on:
+      { auth: { condition: service_healthy }, migrate: { condition: service_completed_successfully } }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/drawings/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 30s
+  # Operator tools for Drawing Database files (pnpm drawings:reconcile / drawings:storage-copy).
+  # Read-only access to the fs volume; never started by `up`.
+  drawings-ops:
+    image: plant-tools:${RELEASE_TAG:-local}
+    profiles: [ops]
+    environment:
+      DRAWINGS_DATABASE_URL: mysql://plant_drawings:${DRAWINGS_DB_PASSWORD}@mysql:3306/plant_drawings
+      DRAWINGS_STORAGE_DRIVER: ${DRAWINGS_STORAGE_DRIVER:-fs}
+      DRAWINGS_STORAGE_PATH: /data/drawings
+      DRAWINGS_S3_ENDPOINT: ${DRAWINGS_S3_ENDPOINT:-}
+      DRAWINGS_S3_REGION: ${DRAWINGS_S3_REGION:-}
+      DRAWINGS_S3_BUCKET: ${DRAWINGS_S3_BUCKET:-}
+      DRAWINGS_S3_ACCESS_KEY_ID: ${DRAWINGS_S3_ACCESS_KEY_ID:-}
+      DRAWINGS_S3_SECRET_ACCESS_KEY: ${DRAWINGS_S3_SECRET_ACCESS_KEY:-}
+      DRAWINGS_S3_FORCE_PATH_STYLE: ${DRAWINGS_S3_FORCE_PATH_STYLE:-true}
+    volumes:
+      - drawings-files:/data/drawings:ro
+    networks: [private]
+    depends_on: { mysql: { condition: service_healthy } }
   nginx:
     image: nginx:stable-alpine
     restart: unless-stopped
@@ -151,6 +206,7 @@ services:
     volumes:
       - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./infra/nginx/proxy.conf:/etc/nginx/plant-proxy.conf:ro
+      - ./infra/nginx/drawings-headers.conf:/etc/nginx/plant-drawings-headers.conf:ro
       - ./infra/certs:/etc/nginx/certs:ro
     networks: [private, gateway]
     depends_on:
@@ -159,6 +215,7 @@ services:
         portal: { condition: service_healthy },
         bag-filter: { condition: service_healthy },
         consumables: { condition: service_healthy },
+        drawings: { condition: service_healthy },
       }
   backup:
     image: mysql:8.4
@@ -167,7 +224,11 @@ services:
     environment:
       MYSQL_PWD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_HOST: mysql
-    volumes: ['./infra/mysql/backup.sh:/scripts/backup.sh:ro', './backups:/backups']
+    volumes:
+      - ./infra/mysql/backup.sh:/scripts/backup.sh:ro
+      - ./backups:/backups
+      # Read-only: archived daily for the Drawing Database fs storage driver.
+      - drawings-files:/drawings-files:ro
     networks: [private]
     depends_on: { mysql: { condition: service_healthy } }
 networks:
@@ -176,3 +237,4 @@ networks:
     internal: true
 volumes:
   mysql-data:
+  drawings-files:

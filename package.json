@@ -31,9 +31,15 @@
     "consumables:import": "tsx scripts/import-consumables.ts",
     "consumables:reconcile": "tsx scripts/reconcile-consumables.ts",
     "consumables:import-naming": "tsx scripts/import-consumables-naming.ts",
-    "consumables:preflight": "tsx scripts/preflight-consumables-r22.ts"
+    "consumables:preflight": "tsx scripts/preflight-consumables-r22.ts",
+    "db:generate:drawings": "drizzle-kit generate --config packages/drawings-core/drizzle.config.ts",
+    "drawings:provision": "tsx scripts/provision-drawings.ts",
+    "drawings:reconcile": "tsx scripts/drawings-reconcile.ts",
+    "drawings:storage-copy": "tsx scripts/drawings-storage-copy.ts"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "3.1160.0",
+    "@cantoo/pdf-lib": "2.11.1",
     "@playwright/test": "1.64.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
@@ -46,11 +52,12 @@
   "dependencies": {
     "@plant/auth-core": "workspace:*",
     "@plant/bag-core": "workspace:*",
+    "@plant/consumables-core": "workspace:*",
     "@plant/contracts": "workspace:*",
+    "@plant/drawings-core": "workspace:*",
     "@plant/server": "workspace:*",
     "better-auth": "1.7.12",
     "drizzle-orm": "0.45.4",
-    "mysql2": "3.24.6",
-    "@plant/consumables-core": "workspace:*"
+    "mysql2": "3.24.6"
   }
 }

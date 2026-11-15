@@ -34,7 +34,8 @@ try {
       container,
       'bash',
       '-c',
-      'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysqldump -uroot --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --tz-utc --hex-blob --routines --events --triggers --databases plant_auth plant_bag_filter plant_consumables',
+      // plant_drawings is included once provisioned (Drawing Database).
+      'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"; dbs="plant_auth plant_bag_filter plant_consumables"; if mysql -uroot -N -e "USE plant_drawings" >/dev/null 2>&1; then dbs="$dbs plant_drawings"; fi; exec mysqldump -uroot --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --tz-utc --hex-blob --routines --events --triggers --databases $dbs',
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
@@ -84,7 +85,12 @@ try {
     sha256: h.digest('hex'),
     bytes,
     uncompressedBytes: sqlBytes,
-    databases: ['plant_auth', 'plant_bag_filter', 'plant_consumables'],
+    databases: [
+      'plant_auth',
+      'plant_bag_filter',
+      'plant_consumables',
+      'plant_drawings (bila sudah diprovisioning)',
+    ],
     consistentSnapshot: 'single-transaction; freeze writers and DDL externally for migration',
     restoreTested: false,
   };

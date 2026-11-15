@@ -1,0 +1,22 @@
+{
+  "name": "@plant/drawings",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/copy-pdfjs-assets.mjs && next dev --port 3004",
+    "build": "node ../../scripts/copy-pdfjs-assets.mjs && next build --webpack",
+    "start": "next start --port 3004",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plant/contracts": "workspace:*",
+    "@plant/drawings-core": "workspace:*",
+    "@plant/server": "workspace:*",
+    "@plant/ui": "workspace:*",
+    "next": "16.4.2",
+    "pdfjs-dist": "6.4.299",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

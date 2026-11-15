@@ -19,6 +19,8 @@ WORKDIR /workspace
 COPY --from=builder --chown=node:node /workspace/apps/${APP}/.next/standalone ./
 COPY --from=builder --chown=node:node /workspace/apps/${APP}/.next/static ./apps/${APP}/.next/static
 COPY --from=builder --chown=node:node /workspace/apps/${APP}/public ./apps/${APP}/public
+# Named volumes copy ownership from the image path on first use; the app runs as node.
+RUN if [ "$APP" = drawings ]; then mkdir -p /data/drawings && chown node:node /data/drawings && chmod 700 /data/drawings; fi
 USER node
 EXPOSE 3000
 CMD ["sh", "-c", "exec node apps/$APP/server.js"]

@@ -1,0 +1,11 @@
+# Use only with DRAWINGS_STORAGE_DRIVER=s3, in addition to compose.yaml (and compose.vps.yaml).
+# The `private` network is internal (no outbound access). This adds an egress-capable network
+# to the drawings service only, without published ports. Restrict its outbound traffic to the
+# storage provider's addresses with the host firewall.
+services:
+  drawings:
+    networks: [private, egress]
+  drawings-ops:
+    networks: [private, egress]
+networks:
+  egress: {}

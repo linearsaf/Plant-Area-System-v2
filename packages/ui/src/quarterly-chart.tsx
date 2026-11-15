@@ -18,19 +18,24 @@ export function QuarterlyChart({
   series,
   active,
   onSelect,
+  unit = 'transaksi',
+  legendLabel = 'Jenis transaksi',
 }: {
   year: number;
   quarters: ChartQuarter[];
   series: ChartSeries[];
   active: number;
   onSelect: (index: number) => void;
+  /** Satuan hitungan; bawaan `transaksi` (Consumable Room). */
+  unit?: string;
+  legendLabel?: string;
 }) {
   const totals = quarters.map((q) => q.values.reduce((a, b) => a + b, 0));
   const scale = countScale(Math.max(0, ...totals));
   const selected = quarters[active] ?? quarters[0];
   return (
     <>
-      <div className="chart-legend" aria-label="Jenis transaksi">
+      <div className="chart-legend" aria-label={legendLabel}>
         {series.map((s) => (
           <span key={s.key}>
             <i
@@ -40,13 +45,13 @@ export function QuarterlyChart({
               aria-hidden="true"
             />
             {s.direction && <Icon name={s.direction === 'out' ? 'issue' : 'receipt'} />}
-            {s.direction === 'out' ? '− ' : s.direction === 'mixed' ? '± ' : '+ '}
+            {s.direction ? (s.direction === 'out' ? '− ' : s.direction === 'mixed' ? '± ' : '+ ') : ''}
             {s.label}
           </span>
         ))}
       </div>
-      <div className="quarter-count-label">Jumlah transaksi</div>
-      <div className="quarter-chart" role="group" aria-label={`Jumlah transaksi tahun ${year} per kuartal`}>
+      <div className="quarter-count-label">Jumlah {unit}</div>
+      <div className="quarter-chart" role="group" aria-label={`Jumlah ${unit} tahun ${year} per kuartal`}>
         <div className="quarter-grid" aria-hidden="true">
           {scale.ticks.map((tick) => (
             <div key={tick} style={{ top: `${100 - (tick / scale.maximum) * 100}%` }}>
@@ -63,7 +68,7 @@ export function QuarterlyChart({
                 type="button"
                 className="quarter-slot"
                 aria-pressed={active === i}
-                aria-label={`Q${q.quarter} ${year}: ${number(totals[i])} transaksi`}
+                aria-label={`Q${q.quarter} ${year}: ${number(totals[i])} ${unit}`}
                 onPointerEnter={(e) => {
                   if (e.pointerType === 'mouse') onSelect(i);
                 }}
@@ -103,13 +108,15 @@ export function QuarterlyChart({
             );
           })}
         </div>
-        {!totals.some(Boolean) && <span className="quarter-empty">Belum ada transaksi pada tahun ini.</span>}
+        {!totals.some(Boolean) && <span className="quarter-empty">Belum ada {unit} pada tahun ini.</span>}
       </div>
       <div className="quarter-labels" aria-hidden="true">
         {quarters.map((q, i) => (
           <span key={q.quarter}>
             <strong>Q{q.quarter}</strong>
-            <small>{number(totals[i])} transaksi</small>
+            <small>
+              {number(totals[i])} {unit}
+            </small>
           </span>
         ))}
       </div>
@@ -117,11 +124,13 @@ export function QuarterlyChart({
         <span>
           Q{selected.quarter} {year} · {ranges[selected.quarter - 1]}
         </span>
-        <strong>{number(totals[active] ?? totals[0])} transaksi</strong>
+        <strong>
+          {number(totals[active] ?? totals[0])} {unit}
+        </strong>
         <div>
           {series.map((s, j) => (
             <small key={s.key}>
-              {s.direction === 'out' ? '− ' : s.direction === 'mixed' ? '± ' : '+ '}
+              {s.direction ? (s.direction === 'out' ? '− ' : s.direction === 'mixed' ? '± ' : '+ ') : ''}
               {s.label}
               <b>{number(selected.values[j])}</b>
             </small>
@@ -129,7 +138,9 @@ export function QuarterlyChart({
         </div>
       </div>
       <table className="sr-only">
-        <caption>Jumlah transaksi per kuartal tahun {year}</caption>
+        <caption>
+          Jumlah {unit} per kuartal tahun {year}
+        </caption>
         <thead>
           <tr>
             <th>Kuartal</th>
