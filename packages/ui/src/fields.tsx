@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useLayoutEffect,
   type SelectHTMLAttributes,
   type InputHTMLAttributes,
   type TextareaHTMLAttributes,
@@ -22,6 +23,8 @@ export function Select({
   const ref = useRef<HTMLSelectElement>(null),
     button = useRef<HTMLButtonElement>(null),
     list = useRef<HTMLDivElement>(null),
+    highlightBar = useRef<HTMLSpanElement>(null),
+    placed = useRef(false),
     id = useId();
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState(''),
@@ -48,6 +51,25 @@ export function Select({
     setOpen(false);
     setQuery('');
   };
+  // Options wrap to several lines, so the highlight follows the measured option instead of a fixed row height.
+  useLayoutEffect(() => {
+    if (!open) {
+      placed.current = false;
+      return;
+    }
+    const bar = highlightBar.current,
+      option = list.current?.querySelectorAll<HTMLElement>('[role="option"]')[index];
+    if (!bar || !option) return;
+    // Land on the first measured position without sliding in from the top of the list.
+    if (!placed.current) bar.style.transition = 'none';
+    bar.style.transform = `translateY(${option.offsetTop}px)`;
+    bar.style.height = `${option.offsetHeight}px`;
+    if (!placed.current) {
+      void bar.offsetHeight;
+      bar.style.transition = '';
+      placed.current = true;
+    }
+  });
   useEffect(() => {
     const label = button.current?.closest('label');
     if (label) label.htmlFor = id + '-trigger';
@@ -155,12 +177,7 @@ export function Select({
           className="menu-list scroll-fade"
           aria-label={props['aria-label'] || 'Opsi'}
         >
-          {!!filtered.length && (
-            <span
-              className="menu-highlight"
-              style={{ transform: `translateY(calc(${index} * var(--menu-row, 36px)))` }}
-            />
-          )}
+          {!!filtered.length && <span ref={highlightBar} className="menu-highlight" />}
           {filtered.map((o, i) => (
             <button
               type="button"

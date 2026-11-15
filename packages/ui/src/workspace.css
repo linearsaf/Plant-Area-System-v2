@@ -552,8 +552,10 @@
     background: var(--surface);
     color: var(--textPrimary);
   }
-  .header-action:hover {
-    background: var(--surfaceMuted);
+  @media (hover: hover) and (pointer: fine) {
+    .header-action:hover {
+      background: var(--surfaceMuted);
+    }
   }
   .notification-trigger {
     position: relative;
@@ -869,6 +871,7 @@
   .application-toggle svg {
     width: 14px;
     transform: rotate(90deg);
+    transition: transform var(--duration-base) var(--ease-standard);
   }
   .application-toggle[aria-expanded='true'] svg {
     transform: rotate(-90deg);
@@ -973,6 +976,7 @@
     height: 14px;
     flex-shrink: 0;
     transform: rotate(90deg);
+    transition: transform var(--duration-base) var(--ease-standard);
   }
   .equipment-subgroup[aria-expanded='true'] svg {
     transform: rotate(-90deg);
@@ -1019,5 +1023,97 @@
   ::view-transition-old(app-topbar),
   ::view-transition-new(app-topbar) {
     animation: none;
+  }
+
+  /* Sidebar collapse (pointer only). The layout changes once; the browser then slides the sidebar
+     edge and the workspace as snapshots on the compositor, so dense pages never reflow per frame. */
+  :root[data-sidebar-transition] .workspace {
+    view-transition-name: app-workspace;
+  }
+  :root[data-sidebar-transition] :is(.topbar, .page-content, .sidebar nav a[aria-current='page']) {
+    view-transition-name: none;
+  }
+  :root[data-sidebar-transition]::view-transition-group(app-sidebar),
+  :root[data-sidebar-transition]::view-transition-group(app-workspace) {
+    animation-duration: 260ms;
+    animation-timing-function: var(--ease-drawer);
+  }
+  /* The narrowing edge clips the labels instead of squashing them. */
+  :root[data-sidebar-transition]::view-transition-group(app-sidebar) {
+    overflow: clip;
+  }
+  :root[data-sidebar-transition]::view-transition-old(app-sidebar),
+  :root[data-sidebar-transition]::view-transition-new(app-sidebar),
+  :root[data-sidebar-transition]::view-transition-old(app-workspace),
+  :root[data-sidebar-transition]::view-transition-new(app-workspace) {
+    width: auto;
+    height: 100%;
+    object-fit: none;
+    object-position: left top;
+    animation-duration: 260ms;
+    animation-timing-function: var(--ease-drawer);
+    animation-fill-mode: both;
+  }
+  /* Sidebar icons sit at the same place in both states, so a crossfade keeps them solid while labels fade. */
+  :root[data-sidebar-transition]::view-transition-old(app-sidebar) {
+    animation-name: sidebar-snapshot-out;
+  }
+  :root[data-sidebar-transition]::view-transition-new(app-sidebar) {
+    animation-name: sidebar-snapshot-in;
+  }
+  /* The workspace reflows to a different layout, so crossfading would show two pages at once.
+     Show only the new layout and slide it from the old edge. */
+  :root[data-sidebar-transition]::view-transition-old(app-workspace) {
+    animation: none;
+    opacity: 0;
+  }
+  :root[data-sidebar-transition]::view-transition-new(app-workspace) {
+    animation: none;
+  }
+  :root[data-sidebar-transition]::view-transition-old(root),
+  :root[data-sidebar-transition]::view-transition-new(root) {
+    animation: none;
+  }
+  @keyframes sidebar-snapshot-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes sidebar-snapshot-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* Submenus stay mounted and reveal their height; closing is quicker than opening. */
+  .nav-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
+  }
+  .nav-collapse[data-open='true'] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition-duration: 220ms, var(--duration-base);
+  }
+  .nav-collapse-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .nav-collapse-inner > * {
+    transform: translateY(-4px);
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .nav-collapse[data-open='true'] .nav-collapse-inner > * {
+    transform: none;
+    transition-duration: 220ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-collapse-inner > * {
+      transform: none;
+    }
   }
 }

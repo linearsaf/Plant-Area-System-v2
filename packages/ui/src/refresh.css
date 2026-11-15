@@ -136,13 +136,20 @@
     border: 1px solid transparent;
     background: var(--buttonPrimaryBg);
     color: var(--buttonPrimaryText);
+    /* Colour follows hover with a short ease; press feedback uses a strong ease-out. */
     transition:
-      transform var(--duration-instant) var(--ease-standard),
-      opacity var(--duration-fast) var(--ease-standard);
+      transform 160ms var(--ease-enter),
+      background-color var(--duration-fast) ease,
+      border-color var(--duration-fast) ease,
+      color var(--duration-fast) ease,
+      opacity var(--duration-fast) ease;
   }
-  /* Base hover must not override a component's own surface/text pairing. */
-  button:where(:hover:not(:disabled)) {
-    background: var(--buttonPrimaryHover);
+  /* Base hover must not override a component's own surface/text pairing.
+     Hover is pointer-only so a tap on a touch screen does not leave a stuck hover colour. */
+  @media (hover: hover) and (pointer: fine) {
+    button:where(:hover:not(:disabled)) {
+      background: var(--buttonPrimaryHover);
+    }
   }
   a.header-action:active {
     transform: scale(0.97);
@@ -152,16 +159,20 @@
     color: var(--buttonPrimaryText);
     border-color: transparent;
   }
-  button.primary:hover:not(:disabled) {
-    background: var(--buttonPrimaryHover);
-    border-color: transparent;
+  @media (hover: hover) and (pointer: fine) {
+    button.primary:hover:not(:disabled) {
+      background: var(--buttonPrimaryHover);
+      border-color: transparent;
+    }
   }
   button.accent {
     background: var(--buttonAccentBg);
     color: var(--buttonAccentText);
   }
-  button.accent:hover:not(:disabled) {
-    background: var(--buttonAccentHover);
+  @media (hover: hover) and (pointer: fine) {
+    button.accent:hover:not(:disabled) {
+      background: var(--buttonAccentHover);
+    }
   }
   button.secondary,
   .secondary {
@@ -169,8 +180,10 @@
     color: var(--textPrimary);
     border: 1px solid var(--borderStrong);
   }
-  button.secondary:hover:not(:disabled) {
-    background: var(--surfaceMuted);
+  @media (hover: hover) and (pointer: fine) {
+    button.secondary:hover:not(:disabled) {
+      background: var(--surfaceMuted);
+    }
   }
   button.ghost,
   .ghost {
@@ -178,17 +191,21 @@
     color: var(--textPrimary);
     border-color: transparent;
   }
-  button.ghost:hover:not(:disabled) {
-    background: var(--surfaceSunken);
+  @media (hover: hover) and (pointer: fine) {
+    button.ghost:hover:not(:disabled) {
+      background: var(--surfaceSunken);
+    }
   }
   button.danger {
     background: var(--danger);
     border-color: transparent;
     color: var(--gray-950);
   }
-  button.danger:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--danger) 85%, var(--gray-0));
-    color: var(--gray-950);
+  @media (hover: hover) and (pointer: fine) {
+    button.danger:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--danger) 85%, var(--gray-0));
+      color: var(--gray-950);
+    }
   }
   button.small {
     min-height: 32px;
@@ -224,12 +241,20 @@
     background: var(--surface);
     color: var(--textPrimary);
   }
+  .icon-button {
+    transition:
+      transform 160ms var(--ease-enter),
+      background-color var(--duration-fast) ease,
+      color var(--duration-fast) ease;
+  }
   .icon-button svg {
     width: 20px;
     height: 20px;
   }
-  .icon-button:hover:not(:disabled) {
-    background: var(--surfaceMuted);
+  @media (hover: hover) and (pointer: fine) {
+    .icon-button:hover:not(:disabled) {
+      background: var(--surfaceMuted);
+    }
   }
   button:focus-visible,
   a:focus-visible,
@@ -280,7 +305,15 @@
     line-height: var(--leading-body);
     font-weight: 400;
     box-shadow: inset 0 1px 2px rgba(11, 11, 11, 0.04);
-    transition: box-shadow var(--duration-fast) var(--ease-standard);
+    transition:
+      box-shadow var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) ease;
+  }
+  .select-trigger {
+    transition:
+      box-shadow var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) ease,
+      transform 160ms var(--ease-enter);
   }
   :root[data-theme='dark'] :is(input, select, textarea, .select-trigger) {
     background: var(--surfaceSunken);
@@ -828,10 +861,10 @@
     transition: transform var(--duration-fast) var(--ease-standard);
   }
   .menu-item {
-    height: 36px;
+    /* Long option labels wrap; the row grows with them instead of overflowing into the next option. */
     min-height: 36px;
     width: 100%;
-    padding: 0 var(--space-2);
+    padding: var(--space-2);
     display: flex;
     gap: var(--space-2);
     align-items: center;
@@ -840,6 +873,7 @@
     background: transparent;
     color: var(--textPrimary);
     font-size: var(--type-body);
+    line-height: var(--leading-body);
     text-align: left;
     font-weight: 400;
   }
@@ -1244,11 +1278,7 @@
       font-size: var(--type-headline);
     }
     .menu-item {
-      height: 44px;
       min-height: 44px;
-    }
-    .menu-highlight {
-      height: 44px;
     }
     .overlay-menu .menu-list {
       max-height: 50dvh;
@@ -1301,9 +1331,6 @@
     }
   }
 
-  :root {
-    --menu-row: 36px;
-  }
   .menu-list:has(.menu-highlight) .menu-item:hover {
     background: transparent;
   }
@@ -1331,13 +1358,18 @@
       min-height: 44px;
     }
   }
-  @media (max-width: 639px) {
-    :root {
-      --menu-row: 44px;
-    }
-  }
   .busy-button {
     position: relative;
+  }
+  .busy-button .button-label {
+    transition:
+      opacity var(--duration-fast) ease,
+      filter var(--duration-fast) ease;
+  }
+  /* Blur bridges the label and spinner so the swap reads as one change; the label stays in the a11y tree. */
+  .busy-button[aria-busy='true'] .button-label {
+    opacity: 0;
+    filter: blur(2px);
   }
   .button-spinner {
     position: absolute;
@@ -1348,7 +1380,15 @@
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    animation: spin var(--duration-slow) linear infinite;
+    animation:
+      spin var(--duration-slow) linear infinite,
+      spinner-in var(--duration-fast) var(--ease-enter);
+  }
+  @keyframes spinner-in {
+    from {
+      opacity: 0;
+      scale: 0.8;
+    }
   }
   @keyframes spin {
     to {
@@ -1589,10 +1629,29 @@
       opacity: 0;
     }
   }
-  .pressable:active:not(:disabled),
-  .icon-button:active:not(:disabled),
-  .select-trigger:active:not(:disabled) {
+  :is(
+      .pressable,
+      .icon-button,
+      .select-trigger,
+      .header-action,
+      a.secondary,
+      .segmented > button,
+      button:is(.primary, .secondary, .accent, .danger, .ghost, .small)
+    ):active:not(:disabled) {
     transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :is(
+        .pressable,
+        .icon-button,
+        .select-trigger,
+        .header-action,
+        a.secondary,
+        .segmented > button,
+        button:is(.primary, .secondary, .accent, .danger, .ghost, .small)
+      ):active:not(:disabled) {
+      transform: none;
+    }
   }
   :is(.stock-table-row, .menu-item, .nav-tree-row, [role='option']):active {
     background: var(--surfaceSunken);

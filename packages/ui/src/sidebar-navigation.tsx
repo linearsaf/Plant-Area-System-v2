@@ -23,6 +23,14 @@ function NavigationTree({
     </ul>
   );
 }
+/** Keeps a submenu mounted so it can open and close as a height reveal; closed content is inert. */
+function Collapsible({ open, children }: { open: boolean; children: ReactNode }) {
+  return (
+    <div className="nav-collapse" data-open={open} inert={!open}>
+      <div className="nav-collapse-inner">{children}</div>
+    </div>
+  );
+}
 export function SidebarNavigation({
   identity,
   activeHref,
@@ -155,43 +163,45 @@ export function SidebarNavigation({
                   </button>
                 )}
               </div>
-              {expanded && (
-                <NavigationTree
-                  className="nav-children application-children"
-                  id={`navigation-${app.id}`}
-                  label={`Submenu ${app.label}`}
-                >
-                  {app.id !== 'bag-filter' ? (
-                    app.items.map(link)
-                  ) : (
-                    <>
-                      {link(app.items[0])}
-                      {!!equipmentLinks.length && (
-                        <li className="nav-tree-item">
-                          <button
-                            type="button"
-                            className="nav-tree-row equipment-subgroup"
-                            aria-expanded={equipmentOpen}
-                            aria-controls="navigation-equipment"
-                            onClick={() => setEquipmentOpen((v) => !v)}
-                          >
-                            Equipment <Icon name="chevron" />
-                          </button>
-                          {equipmentOpen && (
-                            <NavigationTree
-                              className="equipment-links"
-                              id="navigation-equipment"
-                              label="Equipment Bag Filter"
+              {current && !compact && (
+                <Collapsible open={expanded}>
+                  <NavigationTree
+                    className="nav-children application-children"
+                    id={`navigation-${app.id}`}
+                    label={`Submenu ${app.label}`}
+                  >
+                    {app.id !== 'bag-filter' ? (
+                      app.items.map(link)
+                    ) : (
+                      <>
+                        {link(app.items[0])}
+                        {!!equipmentLinks.length && (
+                          <li className="nav-tree-item">
+                            <button
+                              type="button"
+                              className="nav-tree-row equipment-subgroup"
+                              aria-expanded={equipmentOpen}
+                              aria-controls="navigation-equipment"
+                              onClick={() => setEquipmentOpen((v) => !v)}
                             >
-                              {equipmentLinks.map(link)}
-                            </NavigationTree>
-                          )}
-                        </li>
-                      )}
-                      {bagGrant?.role === 'admin' && link({ label: 'Audit', href: '/bag-filter/audit' })}
-                    </>
-                  )}
-                </NavigationTree>
+                              Equipment <Icon name="chevron" />
+                            </button>
+                            <Collapsible open={equipmentOpen}>
+                              <NavigationTree
+                                className="equipment-links"
+                                id="navigation-equipment"
+                                label="Equipment Bag Filter"
+                              >
+                                {equipmentLinks.map(link)}
+                              </NavigationTree>
+                            </Collapsible>
+                          </li>
+                        )}
+                        {bagGrant?.role === 'admin' && link({ label: 'Audit', href: '/bag-filter/audit' })}
+                      </>
+                    )}
+                  </NavigationTree>
+                </Collapsible>
               )}
             </div>
           );

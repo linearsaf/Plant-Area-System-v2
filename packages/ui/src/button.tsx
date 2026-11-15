@@ -15,9 +15,7 @@ export function Button({
       disabled={disabled || busy}
       aria-busy={busy}
     >
-      <span className="button-label" style={busy ? { visibility: 'hidden' } : undefined}>
-        {children}
-      </span>
+      <span className="button-label">{children}</span>
       {busy && <span className="button-spinner" aria-hidden="true" />}
     </button>
   );

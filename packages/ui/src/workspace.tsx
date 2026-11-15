@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import {
   equipment,
   formatDate,
@@ -214,7 +215,7 @@ export function Workspace({
         : active === 'bag-filter'
           ? '/bag-filter'
           : `/${active}`);
-  const toggleSidebar = useCallback(
+  const flipSidebar = useCallback(
     () =>
       setCollapsed((value) => {
         try {
@@ -223,6 +224,24 @@ export function Workspace({
         return !value;
       }),
     [],
+  );
+  // Pointer toggles animate as one layout change on the compositor; keyboard toggles stay instant.
+  const toggleSidebar = useCallback(
+    (animate = false) => {
+      const root = document.documentElement;
+      if (
+        !animate ||
+        !document.startViewTransition ||
+        matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        flipSidebar();
+        return;
+      }
+      root.dataset.sidebarTransition = '';
+      const transition = document.startViewTransition(() => flushSync(flipSidebar));
+      void transition.finished.finally(() => delete root.dataset.sidebarTransition);
+    },
+    [flipSidebar],
   );
   useEffect(() => {
     const media = matchMedia('(max-width: 767px)'),
@@ -471,7 +490,7 @@ export function Workspace({
           className="collapse-row"
           aria-label={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
           aria-expanded={!collapsed}
-          onClick={toggleSidebar}
+          onClick={() => toggleSidebar(true)}
         >
           <span className="nav-icon">
             <Icon name="collapse" style={collapsed ? { transform: 'rotate(180deg)' } : undefined} />
