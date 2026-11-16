@@ -257,6 +257,37 @@ test('concurrent decisions: exactly one succeeds; idempotent replay; legacy has 
   assert.equal(legacy.workflow.actions.length, 0);
 });
 
+test('archive import records the original author as Drawn by; uploader stays owner', async () => {
+  const body = async (ownerId: string) => ({
+    number: `AR-${randomUUID().slice(0, 6)}`,
+    title: 'Archive',
+    hac: '211-XXX',
+    disciplineId: discipline,
+    revisionNo: '0',
+    ownerId,
+    legacyNote: 'Arsip Polysius.',
+    fileId: await stagedPdf(u.admin),
+  });
+  const none = async () => [];
+  const created = await createLegacyDrawing(u.admin, await body(u.admin.id), key(), none, {
+    drawnByName: ' POL ',
+  });
+  const detail = await drawingDetail(u.viewer, (created.body as { id: string }).id);
+  assert.deepEqual(detail.owner, { id: u.admin.id, name: 'POL' });
+  assert.equal(detail.source, 'legacy');
+  assert.equal(detail.released?.status, 'completed');
+  // The archive author can never be assigned to another account or left empty.
+  for (const [ownerId, drawnByName] of [
+    [u.drafter.id, 'POL'],
+    [u.admin.id, ' '],
+    [u.admin.id, 'x'.repeat(101)],
+  ])
+    await assert.rejects(
+      async () => createLegacyDrawing(u.admin, await body(ownerId), key(), none, { drawnByName }),
+      (e) => e instanceof AppError && e.status === 400,
+    );
+});
+
 test('drawing request lifecycle closes on release and on void', async () => {
   const r = (await createRequest(u.viewer, { hac: 'h', description: 'd', purpose: 'p' }, key())).body as {
     id: string;

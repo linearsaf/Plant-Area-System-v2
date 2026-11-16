@@ -84,3 +84,26 @@ Catat hasil, SHA, dan waktu pada log rilis.
 
 4. Ubah `DRAWINGS_STORAGE_DRIVER=s3`, lalu `docker compose -f compose.yaml -f infra/deploy/compose.drawings-s3.yaml up -d --no-deps drawings`.
 5. `drawings:reconcile --hash` dengan driver `s3` harus bersih. Volume `drawings-files` dipertahankan sebagai cadangan sampai backup bucket terbukti.
+
+## 6. Impor arsip Legacy Ready
+
+Untuk arsip drawing lama dalam jumlah besar (mis. dokumentasi Polysius). Dijalankan setelah go-live, setelah driver `s3` aktif dan `drawings:reconcile --hash` bersih. Folder impor disiapkan di luar repositori dan tidak pernah di-commit:
+
+| Isi folder        | Keterangan                                                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `manifest.csv`    | Satu baris per drawing: `number`, `title`, `hac`, `revision_no`, `discipline`, `drawn_by`, `legacy_note`, `description`, `page_count`, `output_pdf` |
+| `conversion.csv`  | Hasil konversi per drawing: `number`, `output_pdf`, `status`, `detail`, `pages`, `size`, `sha256`                                                   |
+| `pdf/<nomor>.pdf` | Satu PDF per drawing, sudah diverifikasi terhadap sumbernya dan lolos `validatePdf` (≤ `DRAWINGS_MAX_PDF_MB`, tidak terenkripsi, lolos uji stamp)   |
+
+1. Pastikan setiap nilai `discipline` di manifest ada dan aktif di master Discipline (**Pengelolaan**), dan catat ID akun pengunggah (Admin atau Draft Leader) dari **Kelola akses**. Pengunggah menjadi owner dan **Uploaded by**; **Drawn by** diambil dari kolom `drawn_by` karena pembuat aslinya bukan pengguna sistem.
+2. Backup database, lalu salin folder impor ke host.
+3. Dry-run. Tidak menulis apa pun; memeriksa aturan isian, file, hash, master, dan nomor yang sudah dipakai:
+
+   ```sh
+   docker compose -f compose.yaml -f infra/deploy/compose.drawings-s3.yaml --profile ops run --rm -v /srv/legacy-import:/import drawings-ops drawings:import-legacy --dir /import --uploader-id <id> --uploader-name "<nama>" --dry-run
+   ```
+
+4. Impor bertahap di luar jam kerja, mulai dari sebagian kecil (`--limit 100`), lalu seluruhnya. Perintahnya sama tanpa `--dry-run`. Aman diulang: nomor yang sudah ada dilewati, sehingga impor yang terputus cukup dijalankan lagi. Bila penyimpanan tidak tersedia, impor berhenti sendiri.
+5. Periksa `import-report.csv` di folder impor: `failed` harus kosong. Jalankan `drawings:reconcile --hash`, lalu cek acak beberapa drawing di Library (badge **Legacy Ready**, jumlah halaman, viewer).
+
+Driver `fs` tidak dapat dipakai lewat `drawings-ops` karena volume `drawings-files` terpasang read-only di sana. File staged dari baris yang gagal dibersihkan otomatis setelah 24 jam.

@@ -148,6 +148,9 @@ File PDF disimpan di object storage melalui driver `fs` (volume `drawings-files`
 pnpm drawings:provision            # database/user plant_drawings pada volume MySQL lama
 pnpm drawings:reconcile --hash     # tabel file vs storage, read-only
 pnpm drawings:storage-copy --dry-run
+pnpm drawings:import-legacy --dir <folder> --dry-run --offline   # impor arsip Legacy Ready
 ```
+
+Impor arsip massal (`drawings:import-legacy`) membaca `manifest.csv`, `conversion.csv` dan `pdf/` yang disiapkan di luar repositori, lalu membuat satu drawing Legacy Ready per baris lewat aturan yang sama dengan form Upload Old Drawing. Langkah lengkap ada di [runbook](docs/deployment/DRAWING-DATABASE-RELEASE.md#6-impor-arsip-legacy-ready).
 
 Stack uji memuat layanan S3-compatible (`s3`, SeaweedFS) untuk uji driver `s3`; jalankan `up -d --wait mysql s3` sebelum suite integrasi.

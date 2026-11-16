@@ -35,7 +35,8 @@
     "db:generate:drawings": "drizzle-kit generate --config packages/drawings-core/drizzle.config.ts",
     "drawings:provision": "tsx scripts/provision-drawings.ts",
     "drawings:reconcile": "tsx scripts/drawings-reconcile.ts",
-    "drawings:storage-copy": "tsx scripts/drawings-storage-copy.ts"
+    "drawings:storage-copy": "tsx scripts/drawings-storage-copy.ts",
+    "drawings:import-legacy": "tsx scripts/drawings-import-legacy.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "3.1160.0",

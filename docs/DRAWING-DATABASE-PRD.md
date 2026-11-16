@@ -144,6 +144,8 @@ Setiap Submit menaikkan nomor **siklus** revisi. Keputusan Check/Approval dicata
 
 Draft Leader atau Admin mengisi nomor, nama, HAC/SAC, discipline, nomor revisi, **Drawn by**, **Legacy Ready Note** (wajib) dan file PDF. Drawn by harus pengguna aktif ber-role `drafter`, atau pengunggah sendiri. Drawing langsung `completed` dengan sumber `legacy`, tanpa approval digital, approval plan maupun stamp, dan diberi badge **Legacy Ready**. Pengunggah tercatat sebagai **Uploaded by**. Revisi berikutnya masuk alur normal.
 
+**Impor arsip massal.** Arsip lama dalam jumlah besar diimpor operator lewat `pnpm drawings:import-legacy` dari manifest di luar repositori. Setiap baris melewati aturan yang sama dengan form ini (validasi isian dan PDF, storage, audit, badge Legacy Ready). Karena pembuat aslinya bukan pengguna sistem, **Drawn by** dicatat sebagai nama dari manifest dan pengunggah tetap menjadi owner; pengecualian ini hanya tersedia bagi skrip impor, tidak lewat API. Langkah operasinya ada di runbook rilis §6.
+
 ### 4.6 Drawing Request
 
 | Status                       | Arti                                                           |

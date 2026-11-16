@@ -85,6 +85,13 @@ export {
 } from './approval';
 export { listNotifications, markNotificationsRead } from './notifications';
 export {
+  parseCsv,
+  legacyImportRow,
+  legacyImportKey,
+  type LegacyImportRow,
+  type LegacyImportOutcome,
+} from './legacy-import';
+export {
   createRequest,
   reviewRequest,
   drafterDecision,

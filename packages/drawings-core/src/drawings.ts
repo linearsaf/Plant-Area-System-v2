@@ -149,12 +149,26 @@ export async function createLegacyDrawing(
   input: unknown,
   key: string | null,
   directory: () => Promise<DirectoryPerson[]>,
+  /**
+   * `drawnByName` hanya untuk impor arsip massal (scripts/drawings-import-legacy.ts): pembuat asli
+   * bukan pengguna sistem, sehingga namanya dicatat apa adanya dan pengunggah tetap menjadi owner.
+   */
+  options: { drawnByName?: string } = {},
 ) {
   if (!canDraw(actor, 'drawing.legacy_upload'))
     throw new AppError(403, 'Anda tidak dapat mengunggah Old Drawing.');
   const data = parse(legacyCreateSchema, input);
   let ownerName = actor.name;
-  if (data.ownerId !== actor.id) {
+  if (options.drawnByName !== undefined) {
+    const name = options.drawnByName.trim();
+    if (data.ownerId !== actor.id || !name || name.length > 100)
+      throw new AppError(
+        400,
+        'Drawn by arsip harus 1–100 karakter dan owner harus pengunggah.',
+        'VALIDATION',
+      );
+    ownerName = name;
+  } else if (data.ownerId !== actor.id) {
     const person = (await directory()).find((p) => p.id === data.ownerId && p.role === 'drafter');
     if (!person) throw new AppError(400, 'Drawn by harus Drafter aktif atau Anda sendiri.', 'VALIDATION');
     ownerName = person.name;

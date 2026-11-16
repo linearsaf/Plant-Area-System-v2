@@ -1,5 +1,19 @@
 # Hasil validasi implementasi v2
 
+## Impor arsip Legacy Ready — 16 November 2026
+
+Importer massal `drawings:import-legacy` ditambahkan untuk arsip Polysius D000470. Data, manifest dan PDF berada di luar repositori.
+
+| Pemeriksaan aktual   | Hasil                                                                                                                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typecheck root       | `tsc --noEmit` lulus                                                                                                                                                                     |
+| Unit                 | **73/73** lulus, termasuk 4 tes baru: parser CSV, aturan baris manifest, Idempotency-Key                                                                                                 |
+| Format               | Prettier pada file berubah lulus                                                                                                                                                         |
+| Konversi arsip       | 2.829 drawing dari 3.456 file sumber (5.564 halaman, 527 MB); 5.329 halaman TIFF cocok piksel demi piksel dengan sumber (MuPDF); 122 halaman dienkode ulang secara lossless              |
+| Validator aplikasi   | `validatePdf` (termasuk uji stamp) lulus untuk 2.829/2.829 PDF; terbesar 9 MB                                                                                                            |
+| Dry-run `--offline`  | 2.829/2.829 baris manifest lolos aturan isian, ukuran dan SHA-256                                                                                                                        |
+| **Belum dijalankan** | Tes integrasi baru (Drawn by arsip) karena PC ini masih memuat project `plant-v2-test` berisi data nyata; dry-run dengan database; impor nyata; tampilan viewer untuk A0 400 dpi (pilot) |
+
 ## Drawing Database v1 — 14–15 November 2026
 
 Fase 1–6 pada branch `feat/drawing-database` diuji di PC Windows (Node.js **26.12.1**, pnpm **12.14.0**) dan runtime development `plant-v2-dev` (Docker Linux, MySQL 8.4, gateway HTTPS `https://localhost:9443`, `next dev`). Engine Docker yang sama masih memuat project `plant-v2-test` berisi data nyata, sehingga suite integrasi, E2E repo, uji operasi dan gateway recovery **tidak dijalankan** di mesin ini (README). VPS tidak diubah.
