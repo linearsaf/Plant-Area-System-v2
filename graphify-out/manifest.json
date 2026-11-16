@@ -534,8 +534,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1794831938.4439702,
-    "seen": 1794832140.6374824,
+    "mtime": 1794838080.6767755,
+    "seen": 1794840225.3655522,
     "ast_hash": "c84b63f94a0a8a7f4c14511cab798831",
     "semantic_hash": ""
   },
@@ -1326,9 +1326,9 @@
     "semantic_hash": "654d75f04f50298110cf7eee1bcdf816"
   },
   "README.md": {
-    "mtime": 1794832107.1406024,
-    "seen": 1794832140.6465013,
-    "ast_hash": "150f8b5f77a342d4910b7765c336b4af",
+    "mtime": 1794838080.6604898,
+    "seen": 1794840225.3778362,
+    "ast_hash": "602a87f31a50f23395f9e13422bf69d0",
     "semantic_hash": ""
   },
   "brand/README.md": {
@@ -1338,9 +1338,9 @@
     "semantic_hash": "19bb82e1eb67d04868796cba93693ec0"
   },
   "docs/API.md": {
-    "mtime": 1794732319.012238,
-    "seen": 1794832140.6465857,
-    "ast_hash": "c6f53bcbc8e7fb48ff571670dfdecfce",
+    "mtime": 1794840216.4374874,
+    "seen": 1794840225.3779097,
+    "ast_hash": "fcc193a2488b1a3f0cf0a2d5ac9ce2cb",
     "semantic_hash": ""
   },
   "docs/AUDIT.md": {
@@ -1392,9 +1392,9 @@
     "semantic_hash": ""
   },
   "docs/VALIDATION.md": {
-    "mtime": 1794832107.6188445,
-    "seen": 1794832140.6470299,
-    "ast_hash": "6e48b46a34ec887c166b9fad9606f438",
+    "mtime": 1794840216.6359332,
+    "seen": 1794840225.378502,
+    "ast_hash": "c2c877a97c9497403468f6bfb5c3a156",
     "semantic_hash": ""
   },
   "docs/deployment/CLAUDE-CODE-MACBOOK.md": {
@@ -1560,15 +1560,15 @@
     "semantic_hash": ""
   },
   "apps/drawings/app/drawing-form.tsx": {
-    "mtime": 1794732318.9863663,
-    "seen": 1794832140.6362185,
-    "ast_hash": "af3405537aa04df84751f84b9e34bd55",
+    "mtime": 1794839655.033202,
+    "seen": 1794840225.3617215,
+    "ast_hash": "d67bf147597fea5bd339e210a8e3fefc",
     "semantic_hash": ""
   },
   "apps/drawings/app/drawing-view.tsx": {
-    "mtime": 1794732319.2948658,
-    "seen": 1794832140.6362197,
-    "ast_hash": "d695d501b74c3882357bb9b28135c0df",
+    "mtime": 1794839655.033202,
+    "seen": 1794840225.3617234,
+    "ast_hash": "dfa069aad78d9237ec298a82f27c470d",
     "semantic_hash": ""
   },
   "apps/drawings/app/error.tsx": {
@@ -1602,9 +1602,9 @@
     "semantic_hash": ""
   },
   "apps/drawings/app/library.tsx": {
-    "mtime": 1794732318.9943712,
-    "seen": 1794832140.6362257,
-    "ast_hash": "7499c3f1a11bb69a98cfe97fd6423a37",
+    "mtime": 1794839655.033202,
+    "seen": 1794840225.3621004,
+    "ast_hash": "3801a90059e020934fbe315b2466784b",
     "semantic_hash": ""
   },
   "apps/drawings/app/library/[id]/edit/page.tsx": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "packages/contracts/src/drawings-model.ts": {
-    "mtime": 1794732319.0408156,
-    "seen": 1794832140.6413925,
-    "ast_hash": "e3e9968e58bdf8d743839403212a5a8f",
+    "mtime": 1794839655.4070697,
+    "seen": 1794840225.3692498,
+    "ast_hash": "dcecacc87c381da87e49b9635d4166d2",
     "semantic_hash": ""
   },
   "packages/contracts/src/drawings-requests.ts": {
@@ -1812,9 +1812,9 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/migrations/meta/_journal.json": {
-    "mtime": 1794732319.0493557,
-    "seen": 1794832140.6414042,
-    "ast_hash": "082d1ee4bc436949a365a2dd39da6ecd",
+    "mtime": 1794839560.283072,
+    "seen": 1794840225.3700113,
+    "ast_hash": "614f176a76d44c29fdd4ba4bf4342824",
     "semantic_hash": ""
   },
   "packages/drawings-core/package.json": {
@@ -1842,9 +1842,9 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/drawings.ts": {
-    "mtime": 1794831938.4429705,
-    "seen": 1794832140.6414094,
-    "ast_hash": "1320da6042460b0907117744a67b958d",
+    "mtime": 1794839611.6766043,
+    "seen": 1794840225.3703012,
+    "ast_hash": "91816620e47fd7e0867ce4ec3110fcbd",
     "semantic_hash": ""
   },
   "packages/drawings-core/src/files.ts": {
@@ -1854,8 +1854,8 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/index.ts": {
-    "mtime": 1794831938.4439702,
-    "seen": 1794832140.641411,
+    "mtime": 1794838080.6777766,
+    "seen": 1794840225.3703737,
     "ast_hash": "70a05310f6477b40d03172de46301887",
     "semantic_hash": ""
   },
@@ -1884,9 +1884,9 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/schema.ts": {
-    "mtime": 1794732319.0548837,
-    "seen": 1794832140.6414175,
-    "ast_hash": "46aa4b2ac3bc235a15b131ce6e10740a",
+    "mtime": 1794839559.228372,
+    "seen": 1794840225.3706698,
+    "ast_hash": "eb6d2488fc9de7a64d31c1ce1b06a61f",
     "semantic_hash": ""
   },
   "packages/drawings-core/src/storage.ts": {
@@ -1896,9 +1896,9 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/summary.ts": {
-    "mtime": 1794732319.2994063,
-    "seen": 1794832140.6414194,
-    "ast_hash": "13fe5559f941b192dd94b3722841ad21",
+    "mtime": 1794839623.3440995,
+    "seen": 1794840225.3707428,
+    "ast_hash": "bfbcf5918740434370bcbda934d29ae0",
     "semantic_hash": ""
   },
   "packages/drawings-core/src/support.ts": {
@@ -1956,9 +1956,9 @@
     "semantic_hash": ""
   },
   "tests/integration/drawings-workflow.test.ts": {
-    "mtime": 1794832019.3734608,
-    "seen": 1794832140.6454346,
-    "ast_hash": "4be82c6a88c6ae6fb3a8d2e0e0c04e92",
+    "mtime": 1794839950.730265,
+    "seen": 1794840225.3765206,
+    "ast_hash": "ca5e573e7e04776f29244648475fa700",
     "semantic_hash": ""
   },
   "tests/unit/drawings-files.test.ts": {
@@ -1968,9 +1968,9 @@
     "semantic_hash": ""
   },
   "tests/unit/drawings-model.test.ts": {
-    "mtime": 1794732319.0767922,
-    "seen": 1794832140.646243,
-    "ast_hash": "a0f353ec3924fce1124d939adacac9f6",
+    "mtime": 1794839950.6714487,
+    "seen": 1794840225.3773222,
+    "ast_hash": "1bf56f901f6f3f8026612cd6e4ad7d57",
     "semantic_hash": ""
   },
   "tests/unit/drawings-requests.test.ts": {
@@ -2004,15 +2004,15 @@
     "semantic_hash": ""
   },
   "docs/DRAWING-DATABASE-PRD.md": {
-    "mtime": 1794832107.1420293,
-    "seen": 1794832140.6468964,
-    "ast_hash": "3c11cfbf1494d3e49b84757e8df68e38",
+    "mtime": 1794840216.5227146,
+    "seen": 1794840225.378194,
+    "ast_hash": "f737e5a03883900f7167f4a2397659d6",
     "semantic_hash": ""
   },
   "docs/deployment/DRAWING-DATABASE-RELEASE.md": {
-    "mtime": 1794832107.449296,
-    "seen": 1794832140.647119,
-    "ast_hash": "14ffbc912d43e00ed4f9592dc0a3db7b",
+    "mtime": 1794840216.5367339,
+    "seen": 1794840225.3787198,
+    "ast_hash": "110a3bb805541859523ab0dffb3ccbd1",
     "semantic_hash": ""
   },
   "docs/design/PORTAL-GOLD-STANDARD-PROMPT.md": {
@@ -2040,21 +2040,27 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/legacy-import.ts": {
-    "mtime": 1794832019.8425653,
-    "seen": 1794832140.6414125,
-    "ast_hash": "c07178bf134076590f99ad306bdf40fc",
+    "mtime": 1794840141.5345612,
+    "seen": 1794840225.370375,
+    "ast_hash": "0daebf982fa6045875955d847795dfa5",
     "semantic_hash": ""
   },
   "scripts/drawings-import-legacy.ts": {
-    "mtime": 1794832019.8209188,
-    "seen": 1794832140.6434526,
-    "ast_hash": "85a07823237c7f71e108ee8ebf62b1d1",
+    "mtime": 1794840141.5345612,
+    "seen": 1794840225.37375,
+    "ast_hash": "03d421b9311b507dc19c5c18acc952d7",
     "semantic_hash": ""
   },
   "tests/unit/drawings-legacy-import.test.ts": {
-    "mtime": 1794832045.8242137,
-    "seen": 1794832140.6462414,
-    "ast_hash": "946c4cc39f8fc30c2024d8727103a697",
+    "mtime": 1794840141.5345612,
+    "seen": 1794840225.3773212,
+    "ast_hash": "86bcfb24ceb2c2c60f15160b9856caba",
+    "semantic_hash": ""
+  },
+  "packages/drawings-core/migrations/meta/0005_snapshot.json": {
+    "mtime": 1794839560.2820456,
+    "seen": 1794840225.37001,
+    "ast_hash": "71ff7ca410b1634e427f765bd461a106",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
