@@ -1,5 +1,19 @@
 # Hasil validasi implementasi v2
 
+## HAC/SAC banyak per drawing — 16 November 2026
+
+Satu drawing kini dapat mempunyai HAC utama dan sampai 60 HAC/SAC lain (tabel relasi `drawing_hacs`, migrasi aditif `0005_drawing_hacs`). Pencarian Library, discovery dan saran HAC mencocokkan semuanya. Importer arsip mengisi HAC lain dari kolom `hac_all`.
+
+| Pemeriksaan aktual                  | Hasil                                                                                                                                                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typecheck                           | Root dan aplikasi `drawings` lulus (`tsc --noEmit`)                                                                                                                                                  |
+| Unit                                | **74/74** lulus, termasuk tes baru untuk aturan HAC lain dan pemecah isian                                                                                                                           |
+| Migrasi `plant-v2-dev`              | `pnpm dev:up` menerapkan `0005_drawing_hacs`; kelima aplikasi kembali sehat                                                                                                                          |
+| Impor pilot ulang di `plant-v2-dev` | 61 drawing pilot lama di-void, 100 diimpor ulang: 84 berhasil dan 16 gagal karena Idempotency-Key lama; setelah key dibuat per file staged, 16 sisanya berhasil. 164 baris HAC lain untuk 27 drawing |
+| Pencarian di MySQL dev              | `L91-DP` menemukan `1124270` (HAC utama `291-DP2`, 35 HAC lain); `TQ01`, `441-PH1`, `291-DP1` menemukan drawing hasil koreksi; saran `X91` dan discovery memuat HAC lain                             |
+| Dry-run importer `--offline`        | 1.452/1.452 baris lolos dengan manifest baru (HAC utama + `hac_all`)                                                                                                                                 |
+| **Belum dijalankan**                | Tes integrasi baru (pencarian HAC lain, koreksi admin) karena larangan `plant-v2-test` di PC ini; pemeriksaan visual form dan Library di browser; E2E                                                |
+
 ## Impor arsip Legacy Ready — 16 November 2026
 
 Importer massal `drawings:import-legacy` ditambahkan untuk arsip Polysius D000470. Data, manifest dan PDF berada di luar repositori.

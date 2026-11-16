@@ -6,7 +6,7 @@
 //   while Drawn by is taken from the manifest (the original author is not a system user).
 // Every row goes through the same validation, storage, audit and Legacy Ready rules as the
 // Upload Old Drawing form (stageUpload + createLegacyDrawing). Safe to repeat: a drawing whose
-// number already exists is skipped, and each row uses a fixed Idempotency-Key.
+// number already exists is skipped; a voided number can be imported again.
 //   --dry-run   validates rows, files and hashes, then reads the database; writes nothing.
 //   --offline   with --dry-run: skips the database checks (no database connection needed).
 // Company data stays outside the repository; the report is written next to the manifest.
@@ -186,6 +186,7 @@ try {
               number: row.number,
               title: row.title,
               hac: row.hac,
+              otherHacs: row.otherHacs,
               disciplineId: discipline.get(row.discipline.toLowerCase()),
               description: row.description,
               revisionNo: row.revisionNo,
@@ -193,7 +194,7 @@ try {
               legacyNote: row.legacyNote,
               fileId: staged.fileId,
             },
-            legacyImportKey(row.number),
+            legacyImportKey(row.number, staged.fileId),
             async () => [],
             { drawnByName: row.drawnBy },
           );

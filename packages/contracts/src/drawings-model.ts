@@ -53,6 +53,30 @@ const hac = z
   .string()
   .transform(normalizeHac)
   .pipe(z.string().min(1, 'HAC/SAC wajib diisi.').max(40, 'HAC/SAC maksimal 40 karakter.'));
+export const MAX_OTHER_HACS = 60;
+/**
+ * HAC/SAC lain tempat drawing yang sama dipakai (komponen standar, gambar bersama). HAC utama
+ * tetap di `hac`; daftar ini tanpa duplikat dan tanpa HAC utama (dirapikan server).
+ */
+const otherHacs = z
+  .array(hac)
+  .max(MAX_OTHER_HACS, `HAC/SAC lain maksimal ${MAX_OTHER_HACS}.`)
+  .transform((list) => [...new Set(list)]);
+/** Memecah isian bebas (koma, titik koma, atau baris baru) menjadi daftar HAC ternormalisasi. */
+export function splitHacs(value: string) {
+  return [
+    ...new Set(
+      value
+        .split(/[,;\n]/)
+        .map(normalizeHac)
+        .filter(Boolean),
+    ),
+  ];
+}
+/** Daftar HAC lain yang bersih: tanpa duplikat dan tanpa HAC utama. */
+export function cleanOtherHacs(primary: string, list: readonly string[]) {
+  return [...new Set(list)].filter((h) => h && h !== primary);
+}
 const id = z.string().regex(/^[0-9a-f-]{36}$/, 'ID tidak valid.');
 const text = (label: string, min: number, max: number) =>
   z.string().trim().min(min, `${label} wajib diisi.`).max(max, `${label} maksimal ${max} karakter.`);
@@ -67,6 +91,7 @@ export const drawingCreateSchema = z
     number: text('Drawing Number', 1, 100),
     title: text('Drawing Name', 1, 255),
     hac,
+    otherHacs: otherHacs.default([]),
     disciplineId: id.nullable().optional(),
     description: text('Description', 0, 2000).default(''),
     revisionNo: revisionNoSchema.default('0'),
@@ -81,6 +106,7 @@ export const legacyCreateSchema = z
     number: text('Drawing Number', 1, 100),
     title: text('Drawing Name', 1, 255),
     hac,
+    otherHacs: otherHacs.default([]),
     disciplineId: id,
     description: text('Description', 0, 2000).default(''),
     revisionNo: revisionNoSchema,
@@ -98,6 +124,7 @@ export const drawingUpdateSchema = z
     number: text('Drawing Number', 1, 100).optional(),
     title: text('Drawing Name', 1, 255).optional(),
     hac: hac.optional(),
+    otherHacs: otherHacs.optional(),
     disciplineId: id.nullable().optional(),
     description: text('Description', 0, 2000).optional(),
     revisionNo: revisionNoSchema.optional(),
@@ -154,6 +181,8 @@ export type DrawingListItem = {
   number: string | null;
   title: string | null;
   hac: string;
+  /** HAC/SAC lain selain HAC utama, urut seperti saat diisi. */
+  otherHacs: string[];
   discipline: string | null;
   owner: PersonRef;
   source: 'standard' | 'legacy';
@@ -179,6 +208,7 @@ export type DrawingDetail = {
   number: string | null;
   title: string | null;
   hac: string;
+  otherHacs: string[];
   disciplineId: string | null;
   discipline: string | null;
   description: string;

@@ -38,7 +38,7 @@ docker compose stop nginx portal bag-filter consumables auth
 # 2.3 Provisioning database dan user plant_drawings pada volume MySQL yang sudah ada
 docker compose run --rm --no-deps migrate drawings:provision
 
-# 2.4 Migrasi aditif (plant_drawings 0000–0004) dan data migration Auth drawings-v1
+# 2.4 Migrasi aditif (plant_drawings 0000–0005) dan data migration Auth drawings-v1
 docker compose up --no-deps --force-recreate --exit-code-from migrate migrate
 
 # 2.5 Jalankan layanan, termasuk drawings
@@ -89,11 +89,11 @@ Catat hasil, SHA, dan waktu pada log rilis.
 
 Untuk arsip drawing lama dalam jumlah besar (mis. dokumentasi Polysius). Dijalankan setelah go-live, setelah driver `s3` aktif dan `drawings:reconcile --hash` bersih. Folder impor disiapkan di luar repositori dan tidak pernah di-commit:
 
-| Isi folder        | Keterangan                                                                                                                                          |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `manifest.csv`    | Satu baris per drawing: `number`, `title`, `hac`, `revision_no`, `discipline`, `drawn_by`, `legacy_note`, `description`, `page_count`, `output_pdf` |
-| `conversion.csv`  | Hasil konversi per drawing: `number`, `output_pdf`, `status`, `detail`, `pages`, `size`, `sha256`                                                   |
-| `pdf/<nomor>.pdf` | Satu PDF per drawing, sudah diverifikasi terhadap sumbernya dan lolos `validatePdf` (≤ `DRAWINGS_MAX_PDF_MB`, tidak terenkripsi, lolos uji stamp)   |
+| Isi folder        | Keterangan                                                                                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `manifest.csv`    | Satu baris per drawing: `number`, `title`, `hac` (HAC utama), `hac_all` (semua HAC dipisah `\|`; selain HAC utama menjadi HAC/SAC lain), `revision_no`, `discipline`, `drawn_by`, `legacy_note`, `description`, `page_count`, `output_pdf` |
+| `conversion.csv`  | Hasil konversi per drawing: `number`, `output_pdf`, `status`, `detail`, `pages`, `size`, `sha256`                                                                                                                                          |
+| `pdf/<nomor>.pdf` | Satu PDF per drawing, sudah diverifikasi terhadap sumbernya dan lolos `validatePdf` (≤ `DRAWINGS_MAX_PDF_MB`, tidak terenkripsi, lolos uji stamp)                                                                                          |
 
 1. Pastikan setiap nilai `discipline` di manifest ada dan aktif di master Discipline (**Pengelolaan**), dan catat ID akun pengunggah (Admin atau Draft Leader) dari **Kelola akses**. Pengunggah menjadi owner dan **Uploaded by**; **Drawn by** diambil dari kolom `drawn_by` karena pembuat aslinya bukan pengguna sistem.
 2. Backup database, lalu salin folder impor ke host.
@@ -105,5 +105,7 @@ Untuk arsip drawing lama dalam jumlah besar (mis. dokumentasi Polysius). Dijalan
 
 4. Impor bertahap di luar jam kerja, mulai dari sebagian kecil (`--limit 100`), lalu seluruhnya. Perintahnya sama tanpa `--dry-run`. Aman diulang: nomor yang sudah ada dilewati, sehingga impor yang terputus cukup dijalankan lagi. Bila penyimpanan tidak tersedia, impor berhenti sendiri.
 5. Periksa `import-report.csv` di folder impor: `failed` harus kosong. Jalankan `drawings:reconcile --hash`, lalu cek acak beberapa drawing di Library (badge **Legacy Ready**, jumlah halaman, viewer).
+
+Impor memerlukan migrasi `0005_drawing_hacs` (tabel HAC/SAC lain); jalankan layanan `migrate` dari rilis yang memuatnya sebelum impor. Nomor yang pernah diimpor lalu di-void dapat diimpor lagi.
 
 Driver `fs` tidak dapat dipakai lewat `drawings-ops` karena volume `drawings-files` terpasang read-only di sana. File staged dari baris yang gagal dibersihkan otomatis setelah 24 jam.

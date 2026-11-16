@@ -6,7 +6,8 @@ const sha = 'a'.repeat(64);
 const manifest = (over: Record<string, string> = {}) => ({
   number: '61008683',
   title: 'Substation main station',
-  hac: 'tq.471-gq1/471-GQ2',
+  hac: 'tq.471-gq1',
+  hac_all: '471-GQ1|tq.471-gq2|471-GQ2|L61-RM1',
   revision_no: 'D',
   discipline: 'Mechanical',
   drawn_by: 'POL',
@@ -44,7 +45,8 @@ test('legacyImportRow applies the Upload Old Drawing rules', () => {
   assert.deepEqual(outcome.row, {
     number: '61008683',
     title: 'Substation main station',
-    hac: '471-GQ1/471-GQ2', // prefix TQ. dibuang, huruf kapital
+    hac: '471-GQ1', // prefix TQ. dibuang, huruf kapital
+    otherHacs: ['471-GQ2', 'L61-RM1'], // tanpa HAC utama dan tanpa duplikat
     description: 'Jenis: General arrangement drawing. Format: A0.',
     revisionNo: 'D',
     legacyNote: 'Arsip Polysius.',
@@ -65,6 +67,11 @@ test('legacyImportRow reports the first problem per row without throwing', () =>
   };
   assert.match(error(manifest({ title: ' ' })), /Drawing Name/);
   assert.match(error(manifest({ hac: 'X'.repeat(41) })), /HAC/);
+  assert.match(error(manifest({ hac_all: 'A|' + 'X'.repeat(41) })), /HAC/);
+  assert.match(
+    error(manifest({ hac_all: Array.from({ length: 61 }, (_, i) => `H${i}`).join('|') })),
+    /maksimal 60/,
+  );
   assert.match(error(manifest({ revision_no: 'rev 1' })), /revisi/i);
   assert.match(error(manifest({ legacy_note: '' })), /Legacy Ready Note/);
   assert.match(error(manifest({ discipline: '' })), /Discipline/);
@@ -80,7 +87,9 @@ test('legacyImportRow reports the first problem per row without throwing', () =>
   assert.match(error(manifest(), conversion({ output_pdf: 'pdf/lain.pdf' })), /output_pdf/);
 });
 
-test('legacyImportKey is stable and a valid Idempotency-Key', () => {
-  assert.equal(legacyImportKey('61008683'), 'legacy-import:61008683');
-  assert.match(legacyImportKey('A/1 B'.padEnd(200, 'x')), /^[A-Za-z0-9._:-]{8,128}$/);
+test('legacyImportKey is a valid Idempotency-Key that differs per staged file', () => {
+  const file = '0f8fad5b-d9cb-469f-a165-70867728950e';
+  assert.equal(legacyImportKey('61008683', file), `legacy-import:61008683:${file}`);
+  assert.notEqual(legacyImportKey('61008683', file), legacyImportKey('61008683', file.replace('0f', '1f')));
+  assert.match(legacyImportKey('A/1 B'.padEnd(200, 'x'), file), /^[A-Za-z0-9._:-]{8,128}$/);
 });

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Select, Textarea, useDebouncedValue } from '@plant/ui';
+import { cleanOtherHacs, normalizeHac, splitHacs } from '@plant/contracts';
 import type { DrawingDetail, DrawingsMasters, MasterItem } from '@plant/contracts';
 import { ApiError, getJson, newKey, sendJson } from './client-api';
 import { PdfUpload, type Staged } from './pdf-upload';
@@ -40,6 +41,7 @@ export function DrawingForm({
     number: drawing?.number ?? '',
     title: drawing?.title ?? '',
     hac: drawing?.hac ?? '',
+    otherHacs: drawing?.otherHacs.join(', ') ?? '',
     disciplineId: drawing?.disciplineId ?? '',
     description: drawing?.description ?? '',
     revisionNo: revision?.revisionNo ?? '0',
@@ -85,6 +87,7 @@ export function DrawingForm({
     setError('');
     try {
       let id = drawing?.id;
+      const otherHacs = cleanOtherHacs(normalizeHac(values.hac), splitHacs(values.otherHacs));
       if (mode === 'create') {
         const r = await sendJson<{ id: string }>(
           'POST',
@@ -93,6 +96,7 @@ export function DrawingForm({
             number: values.number,
             title: values.title,
             hac: values.hac,
+            otherHacs,
             disciplineId: values.disciplineId || null,
             description: values.description,
             revisionNo: values.revisionNo,
@@ -111,6 +115,7 @@ export function DrawingForm({
             number: values.number,
             title: values.title,
             hac: values.hac,
+            otherHacs,
             disciplineId: values.disciplineId,
             description: values.description,
             revisionNo: values.revisionNo,
@@ -127,6 +132,7 @@ export function DrawingForm({
           if (values.number !== (drawing.number ?? '')) changes.number = values.number;
           if (values.title !== (drawing.title ?? '')) changes.title = values.title;
           if (values.hac !== drawing.hac) changes.hac = values.hac;
+          if (otherHacs.join('|') !== drawing.otherHacs.join('|')) changes.otherHacs = otherHacs;
           if (values.disciplineId !== (drawing.disciplineId ?? ''))
             changes.disciplineId = values.disciplineId || null;
           if (values.description !== drawing.description) changes.description = values.description;
@@ -139,7 +145,7 @@ export function DrawingForm({
         if (
           correction &&
           Object.keys(changes).some((k) =>
-            ['number', 'title', 'hac', 'disciplineId', 'description'].includes(k),
+            ['number', 'title', 'hac', 'otherHacs', 'disciplineId', 'description'].includes(k),
           )
         )
           changes.reason = values.reason;
@@ -193,6 +199,17 @@ export function DrawingForm({
                 <option key={s} value={s} />
               ))}
             </datalist>
+          </label>
+          <label>
+            HAC/SAC lain (opsional)
+            <Input
+              value={values.otherHacs}
+              onChange={set('otherHacs')}
+              placeholder="Pisahkan dengan koma, mis. 291-DP2, 291-DP3"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <small className="muted">Untuk drawing yang dipakai di lebih dari satu equipment.</small>
           </label>
           <label>
             Discipline{mode === 'legacy' ? '' : ' (wajib saat Submit)'}

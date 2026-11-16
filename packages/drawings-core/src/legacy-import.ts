@@ -1,6 +1,6 @@
 // Pembacaan manifest impor arsip Legacy Ready (scripts/drawings-import-legacy.ts).
 // Murni tanpa I/O supaya dapat diuji tanpa database maupun storage.
-import { legacyCreateSchema } from '@plant/contracts';
+import { cleanOtherHacs, legacyCreateSchema } from '@plant/contracts';
 
 /** Parser CSV RFC 4180: kutip ganda, koma dan baris baru di dalam kutip, BOM di awal. */
 export function parseCsv(text: string): Record<string, string>[] {
@@ -50,7 +50,10 @@ const OUTPUT = /^pdf\/[A-Za-z0-9._-]{1,120}\.pdf$/;
 export type LegacyImportRow = {
   number: string;
   title: string;
+  /** HAC utama. */
   hac: string;
+  /** HAC lain dari kolom `hac_all` (dipisah `|`), tanpa HAC utama. */
+  otherHacs: string[];
   description: string;
   revisionNo: string;
   legacyNote: string;
@@ -79,6 +82,7 @@ export function legacyImportRow(
     number,
     title: manifest.title,
     hac: manifest.hac,
+    otherHacs: (manifest.hac_all ?? '').split('|').filter((h) => h.trim()),
     description: manifest.description ?? '',
     revisionNo: manifest.revision_no,
     legacyNote: manifest.legacy_note,
@@ -103,12 +107,25 @@ export function legacyImportRow(
   if (!SHA256.test(conversion.sha256 ?? '')) return fail('SHA-256 PDF tidak valid.');
   return {
     ok: true,
-    row: { ...parsed.data, discipline, drawnBy, outputPdf, pageCount, size, sha256: conversion.sha256 },
+    row: {
+      ...parsed.data,
+      otherHacs: cleanOtherHacs(parsed.data.hac, parsed.data.otherHacs),
+      discipline,
+      drawnBy,
+      outputPdf,
+      pageCount,
+      size,
+      sha256: conversion.sha256,
+    },
   };
 }
 
-/** Idempotency-Key tetap per nomor drawing, sehingga impor aman diulang. */
-export function legacyImportKey(number: string) {
-  const safe = number.replace(/[^A-Za-z0-9._:-]/g, '_').slice(0, 100);
-  return `legacy-import:${safe}`;
+/**
+ * Idempotency-Key per percobaan impor: nomor drawing dan file staged-nya. File staged baru dibuat
+ * pada setiap percobaan, sehingga nomor yang pernah diimpor lalu di-void dapat diimpor lagi.
+ * Pengulangan impor dilindungi oleh pemeriksaan nomor yang sudah ada, bukan oleh key ini.
+ */
+export function legacyImportKey(number: string, fileId: string) {
+  const safe = number.replace(/[^A-Za-z0-9._:-]/g, '_').slice(0, 70);
+  return `legacy-import:${safe}:${fileId}`;
 }

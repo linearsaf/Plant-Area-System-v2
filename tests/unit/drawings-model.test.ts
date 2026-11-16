@@ -1,9 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  MAX_OTHER_HACS,
   canSeeDrawing,
   canSeeRevision,
   canSeeWip,
+  cleanOtherHacs,
   drawingCreateSchema,
   drawingFileName,
   drawingPermissions,
@@ -12,6 +14,7 @@ import {
   legacyCreateSchema,
   normalizeHac,
   revisionStatusTone,
+  splitHacs,
   type DrawingsRole,
   type Identity,
 } from '@plant/contracts';
@@ -134,4 +137,25 @@ test('status tones never add a palette and file names are safe', () => {
   assert.equal(revisionStatusTone('draft'), 'neutral');
   assert.equal(drawingFileName('DWG/01:A', 'B'), 'DWG_01_A_Rev-B.pdf');
   assert.equal(drawingFileName(null, '0'), 'Drawing_Rev-0.pdf');
+});
+
+test('other HAC/SAC values are normalised, deduplicated and bounded', () => {
+  const base = { number: 'N', title: 'T', hac: 'tq.291-dp2' };
+  const created = drawingCreateSchema.parse({ ...base, otherHacs: [' 291-dp3 ', 'TQ.K11-DP1', '291-DP3'] });
+  assert.equal(created.hac, '291-DP2');
+  assert.deepEqual(created.otherHacs, ['291-DP3', 'K11-DP1']);
+  assert.deepEqual(drawingCreateSchema.parse(base).otherHacs, [], 'optional, defaults to none');
+  assert.equal(drawingCreateSchema.safeParse({ ...base, otherHacs: ['X'.repeat(41)] }).success, false);
+  assert.equal(drawingCreateSchema.safeParse({ ...base, otherHacs: [''] }).success, false);
+  const many = Array.from({ length: MAX_OTHER_HACS + 1 }, (_, i) => `H-${i}`);
+  assert.equal(drawingCreateSchema.safeParse({ ...base, otherHacs: many }).success, false);
+  assert.equal(
+    drawingUpdateSchema.parse({ expectedVersion: 1 }).otherHacs,
+    undefined,
+    'absent means unchanged',
+  );
+  assert.deepEqual(drawingUpdateSchema.parse({ expectedVersion: 1, otherHacs: [] }).otherHacs, []);
+  assert.deepEqual(splitHacs('291-dp3, tq.k11-dp1;  ,\n291-DP3\nL61-RM1'), ['291-DP3', 'K11-DP1', 'L61-RM1']);
+  assert.deepEqual(splitHacs('  '), []);
+  assert.deepEqual(cleanOtherHacs('291-DP2', ['291-DP3', '291-DP2', '291-DP3', '']), ['291-DP3']);
 });

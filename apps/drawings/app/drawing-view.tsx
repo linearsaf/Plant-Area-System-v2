@@ -120,6 +120,12 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
               <dd>{drawing.title || 'Belum diisi'}</dd>
               <dt>HAC/SAC</dt>
               <dd className="code-text">{drawing.hac}</dd>
+              {drawing.otherHacs.length > 0 && (
+                <>
+                  <dt>HAC/SAC lain</dt>
+                  <dd className="code-text">{drawing.otherHacs.join(', ')}</dd>
+                </>
+              )}
               <dt>Discipline</dt>
               <dd>{drawing.discipline ?? 'Belum diisi'}</dd>
               <dt>Drawn by</dt>

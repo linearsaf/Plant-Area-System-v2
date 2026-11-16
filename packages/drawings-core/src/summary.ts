@@ -16,7 +16,7 @@ import {
 import { drawings, notifications, requests, revisions } from './schema';
 import { db, likeEscape } from './support';
 import { listTasks } from './approval';
-import type { DirectoryPerson } from './drawings';
+import { otherHacLike, type DirectoryPerson } from './drawings';
 
 const WIB = 7 * 3_600_000;
 const yearStart = (year: number) => new Date(Date.UTC(year, 0, 1) - WIB);
@@ -275,6 +275,7 @@ export async function drawingsDiscovery(actor: Identity, q: string) {
           like(drawings.number, pattern),
           like(drawings.title, pattern),
           like(drawings.hac, pattern.toUpperCase()),
+          otherHacLike(pattern.toUpperCase()),
         ),
         scope === 'all'
           ? undefined

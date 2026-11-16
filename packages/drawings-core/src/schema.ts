@@ -33,6 +33,20 @@ const master = (name: string) =>
 export const disciplines = master('disciplines');
 
 /**
+ * HAC/SAC lain sebuah drawing (relasi banyak). HAC utama tetap di `drawings.hac`; tabel ini hanya
+ * berisi HAC tambahan supaya drawing yang dipakai di banyak equipment dapat dicari lewat tiap HAC.
+ */
+export const drawingHacs = mysqlTable(
+  'drawing_hacs',
+  {
+    drawingId: varchar('drawing_id', { length: 36 }).notNull(),
+    hac: varchar('hac', { length: 40 }).notNull(),
+    position: int('position').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.drawingId, t.hac] }), index('drawing_hacs_hac_idx').on(t.hac)],
+);
+
+/**
  * Akar agregat. `releasedRevisionId` = Final Drawing yang berlaku; `currentRevisionId` = revisi
  * yang sedang dikerjakan (sama dengan rilis bila tidak ada revisi aktif). Nomor unik di antara
  * drawing yang tidak void memakai kolom generated karena MySQL tidak punya partial index.

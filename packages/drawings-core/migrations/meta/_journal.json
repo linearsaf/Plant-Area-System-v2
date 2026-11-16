@@ -36,6 +36,13 @@
       "when": 1794682491274,
       "tag": "0004_requests_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1794839560282,
+      "tag": "0005_drawing_hacs",
+      "breakpoints": true
     }
   ]
 }

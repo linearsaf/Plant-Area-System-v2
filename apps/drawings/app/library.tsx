@@ -247,7 +247,15 @@ export function Library({
                     {d.title || '–'} {d.source === 'legacy' && <LegacyBadge />}
                     {d.revising && <small className="muted block">Revisi berikutnya sedang diproses</small>}
                   </td>
-                  <td className="code-text">{d.hac}</td>
+                  <td className="code-text">
+                    {d.hac}
+                    {d.otherHacs.length > 0 && (
+                      <small className="muted" title={d.otherHacs.join(', ')}>
+                        {' '}
+                        +{d.otherHacs.length}
+                      </small>
+                    )}
+                  </td>
                   <td>{d.revisionNo}</td>
                   <td>
                     <StatusBadge status={d.status} />
@@ -266,7 +274,8 @@ export function Library({
               <strong className="code-text">{d.number || 'Tanpa nomor'}</strong>
               <span>{d.title || '–'}</span>
               <span className="muted">
-                {d.hac} · Rev {d.revisionNo}
+                {d.hac}
+                {d.otherHacs.length > 0 && ` +${d.otherHacs.length}`} · Rev {d.revisionNo}
               </span>
               <span className="drawing-card-badges">
                 <StatusBadge status={d.status} />

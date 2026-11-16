@@ -8,6 +8,7 @@ import {
   canSeeDrawing,
   canSeeRevision,
   canSeeWip,
+  cleanOtherHacs,
   drawingCreateSchema,
   drawingFileName,
   drawingMetadataFields,
@@ -31,7 +32,7 @@ import {
   type TimelineEntry,
 } from '@plant/contracts';
 import { requireActiveMaster } from './masters';
-import { audit, disciplines, drawings, files, revisions } from './schema';
+import { audit, disciplines, drawingHacs, drawings, files, revisions } from './schema';
 import {
   db,
   decodeCursor,
@@ -70,6 +71,30 @@ export const conflictNumber = (e: unknown) => {
     return new AppError(409, 'Nomor revisi sudah dipakai pada drawing ini.', 'DUPLICATE_REVISION');
   return e;
 };
+
+/** Mengganti seluruh HAC lain sebuah drawing; urutan isian dipertahankan. */
+async function replaceOtherHacs(tx: Tx, drawingId: string, list: readonly string[]) {
+  await tx.delete(drawingHacs).where(eq(drawingHacs.drawingId, drawingId));
+  if (list.length)
+    await tx.insert(drawingHacs).values(list.map((hac, position) => ({ drawingId, hac, position })));
+}
+
+/** HAC lain per drawing, urut seperti saat diisi. */
+export async function otherHacsOf(ids: readonly string[], executor: Pick<Tx, 'select'> = db()) {
+  const result = new Map<string, string[]>();
+  if (!ids.length) return result;
+  const rows = await executor
+    .select()
+    .from(drawingHacs)
+    .where(inArray(drawingHacs.drawingId, [...ids]))
+    .orderBy(asc(drawingHacs.drawingId), asc(drawingHacs.position));
+  for (const row of rows) result.set(row.drawingId, [...(result.get(row.drawingId) ?? []), row.hac]);
+  return result;
+}
+
+/** Cocok bila salah satu HAC lain drawing memenuhi pola LIKE. */
+export const otherHacLike = (pattern: string) =>
+  sql`EXISTS (SELECT 1 FROM drawing_hacs dh WHERE dh.drawing_id = drawings.id AND dh.hac LIKE ${pattern})`;
 
 /** Menautkan file staged milik actor ke revisi sebagai file kerja. */
 async function attachWorkingFile(tx: Tx, actor: Identity, fileId: string, revisionId: string, at: Date) {
@@ -121,6 +146,7 @@ export async function createDrawing(actor: Identity, input: unknown, key: string
         createdAt: now,
         updatedAt: now,
       });
+      await replaceOtherHacs(tx, id, cleanOtherHacs(data.hac, data.otherHacs));
       await tx.insert(revisions).values({
         id: revisionId,
         drawingId: id,
@@ -199,6 +225,7 @@ export async function createLegacyDrawing(
         createdAt: now,
         updatedAt: now,
       });
+      await replaceOtherHacs(tx, id, cleanOtherHacs(data.hac, data.otherHacs));
       // Legacy: langsung Completed tanpa approval digital, approval plan maupun stamp (§4.5).
       await tx.insert(revisions).values({
         id: revisionId,
@@ -240,10 +267,12 @@ export async function updateDrawing(actor: Identity, id: string, input: unknown)
   if (!canDraw(actor, 'read')) throw new AppError(403, 'Akses Drawing Database belum diberikan.');
   const { expectedVersion, reason, ...changes } = parse(drawingUpdateSchema, input);
   const metadata = drawingMetadataFields.filter((k) => changes[k] !== undefined);
+  // HAC lain adalah metadata juga, tetapi disimpan di tabel relasi, bukan di baris drawing.
+  const touchesMetadata = metadata.length > 0 || changes.otherHacs !== undefined;
   const revisionFields = (['revisionNo', 'changeNote', 'fileId'] as const).filter(
     (k) => changes[k] !== undefined,
   );
-  if (!metadata.length && !revisionFields.length)
+  if (!touchesMetadata && !revisionFields.length)
     throw new AppError(400, 'Tidak ada perubahan.', 'VALIDATION');
   let cleanup: { id: string; storageKey: string } | null = null;
   try {
@@ -258,12 +287,12 @@ export async function updateDrawing(actor: Identity, id: string, input: unknown)
         currentStatus: (rev?.status as RevisionStatus) ?? null,
       });
       const released = !!d.releasedRevisionId;
-      const correction = released && metadata.length > 0;
+      const correction = released && touchesMetadata;
       if (correction) {
         if (!permissions.correct)
           throw new AppError(403, 'Metadata Final Drawing hanya dapat dikoreksi Admin.');
         if (!reason) throw new AppError(400, 'Alasan koreksi wajib diisi.', 'VALIDATION');
-      } else if (metadata.length && !permissions.edit)
+      } else if (touchesMetadata && !permissions.edit)
         throw new AppError(403, 'Anda tidak dapat mengedit drawing ini.');
       if (revisionFields.length) {
         if (
@@ -286,6 +315,14 @@ export async function updateDrawing(actor: Identity, id: string, input: unknown)
         before[key] = d[key];
         after[key] = value;
         (drawingSet as Record<string, unknown>)[key] = value;
+      }
+      // HAC utama yang baru tidak boleh tertinggal di daftar HAC lain.
+      const currentOthers = (await otherHacsOf([d.id], tx)).get(d.id) ?? [];
+      const nextOthers = cleanOtherHacs(drawingSet.hac ?? d.hac, changes.otherHacs ?? currentOthers);
+      const othersChanged = JSON.stringify(nextOthers) !== JSON.stringify(currentOthers);
+      if (othersChanged) {
+        before.otherHacs = currentOthers;
+        after.otherHacs = nextOthers;
       }
       const revisionSet: Partial<RevisionRow> = {};
       if (rev && changes.revisionNo !== undefined && changes.revisionNo !== rev.revisionNo) {
@@ -320,6 +357,7 @@ export async function updateDrawing(actor: Identity, id: string, input: unknown)
         .update(drawings)
         .set({ ...drawingSet, version, updatedAt: now })
         .where(eq(drawings.id, d.id));
+      if (othersChanged) await replaceOtherHacs(tx, d.id, nextOthers);
       await writeAudit(
         tx,
         actor,
@@ -456,7 +494,7 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
   if (q) {
     const like = `%${likeEscape(q)}%`;
     where.push(
-      sql`(${drawings.number} LIKE ${like} OR ${drawings.title} LIKE ${like} OR ${drawings.hac} LIKE ${like})`,
+      sql`(${drawings.number} LIKE ${like} OR ${drawings.title} LIKE ${like} OR ${drawings.hac} LIKE ${like} OR ${otherHacLike(like)})`,
     );
   }
   const status = params.get('status');
@@ -497,11 +535,13 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
     .orderBy(desc(sortTime), desc(drawings.id))
     .limit(PAGE + 1);
   const page = rows.slice(0, PAGE);
+  const others = await otherHacsOf(page.map((r) => r.d.id));
   const items: DrawingListItem[] = page.map(({ d, discipline, revisionNo, status }) => ({
     id: d.id,
     number: d.number,
     title: d.title,
     hac: d.hac,
+    otherHacs: others.get(d.id) ?? [],
     discipline,
     owner: { id: d.ownerId, name: d.ownerName },
     source: d.source as 'standard' | 'legacy',
@@ -585,6 +625,7 @@ export async function drawingDetailBase(
     number: d.number,
     title: d.title,
     hac: d.hac,
+    otherHacs: (await otherHacsOf([d.id])).get(d.id) ?? [],
     disciplineId: d.disciplineId,
     discipline: discipline?.name ?? null,
     description: d.description,
@@ -691,7 +732,21 @@ export async function hacSuggestions(actor: Identity, q: string) {
     )
     .orderBy(asc(drawings.hac))
     .limit(10);
-  return { items: rows.map((r) => r.hac) };
+  const others = await db()
+    .selectDistinct({ hac: drawingHacs.hac })
+    .from(drawingHacs)
+    .innerJoin(drawings, eq(drawings.id, drawingHacs.drawingId))
+    .where(
+      and(
+        isNull(drawings.voidedAt),
+        prefix ? sql`${drawingHacs.hac} LIKE ${likeEscape(prefix) + '%'}` : undefined,
+        seeAll ? undefined : or(isNotNull(drawings.releasedRevisionId), eq(drawings.ownerId, actor.id)),
+      ),
+    )
+    .orderBy(asc(drawingHacs.hac))
+    .limit(10);
+  const items = [...new Set([...rows, ...others].map((r) => r.hac))].sort().slice(0, 10);
+  return { items };
 }
 
 export type FileIntent = 'view' | 'download' | 'print';

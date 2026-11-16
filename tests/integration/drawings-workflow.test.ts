@@ -15,6 +15,8 @@ import {
   decideApproval,
   drafterDecision,
   drawingDetail,
+  drawingsDiscovery,
+  hacSuggestions,
   listDrawings,
   listMasters,
   listTasks,
@@ -286,6 +288,93 @@ test('archive import records the original author as Drawn by; uploader stays own
       async () => createLegacyDrawing(u.admin, await body(ownerId), key(), none, { drawnByName }),
       (e) => e instanceof AppError && e.status === 400,
     );
+});
+
+test('a drawing used on several equipment is found through each HAC/SAC', async () => {
+  const tag = randomUUID().slice(0, 6).toUpperCase();
+  const [primary, second, third] = [`P${tag}-01`, `S${tag}-02`, `T${tag}-03`];
+  const created = await createDrawing(
+    u.drafter,
+    {
+      number: `MH-${tag}`,
+      title: 'Inspection cover',
+      hac: primary,
+      // The primary HAC and duplicates never end up in the list of other HACs.
+      otherHacs: [second, primary, second.toLowerCase(), third],
+      disciplineId: discipline,
+      fileId: await stagedPdf(u.drafter),
+    },
+    key(),
+  );
+  const id = (created.body as { id: string }).id;
+  const detail = await drawingDetail(u.drafter, id);
+  assert.equal(detail.hac, primary);
+  assert.deepEqual(detail.otherHacs, [second, third]);
+
+  const find = async (q: string) =>
+    (await listDrawings(u.drafter, new URLSearchParams({ tab: 'wip', q }))).items.filter((d) => d.id === id);
+  for (const q of [primary, second, third.toLowerCase(), `${tag}-03`]) {
+    const [hit] = await find(q);
+    assert.ok(hit, `found by ${q}`);
+    assert.deepEqual(hit.otherHacs, [second, third]);
+  }
+  assert.equal((await find(`Z${tag}`)).length, 0);
+  assert.ok((await drawingsDiscovery(u.drafter, third)).drawings.some((d) => d.id === id));
+  assert.deepEqual((await hacSuggestions(u.drafter, `S${tag}`)).items, [second]);
+  assert.deepEqual((await hacSuggestions(u.drafter, `P${tag}`)).items, [primary]);
+
+  // Promoting an other HAC to primary removes it from the list; the list alone can be replaced.
+  await updateDrawing(u.drafter, id, { expectedVersion: await v(id), hac: second });
+  assert.deepEqual((await drawingDetail(u.drafter, id)).otherHacs, [third]);
+  await updateDrawing(u.drafter, id, { expectedVersion: await v(id), otherHacs: [primary, third] });
+  const updated = await drawingDetail(u.drafter, id);
+  assert.equal(updated.hac, second);
+  assert.deepEqual(updated.otherHacs, [primary, third]);
+  // Sending the same list again is not a change.
+  const same = await updateDrawing(u.drafter, id, {
+    expectedVersion: updated.version,
+    otherHacs: [primary, third],
+  });
+  assert.equal(same.changed, false);
+  await updateDrawing(u.drafter, id, { expectedVersion: updated.version, otherHacs: [] });
+  assert.deepEqual((await drawingDetail(u.drafter, id)).otherHacs, []);
+  assert.equal((await find(primary)).length, 0);
+
+  // After release the list is metadata: only an Admin correction with a reason may change it.
+  const legacy = await createLegacyDrawing(
+    u.leader,
+    {
+      number: `ML-${tag}`,
+      title: 'Throttle valve',
+      hac: primary,
+      otherHacs: [second],
+      disciplineId: discipline,
+      revisionNo: '0',
+      ownerId: u.leader.id,
+      legacyNote: 'scan',
+      fileId: await stagedPdf(u.leader),
+    },
+    key(),
+    directory,
+  );
+  const legacyId = (legacy.body as { id: string }).id;
+  assert.deepEqual((await drawingDetail(u.viewer, legacyId)).otherHacs, [second]);
+  const released = await listDrawings(u.viewer, new URLSearchParams({ tab: 'released', q: second }));
+  assert.ok(released.items.some((d) => d.id === legacyId));
+  await assert.rejects(
+    async () => updateDrawing(u.leader, legacyId, { expectedVersion: await v(legacyId), otherHacs: [] }),
+    rejects(403),
+  );
+  await assert.rejects(
+    async () => updateDrawing(u.admin, legacyId, { expectedVersion: await v(legacyId), otherHacs: [third] }),
+    rejects(400),
+  );
+  await updateDrawing(u.admin, legacyId, {
+    expectedVersion: await v(legacyId),
+    otherHacs: [third],
+    reason: 'Equipment dikoreksi.',
+  });
+  assert.deepEqual((await drawingDetail(u.viewer, legacyId)).otherHacs, [third]);
 });
 
 test('drawing request lifecycle closes on release and on void', async () => {

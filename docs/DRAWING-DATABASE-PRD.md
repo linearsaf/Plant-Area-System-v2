@@ -180,16 +180,17 @@ Pemohon melihat request miliknya; Drafter melihat request yang ditugaskan kepada
 
 ## 5. Data dan aturan bisnis
 
-| Field           | Aturan                                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Drawing Number  | 1–100 karakter, unik di antara drawing yang tidak void. Boleh kosong hanya pada draft hasil request.             |
-| Drawing Name    | 1–255 karakter                                                                                                   |
-| HAC/SAC         | Wajib, 1–40 karakter, di-trim, kapital, prefiks `TQ.` dibuang (`normalizeHec`). Saran dari nilai yang sudah ada. |
-| Discipline      | Wajib saat Submit, dari master Discipline                                                                        |
-| Description     | Opsional, maksimal 2000 karakter                                                                                 |
-| Revision Number | 1–20 karakter `[A-Za-z0-9.-]`, default `0`, unik per drawing di antara revisi yang tidak cancelled               |
-| Change Note     | Opsional, maksimal 1000 karakter                                                                                 |
-| File            | Satu PDF per revisi. Wajib saat Submit dan Upload Old Drawing.                                                   |
+| Field           | Aturan                                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Drawing Number  | 1–100 karakter, unik di antara drawing yang tidak void. Boleh kosong hanya pada draft hasil request.                                                                      |
+| Drawing Name    | 1–255 karakter                                                                                                                                                            |
+| HAC/SAC         | Wajib, 1–40 karakter, di-trim, kapital, prefiks `TQ.` dibuang (`normalizeHec`). Saran dari nilai yang sudah ada.                                                          |
+| HAC/SAC lain    | Opsional, maksimal 60 nilai dengan aturan yang sama, untuk drawing yang dipakai di lebih dari satu equipment. Duplikat dan HAC utama dibuang. Ikut dicari dan disarankan. |
+| Discipline      | Wajib saat Submit, dari master Discipline                                                                                                                                 |
+| Description     | Opsional, maksimal 2000 karakter                                                                                                                                          |
+| Revision Number | 1–20 karakter `[A-Za-z0-9.-]`, default `0`, unik per drawing di antara revisi yang tidak cancelled                                                                        |
+| Change Note     | Opsional, maksimal 1000 karakter                                                                                                                                          |
+| File            | Satu PDF per revisi. Wajib saat Submit dan Upload Old Drawing.                                                                                                            |
 
 Aturan yang dikunci:
 
@@ -308,6 +309,7 @@ Kredensial runtime hanya DML; migrasi memakai kredensial DDL lewat job `migrate`
 | `drawing_revisions`       | Drawing, nomor revisi, status, siklus, file kerja, file issued, change note, submitter, waktu submit/completed/obsolete, data pembatalan                         |
 | `revision_approval_steps` | Revisi, level (1/2), assignee, penugas, waktu; unik per revisi+level                                                                                             |
 | `approval_actions`        | Revisi, siklus, level (0/1/2), keputusan, catatan, actor, role actor, file yang ditinjau; unik per revisi+siklus+level                                           |
+| `drawing_hacs`            | HAC/SAC lain per drawing (relasi banyak) beserta urutannya; HAC utama tetap di `drawings`                                                                        |
 | `drawing_files`           | Jenis, tujuan, key storage, nama asli, MIME, ukuran, SHA-256, jumlah halaman, status (`staged`/`attached`/`orphaned`), pemilik, rujukan induk                    |
 | `drawing_requests`        | Nomor, pemohon, HAC/SAC, deskripsi, keperluan, status, reviewer, drafter, catatan, drawing hasil, alasan tutup, versi                                            |
 | `drawing_sequences`       | Sekuens nomor request per tahun                                                                                                                                  |
@@ -367,7 +369,7 @@ Semua halaman memakai `Shell`, `Heading`, `Select`, `Input`, `Textarea`, `Overla
 Halaman lain: detail `/drawings/library/[id]`, edit `/drawings/library/[id]/edit`, ruang tinjau Check/Approval `/drawings/library/[id]/review`, viewer penuh `/drawings/view/[revisionId]`, `/drawings/requests/new`, `/drawings/requests/[id]`.
 
 - **Ringkasan** memakai `.dashboard-grid`: hero grafik Final Drawing terbit per kuartal (tahun WIB, pilihan tahun), KPI (Final Drawing, dalam proses, menunggu tindakan, ditolak), antrean tugas, dan aktivitas terbaru. Viewer hanya melihat angka Final Drawing.
-- **Drawing Library**: tab Final / Dalam proses (dan Dibatalkan untuk admin), pencarian nomor/nama/HAC/SAC, filter status, discipline, owner, revisi dan rentang tanggal WIB. Daftar ringkas sebagai bawaan, tampilan kartu sebagai pilihan yang diingat browser.
+- **Drawing Library**: tab Final / Dalam proses (dan Dibatalkan untuk admin), pencarian nomor/nama/HAC/SAC (termasuk HAC/SAC lain), filter status, discipline, owner, revisi dan rentang tanggal WIB. Daftar ringkas sebagai bawaan, tampilan kartu sebagai pilihan yang diingat browser.
 - **Detail**: metadata, Current Revision, panel viewer, riwayat revisi, riwayat approval (dengan thumbnail lampiran), jejak aktivitas, dan tombol aksi sesuai izin. Form memakai sheet kanan/bawah; keputusan dan aksi destruktif memakai dialog konfirmasi; hasil memakai toast.
 - **Ruang tinjau**: viewer besar berdampingan dengan panel keputusan (ringkasan, pemilihan approver saat Check, catatan, lampiran reject). Di bawah 960 px tersusun vertikal.
 - **Status** tidak menambah palet: Draft netral; Waiting netral dengan ikon jam; Rejected memakai warna perhatian (pumpkin); Completed lime; Obsolete dan Cancelled teredam. Arti selalu dibawa label teks, bukan warna saja.
