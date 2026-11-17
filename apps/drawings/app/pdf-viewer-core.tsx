@@ -419,8 +419,7 @@ export default function PdfViewerCore({
           >
             <Icon name="move" />
           </button>
-        </div>
-        <div className="pdf-toolbar-group pdf-actions">
+          {/* Sits with the view tools: on a phone the page row has no room for a fourth file action. */}
           <button
             type="button"
             className="icon-button"
@@ -430,6 +429,8 @@ export default function PdfViewerCore({
           >
             <Icon name={fullscreen ? 'shrink' : 'expand'} />
           </button>
+        </div>
+        <div className="pdf-toolbar-group pdf-actions">
           {url && (
             <a
               className="icon-button"

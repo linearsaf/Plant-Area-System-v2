@@ -1002,6 +1002,8 @@
     .pdf-zoom {
       flex: 1;
       min-width: 0;
+      /* Tighter inline padding so "Otomatis" clears the native arrow at phone width. */
+      padding-inline: var(--space-2) var(--space-1);
     }
   }
   /*
@@ -1094,6 +1096,14 @@
     .pdf-nav,
     .pdf-actions {
       justify-content: space-between;
+    }
+    /* Five tool buttons leave the zoom menu unusably narrow here; let the row wrap instead. */
+    .pdf-tools {
+      flex-wrap: wrap;
+      row-gap: var(--space-1);
+    }
+    .pdf-zoom {
+      min-width: 7em;
     }
   }
   @media (max-width: 959px) {
