@@ -194,7 +194,12 @@ export type DrawingListItem = {
   releasedAt: string | null;
   updatedAt: string;
 };
-export type DrawingPage = { items: DrawingListItem[]; nextCursor: string | null };
+export type DrawingPage = {
+  items: DrawingListItem[];
+  nextCursor: string | null;
+  /** Jumlah per tab yang boleh dibuka, dengan filter yang sama; hanya pada halaman pertama. */
+  counts?: Partial<Record<LibraryTab, number>>;
+};
 export type DrawingPermissions = {
   edit: boolean;
   correct: boolean;

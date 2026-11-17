@@ -63,6 +63,7 @@ export {
   voidDrawing,
   transferOwner,
   listDrawings,
+  libraryOwners,
   drawingTimeline,
   auditList,
   hacSuggestions,
