@@ -34,6 +34,17 @@ export function ToneBadge({
     </span>
   );
 }
+/**
+ * Status drawing di daftar dan judul. Void tidak mengubah status revisi (revisi tetap Completed),
+ * jadi drawing yang dibatalkan harus diberi label sendiri agar tidak terbaca sebagai dokumen berlaku.
+ */
+export function DrawingStatusBadge({ status, voided }: { status: RevisionStatus; voided: boolean }) {
+  return voided ? (
+    <ToneBadge label="Dibatalkan" tone="muted" status="voided" />
+  ) : (
+    <StatusBadge status={status} />
+  );
+}
 export function LegacyBadge() {
   return <span className="badge neutral">Legacy Ready</span>;
 }

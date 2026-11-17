@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button } from '@plant/ui';
+import { FileDrop } from './file-drop';
 
 type Item = { fileId: string; name: string };
 const MAX = 3;
@@ -48,19 +49,20 @@ export function ImageUpload({
   }
   return (
     <div className="form-stack">
-      <label>
-        {label} — maks. {MAX}, JPEG/PNG/WebP ≤ 5 MB
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          disabled={!mounted || busy || items.length >= MAX}
-          onChange={(e) => {
-            void add(e.target.files);
-            e.target.value = '';
-          }}
-        />
-      </label>
+      <FileDrop
+        label={label}
+        hint={
+          busy
+            ? 'Mengunggah gambar…'
+            : items.length >= MAX
+              ? `Batas ${MAX} gambar tercapai. Hapus satu untuk mengganti.`
+              : `Pilih atau tarik gambar ke sini · maks. ${MAX}, JPEG/PNG/WebP ≤ 5 MB`
+        }
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        disabled={!mounted || busy || items.length >= MAX}
+        onFiles={(files) => void add(files)}
+      />
       {error && (
         <p className="notice error" role="alert">
           {error}

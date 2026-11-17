@@ -10,7 +10,7 @@ import {
 } from '@plant/contracts';
 import { Shell, Heading, EmptyState } from '@plant/ui';
 import { listMasters, maxPdfBytes } from '@plant/drawings-core';
-import { Library } from '../library';
+import { Library, type LibraryParams } from '../library';
 import { DrawingForm } from '../drawing-form';
 import { MastersManager } from '../masters-manager';
 import { AuditList } from '../audit-list';
@@ -45,7 +45,13 @@ const pages: Record<string, { title: string; description: string }> = {
     description: 'Telusuri perubahan drawing, revisi, file dan master beserta pencatatnya.',
   },
 };
-export default async function Page({ params }: { params: Promise<{ section: string }> }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ section: string }>;
+  searchParams: Promise<LibraryParams>;
+}) {
   const { section } = await params;
   if (!drawingsSections.includes(section) || !pages[section]) notFound();
   const identity = await pageIdentity(`/drawings/${section}`);
@@ -60,7 +66,7 @@ export default async function Page({ params }: { params: Promise<{ section: stri
       <Heading eyebrow="Drawing Database" title={page.title} description={page.description}>
         {section === 'requests' && allowed && canDraw(identity, 'request.create') && (
           <a className="button primary" href="/drawings/requests/new">
-            Drawing Request baru
+            Request baru
           </a>
         )}
         {section === 'library' && allowed && canOpenDrawingsSection(identity, 'new') && (
@@ -78,6 +84,7 @@ export default async function Page({ params }: { params: Promise<{ section: stri
           masters={masters}
           canSeeWip={canSeeWip(identity, { ownerId: identity.id })}
           isAdmin={drawingsRole(identity) === 'admin'}
+          initial={await searchParams}
         />
       ) : (section === 'new' || section === 'legacy') && masters ? (
         <section className="panel">

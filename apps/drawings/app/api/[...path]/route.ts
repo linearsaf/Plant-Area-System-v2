@@ -11,6 +11,7 @@ import {
   fileNameFromHeader,
   hacSuggestions,
   listDrawings,
+  libraryOwners,
   listMasters,
   requireContentType,
   requireDrawings,
@@ -88,6 +89,7 @@ export async function GET(request: Request, context: Context) {
       return json(await requestDetail(actor, segments[1]));
     if (path === 'masters') return json(await listMasters());
     if (path === 'drawings') return json(await listDrawings(actor, params));
+    if (path === 'drawing-owners') return json(await libraryOwners(actor));
     if (path === 'hac-suggestions') return json(await hacSuggestions(actor, params.get('q') || ''));
     if (path === 'audit') return json(await auditList(actor, params.get('cursor')));
     if (path === 'people') {

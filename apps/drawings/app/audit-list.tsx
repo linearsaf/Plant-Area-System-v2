@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button, TableSkeleton } from '@plant/ui';
+import { actionLabels } from './action-labels';
 import { formatWib, getJson } from './client-api';
 
 type Item = {
@@ -45,7 +46,7 @@ export function AuditList() {
       {loading && !items.length ? (
         <TableSkeleton />
       ) : (
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="Catatan audit" tabIndex={0}>
           <table className="drawing-table">
             <thead>
               <tr>
@@ -61,7 +62,10 @@ export function AuditList() {
                 <tr key={i.id}>
                   <td>{formatWib(i.createdAt)}</td>
                   <td>{i.actor.name}</td>
-                  <td className="code-text">{i.action}</td>
+                  <td>
+                    {actionLabels[i.action] ?? i.action}
+                    {actionLabels[i.action] && <small className="muted block code-text">{i.action}</small>}
+                  </td>
                   <td>
                     {i.drawingId ? (
                       <a href={`/drawings/library/${i.drawingId}`}>{i.targetType}</a>

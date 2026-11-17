@@ -1,32 +1,19 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Button, Overlay, Select, Textarea, Toast, useConfirmation } from '@plant/ui';
-import type { DrawingDetail, RevisionSummary, TimelineEntry } from '@plant/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Icon, Overlay, Select, Textarea, Toast, useConfirmation } from '@plant/ui';
+import {
+  revisionStatusLabels,
+  type DrawingDetail,
+  type RevisionSummary,
+  type TimelineEntry,
+} from '@plant/contracts';
 import { formatWib, getJson, newKey, sendJson } from './client-api';
+import { actionLabels } from './action-labels';
+import { ClampText } from './clamp-text';
 import { PdfViewer } from './pdf-viewer';
 import { LegacyBadge, StatusBadge } from './status-badge';
 import { WorkflowPanel } from './workflow-panel';
 
-const actionLabels: Record<string, string> = {
-  'drawing.created': 'Membuat drawing',
-  'drawing.legacy_uploaded': 'Upload Old Drawing',
-  'drawing.updated': 'Mengubah draft',
-  'drawing.corrected': 'Mengoreksi metadata',
-  'drawing.voided': 'Membatalkan drawing',
-  'drawing.owner_transferred': 'Mengalihkan owner',
-  'file.downloaded': 'Mengunduh Final Drawing',
-  'file.printed': 'Mencetak Final Drawing',
-  'revision.submitted': 'Submit to Check',
-  'revision.check_approved': 'Check disetujui',
-  'revision.check_rejected': 'Check ditolak',
-  'revision.l1_approved': 'Approval L1 disetujui',
-  'revision.l1_rejected': 'Approval L1 ditolak',
-  'revision.l2_approved': 'Final Approval disetujui',
-  'revision.l2_rejected': 'Final Approval ditolak',
-  'revision.approval_plan_changed': 'Mengganti approver',
-  'revision.created': 'Membuat revisi baru',
-  'revision.cancelled': 'Membatalkan revisi',
-};
 type Person = { id: string; name: string; position: string };
 
 /** Revisi yang ditampilkan: Final Drawing berlaku, atau revisi kerja bila belum ada rilis. */
@@ -36,7 +23,8 @@ function shown(d: DrawingDetail): RevisionSummary | null {
 
 export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
   const confirm = useConfirmation();
-  const [selected, setSelected] = useState<RevisionSummary | null>(shown(drawing)),
+  const primary = shown(drawing);
+  const [selected, setSelected] = useState<RevisionSummary | null>(primary),
     [timeline, setTimeline] = useState<TimelineEntry[]>([]),
     [toast, setToast] = useState(''),
     [error, setError] = useState(''),
@@ -47,6 +35,9 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
     [busy, setBusy] = useState(false),
     [key, setKey] = useState(newKey());
   const p = drawing.permissions;
+  const [menu, setMenu] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const hasActions = p.edit || p.correct || p.transferOwner || p.void;
   useEffect(() => {
     if (!p.timeline) return;
     getJson<{ items: TimelineEntry[] }>(`drawings/${drawing.id}/timeline`)
@@ -96,6 +87,19 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
         </p>
       )}
       {drawing.revising && <p className="notice">Revisi berikutnya sedang diproses.</p>}
+      {selected && primary && selected.id !== primary.id && (
+        <div className="notice revision-notice" role="status">
+          <span>
+            Anda melihat Rev {selected.revisionNo} ({revisionStatusLabels[selected.status]}).{' '}
+            {drawing.released
+              ? `Final Drawing berlaku: Rev ${primary.revisionNo}.`
+              : `Revisi kerja saat ini: Rev ${primary.revisionNo}.`}
+          </span>
+          <Button className="small secondary" onClick={() => setSelected(primary)}>
+            Tampilkan Rev {primary.revisionNo}
+          </Button>
+        </div>
+      )}
       <div className="drawing-detail">
         <section className="panel viewer-panel" aria-label="Viewer drawing">
           {selected ? (
@@ -112,7 +116,79 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
         </section>
         <div className="detail-side">
           <section className="panel">
-            <h2>Data drawing</h2>
+            <div className="panel-head">
+              <h2>Data drawing</h2>
+              {hasActions && (
+                <>
+                  <button
+                    ref={menuButton}
+                    type="button"
+                    className="icon-button ghost"
+                    aria-label="Aksi drawing"
+                    aria-haspopup="menu"
+                    aria-expanded={menu}
+                    title="Aksi drawing"
+                    onClick={() => setMenu(true)}
+                  >
+                    <Icon name="more" strokeWidth={3} />
+                  </button>
+                  <Overlay
+                    open={menu}
+                    onClose={() => setMenu(false)}
+                    title="Aksi drawing"
+                    kind="menu"
+                    placement="bottom-end"
+                    anchor={menuButton}
+                    hideTitle
+                  >
+                    <div className="menu-list" role="menu" aria-label="Aksi drawing">
+                      {p.edit && (
+                        <a
+                          className="menu-item"
+                          role="menuitem"
+                          href={`/drawings/library/${drawing.id}/edit`}
+                        >
+                          <Icon name="drawing" />
+                          <span>Edit draft</span>
+                        </a>
+                      )}
+                      {p.correct && !p.edit && (
+                        <a
+                          className="menu-item"
+                          role="menuitem"
+                          href={`/drawings/library/${drawing.id}/edit?correct=1`}
+                        >
+                          <Icon name="settings" />
+                          <span>Koreksi metadata</span>
+                        </a>
+                      )}
+                      {p.transferOwner && (
+                        <button
+                          type="button"
+                          className="menu-item"
+                          role="menuitem"
+                          onClick={() => (setMenu(false), setKey(newKey()), setSheet('owner'))}
+                        >
+                          <Icon name="user" />
+                          <span>Alihkan owner</span>
+                        </button>
+                      )}
+                      {p.void && (
+                        <button
+                          type="button"
+                          className="menu-item is-danger"
+                          role="menuitem"
+                          onClick={() => (setMenu(false), setKey(newKey()), setSheet('void'))}
+                        >
+                          <Icon name="x" />
+                          <span>Batalkan drawing</span>
+                        </button>
+                      )}
+                    </div>
+                  </Overlay>
+                </>
+              )}
+            </div>
             <dl className="meta-list">
               <dt>Drawing Number</dt>
               <dd className="code-text">{drawing.number || 'Belum diisi'}</dd>
@@ -138,44 +214,21 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
                   <dd>
                     <LegacyBadge />
                   </dd>
-                  <dt>Legacy Ready Note</dt>
-                  <dd>{drawing.legacyNote}</dd>
+                  <dt className="is-stacked">Legacy Ready Note</dt>
+                  <dd className="is-stacked">
+                    {drawing.legacyNote ? <ClampText>{drawing.legacyNote}</ClampText> : '–'}
+                  </dd>
                 </>
               )}
               {drawing.description && (
                 <>
-                  <dt>Description</dt>
-                  <dd>{drawing.description}</dd>
+                  <dt className="is-stacked">Description</dt>
+                  <dd className="is-stacked">
+                    <ClampText>{drawing.description}</ClampText>
+                  </dd>
                 </>
               )}
             </dl>
-            <div className="detail-actions">
-              {p.edit && (
-                <a className="button primary" href={`/drawings/library/${drawing.id}/edit`}>
-                  Edit draft
-                </a>
-              )}
-              {p.correct && !p.edit && (
-                <a className="button secondary" href={`/drawings/library/${drawing.id}/edit?correct=1`}>
-                  Koreksi metadata
-                </a>
-              )}
-              {p.transferOwner && (
-                <Button className="secondary" onClick={() => (setKey(newKey()), setSheet('owner'))}>
-                  Alihkan owner
-                </Button>
-              )}
-              {p.void && (
-                <Button className="danger" onClick={() => (setKey(newKey()), setSheet('void'))}>
-                  Batalkan drawing
-                </Button>
-              )}
-              {selected?.hasFile && (
-                <a className="button secondary" href={`/drawings/view/${selected.id}`}>
-                  Buka viewer penuh
-                </a>
-              )}
-            </div>
           </section>
           <WorkflowPanel
             drawing={drawing}
@@ -199,7 +252,13 @@ export function DrawingView({ drawing }: { drawing: DrawingDetail }) {
                         aria-pressed={selected?.id === r.id}
                         onClick={() => setSelected(r)}
                       >
-                        {selected?.id === r.id ? 'Ditampilkan' : 'Tampilkan'}
+                        {selected?.id === r.id ? (
+                          <>
+                            <Icon name="check" /> Ditampilkan
+                          </>
+                        ) : (
+                          'Tampilkan'
+                        )}
                       </Button>
                     )}
                   </div>
