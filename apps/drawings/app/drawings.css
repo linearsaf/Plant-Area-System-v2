@@ -538,6 +538,13 @@
     flex-wrap: wrap;
     gap: var(--space-1);
   }
+  /*
+   * Summary chart: both series are filled greens, so the shared stroke (needed by Consumable Room's
+   * white series) only adds noise. A surface-coloured edge keeps stacked segments apart.
+   */
+  .hero-chart-card .quarter-stack i {
+    box-shadow: none;
+  }
   /* Detail */
   .drawing-detail {
     display: grid;
