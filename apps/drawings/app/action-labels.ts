@@ -1,0 +1,21 @@
+/** Nama aksi audit dalam bahasa pengguna; kode mentah tetap tampil sebagai cadangan. */
+export const actionLabels: Record<string, string> = {
+  'drawing.created': 'Membuat drawing',
+  'drawing.legacy_uploaded': 'Upload Old Drawing',
+  'drawing.updated': 'Mengubah draft',
+  'drawing.corrected': 'Mengoreksi metadata',
+  'drawing.voided': 'Membatalkan drawing',
+  'drawing.owner_transferred': 'Mengalihkan owner',
+  'file.downloaded': 'Mengunduh Final Drawing',
+  'file.printed': 'Mencetak Final Drawing',
+  'revision.submitted': 'Submit to Check',
+  'revision.check_approved': 'Check disetujui',
+  'revision.check_rejected': 'Check ditolak',
+  'revision.l1_approved': 'Approval L1 disetujui',
+  'revision.l1_rejected': 'Approval L1 ditolak',
+  'revision.l2_approved': 'Final Approval disetujui',
+  'revision.l2_rejected': 'Final Approval ditolak',
+  'revision.approval_plan_changed': 'Mengganti approver',
+  'revision.created': 'Membuat revisi baru',
+  'revision.cancelled': 'Membatalkan revisi',
+};

@@ -125,8 +125,8 @@ export function RequestList({ scopes }: { scopes: RequestScope[] }) {
           description="Drawing Request dalam cakupan Anda akan tampil di sini."
         />
       ) : (
-        <div className="table-scroll">
-          <table className="drawing-table">
+        <div className="table-scroll" role="region" aria-label="Daftar request" tabIndex={0}>
+          <table className="drawing-table stack-table">
             <thead>
               <tr>
                 <th scope="col">Nomor</th>
@@ -141,19 +141,23 @@ export function RequestList({ scopes }: { scopes: RequestScope[] }) {
             <tbody>
               {items.map((r) => (
                 <tr key={r.id}>
-                  <td>
-                    <a className="code-text" href={`/drawings/requests/${r.id}`}>
+                  <td data-cell="num">
+                    <a className="code-text row-link" href={`/drawings/requests/${r.id}`}>
                       {r.number}
                     </a>
                   </td>
-                  <td className="code-text">{r.hac}</td>
-                  <td>{r.description.length > 120 ? r.description.slice(0, 117) + '…' : r.description}</td>
-                  <td>
+                  <td className="code-text" data-cell="hac">
+                    {r.hac}
+                  </td>
+                  <td data-cell="desc">
+                    {r.description.length > 120 ? r.description.slice(0, 117) + '…' : r.description}
+                  </td>
+                  <td data-cell="status">
                     <RequestBadge status={r.status} />
                   </td>
-                  <td>{r.requester.name}</td>
-                  <td>{r.drafter?.name ?? '–'}</td>
-                  <td>{formatWib(r.updatedAt)}</td>
+                  <td data-label="Pemohon">{r.requester.name}</td>
+                  <td data-label="Drafter">{r.drafter?.name ?? '–'}</td>
+                  <td data-label="Diperbarui">{formatWib(r.updatedAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -237,7 +241,11 @@ export function RequestForm() {
           onChange={set('hac')}
           autoComplete="off"
           spellCheck={false}
+          aria-describedby="request-hac-hint"
         />
+        <small id="request-hac-hint" className="field-hint">
+          Kode area atau peralatan yang digambar. Ketik beberapa karakter untuk melihat kode yang sudah ada.
+        </small>
         <datalist id="request-hac">
           {suggestions.map((s) => (
             <option key={s} value={s} />
@@ -252,11 +260,26 @@ export function RequestForm() {
           rows={4}
           value={values.description}
           onChange={set('description')}
+          aria-describedby="request-description-hint"
         />
+        <small id="request-description-hint" className="field-hint">
+          Objek yang perlu digambar, misalnya bagian peralatan, jenis gambar, dan ukuran penting yang sudah
+          diketahui.
+        </small>
       </label>
       <label>
         Keperluan
-        <Textarea required maxLength={1000} rows={3} value={values.purpose} onChange={set('purpose')} />
+        <Textarea
+          required
+          maxLength={1000}
+          rows={3}
+          value={values.purpose}
+          onChange={set('purpose')}
+          aria-describedby="request-purpose-hint"
+        />
+        <small id="request-purpose-hint" className="field-hint">
+          Untuk apa drawing ini dibutuhkan, misalnya perbaikan, modifikasi, atau pengadaan suku cadang.
+        </small>
       </label>
       <ImageUpload onChange={onImages} label="Gambar referensi (opsional)" />
       <div className="form-actions">
@@ -408,6 +431,13 @@ export function RequestView({ request }: { request: RequestDetail }) {
                 {request.can.cancel ? 'Alasan pembatalan (opsional)' : 'Catatan (wajib bila menolak)'}
                 <Textarea maxLength={1000} rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
               </label>
+            )}
+            {(request.can.review || request.can.drafterDecision) && (
+              <p id="request-action-hint" className="fine">
+                {request.can.review
+                  ? 'Pilih Drafter untuk menugaskan. Isi catatan untuk menolak request.'
+                  : 'Isi catatan untuk menolak request.'}
+              </p>
             )}
             <div className="detail-actions">
               {request.can.review && (

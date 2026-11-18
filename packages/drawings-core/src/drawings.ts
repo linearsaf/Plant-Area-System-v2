@@ -464,21 +464,18 @@ export async function transferOwner(
 // ───────────────────────── Baca ─────────────────────────
 
 const PAGE = 50;
-/** Drawing Library dengan filter dan pagination cursor di server (§9). */
-export async function listDrawings(actor: Identity, params: URLSearchParams): Promise<DrawingPage> {
-  if (!canDraw(actor, 'read')) throw new AppError(403, 'Akses Drawing Database belum diberikan.');
-  const tab = (params.get('tab') || 'released') as LibraryTab;
-  if (!libraryTabs.includes(tab)) throw new AppError(400, 'Tab tidak dikenal.');
-  const wipValue = canSeeWip(actor, { ownerId: '' })
-    ? 'all'
-    : canSeeWip(actor, { ownerId: actor.id })
-      ? 'own'
-      : 'none';
-  if (tab === 'wip' && wipValue === 'none')
-    throw new AppError(403, 'Anda tidak dapat melihat drawing dalam proses.');
-  if (tab === 'void' && drawingsRole(actor) !== 'admin')
-    throw new AppError(403, 'Hanya Admin yang dapat melihat drawing dibatalkan.');
-  const display = tab === 'released' ? drawings.releasedRevisionId : drawings.currentRevisionId;
+type WipScope = 'all' | 'own' | 'none';
+function wipScope(actor: Identity): WipScope {
+  return canSeeWip(actor, { ownerId: '' }) ? 'all' : canSeeWip(actor, { ownerId: actor.id }) ? 'own' : 'none';
+}
+/** Tab Library yang boleh dibuka aktor; dipakai untuk akses dan hitungan per tab. */
+function visibleTabs(actor: Identity): LibraryTab[] {
+  return libraryTabs.filter(
+    (t) => t === 'released' || (t === 'wip' ? wipScope(actor) !== 'none' : drawingsRole(actor) === 'admin'),
+  );
+}
+/** Syarat tab + filter pencarian, tanpa cursor; sama untuk daftar maupun hitungan. */
+function libraryWhere(actor: Identity, tab: LibraryTab, params: URLSearchParams) {
   const sortTime = tab === 'released' ? drawings.releasedAt : drawings.updatedAt;
   const where: (SQL | undefined)[] = [];
   if (tab === 'released') where.push(isNotNull(drawings.releasedRevisionId), isNull(drawings.voidedAt));
@@ -487,7 +484,7 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
       isNull(drawings.voidedAt),
       or(isNull(drawings.releasedRevisionId), ne(drawings.currentRevisionId, drawings.releasedRevisionId)),
     );
-    if (wipValue === 'own') where.push(eq(drawings.ownerId, actor.id));
+    if (wipScope(actor) === 'own') where.push(eq(drawings.ownerId, actor.id));
   }
   if (tab === 'void') where.push(isNotNull(drawings.voidedAt));
   const q = params.get('q')?.trim().slice(0, 100);
@@ -512,28 +509,63 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
     if (!/^[0-9a-f-]{36}$/.test(value)) throw new AppError(400, `Filter ${param} tidak valid.`);
     where.push(eq(column, value));
   }
+  const drawnBy = params.get('drawnBy')?.trim();
+  if (drawnBy) where.push(eq(drawings.ownerName, drawnBy.slice(0, 100)));
   const revision = params.get('revision')?.trim();
   if (revision) where.push(eq(revisions.revisionNo, revision.slice(0, 20)));
   const from = params.get('from'),
     to = params.get('to');
   if (from) where.push(sql`${sortTime} >= ${wibDayStart(from, 'Tanggal awal')}`);
   if (to) where.push(lt(sortTime, new Date(wibDayStart(to, 'Tanggal akhir').getTime() + 86_400_000)));
+  return {
+    where,
+    sortTime,
+    display: tab === 'released' ? drawings.releasedRevisionId : drawings.currentRevisionId,
+  };
+}
+async function countLibrary(actor: Identity, tab: LibraryTab, params: URLSearchParams) {
+  const { where, display } = libraryWhere(actor, tab, params);
+  const [row] = await db()
+    .select({ n: sql<number>`count(*)` })
+    .from(drawings)
+    .innerJoin(revisions, eq(revisions.id, display))
+    .where(and(...where));
+  return Number(row?.n ?? 0);
+}
+/** Drawing Library dengan filter dan pagination cursor di server (§9). */
+export async function listDrawings(actor: Identity, params: URLSearchParams): Promise<DrawingPage> {
+  if (!canDraw(actor, 'read')) throw new AppError(403, 'Akses Drawing Database belum diberikan.');
+  const tab = (params.get('tab') || 'released') as LibraryTab;
+  if (!libraryTabs.includes(tab)) throw new AppError(400, 'Tab tidak dikenal.');
+  if (tab === 'wip' && wipScope(actor) === 'none')
+    throw new AppError(403, 'Anda tidak dapat melihat drawing dalam proses.');
+  if (tab === 'void' && drawingsRole(actor) !== 'admin')
+    throw new AppError(403, 'Hanya Admin yang dapat melihat drawing dibatalkan.');
+  const { where, sortTime, display } = libraryWhere(actor, tab, params);
   const cursor = decodeCursor(params.get('cursor'));
   if (cursor)
     where.push(or(lt(sortTime, cursor.at), and(eq(sortTime, cursor.at), lt(drawings.id, cursor.id))));
-  const rows = await db()
-    .select({
-      d: drawings,
-      discipline: disciplines.name,
-      revisionNo: revisions.revisionNo,
-      status: revisions.status,
-    })
-    .from(drawings)
-    .leftJoin(disciplines, eq(disciplines.id, drawings.disciplineId))
-    .innerJoin(revisions, eq(revisions.id, display))
-    .where(and(...where))
-    .orderBy(desc(sortTime), desc(drawings.id))
-    .limit(PAGE + 1);
+  const [rows, counts] = await Promise.all([
+    db()
+      .select({
+        d: drawings,
+        discipline: disciplines.name,
+        revisionNo: revisions.revisionNo,
+        status: revisions.status,
+      })
+      .from(drawings)
+      .leftJoin(disciplines, eq(disciplines.id, drawings.disciplineId))
+      .innerJoin(revisions, eq(revisions.id, display))
+      .where(and(...where))
+      .orderBy(desc(sortTime), desc(drawings.id))
+      .limit(PAGE + 1),
+    // Hitungan per tab hanya pada halaman pertama, dengan filter yang sama dengan daftar.
+    cursor
+      ? undefined
+      : Promise.all(
+          visibleTabs(actor).map(async (t) => [t, await countLibrary(actor, t, params)] as const),
+        ).then((entries) => Object.fromEntries(entries) as Partial<Record<LibraryTab, number>>),
+  ]);
   const page = rows.slice(0, PAGE);
   const others = await otherHacsOf(page.map((r) => r.d.id));
   const items: DrawingListItem[] = page.map(({ d, discipline, revisionNo, status }) => ({
@@ -559,7 +591,35 @@ export async function listDrawings(actor: Identity, params: URLSearchParams): Pr
       rows.length > PAGE && last
         ? encodeCursor(tab === 'released' ? last.releasedAt : last.updatedAt, last.id)
         : null,
+    ...(counts && { counts }),
   };
+}
+
+/**
+ * Pilihan filter "Drawn by": nama yang tampil di Library, dari drawing yang terlihat oleh aktor
+ * (Final untuk semua; dalam proses sesuai cakupan; dibatalkan hanya Admin). Berdasarkan nama,
+ * bukan owner id: Old Drawing arsip menyimpan Drawn by sebagai teks dengan owner = pengunggah.
+ */
+export async function libraryOwners(actor: Identity): Promise<{ names: string[] }> {
+  if (!canDraw(actor, 'read')) throw new AppError(403, 'Akses Drawing Database belum diberikan.');
+  const scope = wipScope(actor);
+  const visible =
+    drawingsRole(actor) === 'admin'
+      ? undefined
+      : or(
+          and(isNotNull(drawings.releasedRevisionId), isNull(drawings.voidedAt)),
+          scope === 'all'
+            ? isNull(drawings.voidedAt)
+            : scope === 'own'
+              ? and(isNull(drawings.voidedAt), eq(drawings.ownerId, actor.id))
+              : undefined,
+        );
+  const rows = await db()
+    .selectDistinct({ name: drawings.ownerName })
+    .from(drawings)
+    .where(visible)
+    .orderBy(asc(drawings.ownerName));
+  return { names: rows.map((r) => r.name) };
 }
 
 async function revisionSummaries(rows: RevisionRow[]): Promise<Map<string, RevisionSummary>> {

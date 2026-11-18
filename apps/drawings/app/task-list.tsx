@@ -13,7 +13,7 @@ const groups: { kind: TaskKind; title: string; hint: string }[] = [
     title: 'Request ditugaskan',
     hint: 'Terima atau tolak Drawing Request yang ditugaskan kepada Anda.',
   },
-  { kind: 'waiting_check', title: 'Menunggu Check', hint: 'Periksa drawing dan susun approval plan.' },
+  { kind: 'waiting_check', title: 'Waiting Check', hint: 'Periksa drawing dan susun approval plan.' },
   {
     kind: 'request_review',
     title: 'Request menunggu review',

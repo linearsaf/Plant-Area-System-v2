@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@plant/ui';
+import { FileDrop } from './file-drop';
 import { PdfViewer } from './pdf-viewer';
 
 export type Staged = { fileId: string; name: string; size: number; sha256: string; pageCount: number | null };
@@ -62,19 +63,19 @@ export function PdfUpload({
   return (
     <div className="upload-drop">
       <div className="form-stack">
-        <label>
-          {label} (maksimal {maxMb} MB)
-          <input
-            ref={input}
-            type="file"
+        {!staged && (
+          <FileDrop
+            label={label}
+            hint={`Pilih atau tarik file PDF ke sini · maksimal ${maxMb} MB`}
             accept="application/pdf,.pdf"
+            inputRef={input}
             disabled={!mounted || progress !== null}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
+            onFiles={(files) => {
+              const file = files?.[0];
               if (file) upload(file);
             }}
           />
-        </label>
+        )}
         {progress !== null && (
           <div role="status" aria-live="polite">
             <p className="fine">Mengunggah dan memeriksa PDF… {progress}%</p>

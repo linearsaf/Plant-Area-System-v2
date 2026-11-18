@@ -214,6 +214,9 @@
   }
   /* Compact on desktop; touch gets the 44 px target used across the platform. */
   @media (pointer: coarse) {
+    button,
+    .secondary,
+    .header-action,
     button.small {
       min-height: 44px;
     }
@@ -380,6 +383,10 @@
   .input-wrap:focus-within .input-clear,
   .input-wrap:hover .input-clear {
     opacity: 1;
+  }
+  /* The shared clear button replaces the browser's own search cancel control. */
+  .input-wrap input[type='search']::-webkit-search-cancel-button {
+    appearance: none;
   }
   .input-clear svg {
     width: 16px;
@@ -1287,9 +1294,9 @@
       grid-template-columns: 1fr;
     }
     .date-field > .icon-button {
-      width: 40px;
-      height: 40px;
-      min-height: 40px;
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
     }
     .calendar-grid button {
       height: 44px;

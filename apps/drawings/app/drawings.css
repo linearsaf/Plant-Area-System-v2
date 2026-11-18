@@ -1,7 +1,7 @@
 /* Drawing Database — viewer PDF dan unggah. Memakai token @plant/ui; tanpa palet baru. */
 @layer components {
   .pdf-frame {
-    --pdf-height: min(78vh, 900px);
+    --pdf-height: min(76vh, 900px);
     display: grid;
     grid-template-rows: auto 1fr;
     /* Grid items default to min-width:auto and would grow to the toolbar's content width. */
@@ -93,6 +93,8 @@
   /* Paper stays white in light and dark themes. */
   .pdf-container .pdfViewer .page {
     background-color: #fff;
+    /* Page borders are off (full-width fit); a hairline keeps the sheet edge readable. */
+    box-shadow: 0 0 0 1px var(--border);
   }
   .pdf-watermark {
     position: absolute;
@@ -177,6 +179,11 @@
     color: var(--textPrimary);
     box-shadow: var(--shadow-panel);
   }
+  @media (pointer: coarse) {
+    .segmented button {
+      min-height: 44px;
+    }
+  }
   .library-filters {
     display: grid;
     gap: var(--space-2);
@@ -191,6 +198,15 @@
   }
   .table-scroll {
     overflow-x: auto;
+    border-radius: var(--radius-control);
+  }
+  .table-scroll:focus-visible {
+    outline: 2px solid var(--focusBorder);
+    outline-offset: 2px;
+  }
+  /* Lists follow their own panel width: a register on desktop, labelled rows on a phone. */
+  .drawing-library {
+    container: list / inline-size;
   }
   .drawing-table {
     width: 100%;
@@ -211,6 +227,283 @@
   }
   .drawing-table td a {
     font-weight: var(--weight-semibold);
+  }
+  /* The whole row opens the record; the number link carries the name and keyboard focus. */
+  .stack-table tbody tr {
+    position: relative;
+  }
+  .stack-table .row-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .stack-table .row-link:focus-visible {
+    outline: none;
+  }
+  .stack-table .row-link:focus-visible::after {
+    outline: 2px solid var(--focusBorder);
+    outline-offset: -2px;
+    border-radius: var(--radius-control);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .stack-table tbody tr:hover {
+      background: var(--surfaceMuted);
+    }
+  }
+  .stack-table td,
+  .stack-table th {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  /* Columns stay on one line; the table spans the card and spreads spare width over every column. */
+  /* Names and request descriptions wrap only when the card is too narrow for every column. */
+  .stack-table td[data-cell='title'] {
+    white-space: normal;
+    min-width: 12rem;
+  }
+  .stack-table td[data-cell='desc'] {
+    white-space: normal;
+    min-width: 20rem;
+  }
+  .stack-table td[data-cell='flag'] .legacy-dot {
+    display: none;
+  }
+  .count-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    margin-left: var(--space-1);
+    padding: 0 6px;
+    border-radius: var(--radius-pill);
+    background: var(--surfaceSunken);
+    color: var(--textSecondary);
+    font-size: var(--type-caption);
+    font-weight: var(--weight-medium);
+    vertical-align: 0.1em;
+  }
+  .legacy-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--borderStrong);
+    border-radius: var(--radius-pill);
+    background: var(--surfaceSunken);
+    vertical-align: -1px;
+  }
+  .legacy-legend {
+    display: none;
+  }
+  /* Tab and filter counters: same quiet pill as the sidebar's task count. */
+  .tab-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 20px;
+    margin-left: var(--space-2);
+    padding: 0 6px;
+    border-radius: var(--radius-pill);
+    background: var(--surfaceSunken);
+    color: var(--textSecondary);
+    font-size: var(--type-caption);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+  .segmented button.is-active .tab-count {
+    background: var(--surfaceMuted);
+    color: var(--textPrimary);
+  }
+  .library-search-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .library-search-row .library-search {
+    flex: 1;
+    min-width: 0;
+  }
+  .filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    min-height: 44px;
+  }
+  .filter-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+  .filter-toggle[aria-expanded='true'],
+  .filter-toggle.is-active {
+    background: var(--surfaceSunken);
+  }
+  .filter-toggle .tab-count {
+    margin-left: 0;
+    background: var(--buttonPrimaryBg);
+    color: var(--buttonPrimaryText);
+  }
+  @container list (max-width: 640px) {
+    .view-toggle {
+      display: none;
+    }
+    .library-head {
+      margin-bottom: var(--space-2);
+    }
+    .library-head > [role='tablist'] {
+      width: 100%;
+    }
+    /* Tabs keep one line; with three tabs and counts the row scrolls sideways instead of wrapping. */
+    .library-head > [role='tablist'] {
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .library-head > [role='tablist'] button {
+      flex: 1 0 auto;
+      padding: 0 var(--space-3);
+      white-space: nowrap;
+    }
+    .filter-toggle {
+      width: 48px;
+      justify-content: center;
+      padding: 0;
+      position: relative;
+    }
+    .filter-toggle > .filter-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    .filter-toggle .tab-count {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+    }
+    .stack-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .stack-table,
+    .stack-table tbody {
+      display: block;
+    }
+    /* One record = three lines: identity + flags, name, then a single metadata line. */
+    .stack-table tbody tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-1) var(--space-2);
+      padding: var(--space-3) var(--space-1);
+      border-bottom: 1px solid var(--divider);
+    }
+    .stack-table td {
+      order: 10;
+      flex: 0 0 100%;
+      display: block;
+      width: auto;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      color: var(--textSecondary);
+      white-space: normal;
+    }
+    .stack-table td[data-cell='num'] {
+      order: 1;
+      flex: none;
+      color: var(--textPrimary);
+      font-size: var(--type-body);
+      white-space: nowrap;
+    }
+    .stack-table td[data-cell='rev'] {
+      order: 2;
+      flex: none;
+      color: var(--textPrimary);
+      font-weight: var(--weight-medium);
+    }
+    .stack-table td[data-cell='rev']::before {
+      content: '· Rev ';
+      font-weight: var(--weight-regular);
+    }
+    .stack-table td[data-cell='status'] {
+      order: 3;
+      flex: none;
+      margin-left: auto;
+      align-self: center;
+    }
+    .stack-table td[data-cell='flag'] {
+      order: 4;
+      display: block;
+      flex: none;
+      margin-left: auto;
+      align-self: center;
+    }
+    /* With a status badge present, the badge takes the push to the right and the dot follows it. */
+    .stack-table td[data-cell='flag']:has(~ td[data-cell='status']) {
+      margin-left: 0;
+    }
+    .stack-table td:empty {
+      display: none;
+    }
+    .stack-table td[data-cell='hac'] {
+      order: 5;
+    }
+    .stack-table td[data-cell='title'],
+    .stack-table td[data-cell='desc'] {
+      order: 6;
+      min-width: 0;
+      color: var(--textPrimary);
+      font-size: var(--type-body);
+    }
+    .stack-table td[data-cell='meta'] {
+      order: 7;
+      flex: none;
+      font-size: var(--type-footnote);
+    }
+    .stack-table td[data-cell='extra'] {
+      display: none;
+    }
+    .stack-table td[data-cell='flag'] .legacy-dot {
+      display: inline-block;
+    }
+    /* One metadata line: HAC/SAC · Drawn by · date. */
+    .stack-table td[data-cell='meta']:not(.meta-first)::before {
+      content: '·';
+      margin-right: var(--space-2);
+    }
+    /* A long HAC/SAC list gives way (ellipsis) so owner and date stay on the same line. */
+    .stack-table td.meta-first {
+      flex: none;
+      max-width: 50%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .stack-table td[data-label]::before {
+      content: attr(data-label) ' ';
+      color: var(--textSecondary);
+    }
+    .stack-table .legacy-inline,
+    .stack-table .date-time {
+      display: none;
+    }
+    .stack-table td[data-cell='meta'] .count-pill {
+      height: 16px;
+    }
+    .legacy-legend {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin: var(--space-3) 0 0;
+      color: var(--textSecondary);
+      font-size: var(--type-caption);
+    }
   }
   .block {
     display: block;
@@ -344,6 +637,216 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+  }
+  .revision-row button[aria-pressed='true'] {
+    background: var(--surfaceSunken);
+    color: var(--textPrimary);
+    font-weight: var(--weight-semibold);
+  }
+  .revision-row button[aria-pressed='true'] svg {
+    width: 14px;
+    height: 14px;
+  }
+  /* Long free text stays out of the way of the actions until asked for. */
+  .clamp-text {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-1);
+  }
+  .clamp-text > span {
+    white-space: pre-line;
+  }
+  .clamp-text.is-clamped > span {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+  .clamp-text > button {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--textPrimary);
+    font-weight: var(--weight-medium);
+    font-size: var(--type-footnote);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  @media (pointer: coarse) {
+    .clamp-text > button {
+      min-height: 44px;
+    }
+  }
+  .revision-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .panel-head h2 {
+    margin: 0;
+  }
+  .panel-head .icon-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+  }
+  .menu-item.is-danger {
+    color: var(--negativeText);
+  }
+  /* Long free text reads as a paragraph under its label, not squeezed into the value column. */
+  .meta-list dt.is-stacked,
+  .meta-list dd.is-stacked {
+    grid-column: 1 / -1;
+  }
+  .meta-list dt.is-stacked {
+    margin-top: var(--space-2);
+    margin-bottom: calc(var(--space-2) * -1);
+  }
+  /* Detail title: Drawing Name by default; one click swaps it with Drawing Number · Rev. */
+  .drawing-title {
+    text-wrap: balance;
+  }
+  /* Header actions keep their label on one line; the heading text wraps instead. */
+  .heading > a.button {
+    flex: none;
+    white-space: nowrap;
+  }
+  @media (max-width: 639px) {
+    /* On a phone the Library's purpose line costs three lines before the first drawing. */
+    .heading:has(+ .drawing-library) .muted {
+      display: none;
+    }
+  }
+  @media (max-width: 767px) {
+    /* Status badges sit under the title on a phone instead of squeezing it. */
+    .drawing-heading {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+  }
+  .title-swap {
+    display: inline;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .title-swap > span {
+    text-decoration: underline dotted transparent;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    transition: text-decoration-color var(--duration-base) var(--ease-standard);
+  }
+  .title-swap > svg {
+    width: 0.6em;
+    height: 0.6em;
+    margin-left: 0.3em;
+    vertical-align: 0.05em;
+    color: var(--textSecondary);
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .title-swap:hover > span,
+  .title-swap:focus-visible > span {
+    text-decoration-color: var(--textSecondary);
+  }
+  .title-swap:hover > svg,
+  .title-swap:focus-visible > svg {
+    opacity: 1;
+  }
+  .title-swap:focus-visible {
+    outline: 2px solid var(--focusBorder);
+    outline-offset: 4px;
+    border-radius: var(--radius-control);
+  }
+  /* Touch has no hover: keep the swap hint visible so the affordance is discoverable. */
+  @media (hover: none) {
+    .title-swap > svg {
+      opacity: 1;
+    }
+  }
+  /* File picker: a drop target in the product's own language instead of the browser's button. */
+  .file-drop {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-4);
+    border: 1px dashed var(--borderStrong);
+    border-radius: var(--radius-card);
+    background: var(--surfaceSunken);
+    color: var(--textPrimary);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-base) var(--ease-standard),
+      border-color var(--duration-base) var(--ease-standard);
+  }
+  .file-drop > svg {
+    grid-row: span 2;
+    width: 24px;
+    height: 24px;
+    color: var(--textSecondary);
+  }
+  .file-drop strong {
+    font-weight: var(--weight-medium);
+  }
+  .file-drop small {
+    color: var(--textSecondary);
+  }
+  .file-drop input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .file-drop:hover,
+  .file-drop.is-over {
+    border-color: var(--textSecondary);
+    background: var(--surfaceMuted);
+  }
+  .file-drop:focus-within {
+    outline: 2px solid var(--focusBorder);
+    outline-offset: 2px;
+  }
+  .file-drop.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .file-drop.is-disabled input {
+    cursor: not-allowed;
+  }
+  .field-hint {
+    display: block;
+    margin-top: var(--space-1);
+    color: var(--textSecondary);
+    font-size: var(--type-footnote);
+    font-weight: var(--weight-regular);
+  }
+  .attachment-list + h3,
+  .meta-list + h3 {
+    margin-top: var(--space-6);
   }
   .drawing-form fieldset {
     border: 0;
@@ -491,19 +994,94 @@
       justify-content: flex-end;
     }
     .pdf-toolbar .icon-button {
-      width: 40px;
-      height: 40px;
-      min-height: 40px;
       flex: none;
     }
     .pdf-page input {
       width: 3em;
-      min-height: 40px;
     }
     .pdf-zoom {
       flex: 1;
       min-width: 0;
+      /* Tighter inline padding so "Otomatis" clears the native arrow at phone width. */
+      padding-inline: var(--space-2) var(--space-1);
+    }
+  }
+  /*
+   * Wide viewers: the toolbar floats as a compact bar over the bottom of the canvas, so the full
+   * frame height goes to the drawing. Narrow viewers keep the two-row toolbar above the canvas,
+   * where twelve controls would otherwise cover most of a phone-width sheet.
+   */
+  .pdf-frame {
+    position: relative;
+  }
+  @container (min-width: 700px) {
+    .pdf-toolbar {
+      position: absolute;
+      z-index: 3;
+      bottom: var(--space-4);
+      left: 50%;
+      transform: translateX(-50%);
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: var(--space-1);
+      width: max-content;
+      max-width: calc(100% - var(--space-8, 32px));
+      min-height: 0;
+      padding: var(--space-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      box-shadow: var(--shadow-overlay);
+      backdrop-filter: blur(8px);
+      /* Fades out quickly when a drag starts and returns a little slower once it ends. */
+      transition: opacity 240ms var(--ease-standard);
+    }
+    /* While the sheet is being dragged the bar steps back so the drawing under it stays readable. */
+    .is-dragging .pdf-toolbar {
+      opacity: 0.2;
+      pointer-events: none;
+      transition-duration: 120ms;
+    }
+    .pdf-toolbar-group + .pdf-toolbar-group {
+      padding-left: var(--space-1);
+      border-left: 1px solid var(--divider);
+    }
+    .pdf-toolbar .icon-button {
+      width: 40px;
+      height: 40px;
       min-height: 40px;
+      border-radius: var(--radius-pill);
+    }
+    .pdf-toolbar .pdf-page input,
+    .pdf-toolbar .pdf-zoom {
+      min-height: 40px;
+    }
+    .pdf-toolbar .pdf-zoom {
+      min-width: 7.5em;
+    }
+    @media (pointer: coarse) {
+      .pdf-toolbar .icon-button,
+      .pdf-toolbar .pdf-page input,
+      .pdf-toolbar .pdf-zoom {
+        width: auto;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
+      }
+      .pdf-toolbar .pdf-zoom {
+        min-width: 7.5em;
+      }
+      .pdf-toolbar .pdf-page input {
+        width: 3.5em;
+      }
+    }
+    /* Keep the last page's bottom edge clear of the floating bar. */
+    .pdf-container .pdfViewer {
+      padding-bottom: 88px;
+    }
+    /* The toolbar no longer takes a row, so fullscreen gives the whole screen to the sheet. */
+    .is-fullscreen .pdf-stage {
+      height: 100vh;
     }
   }
   @container (max-width: 339px) {
@@ -518,6 +1096,14 @@
     .pdf-nav,
     .pdf-actions {
       justify-content: space-between;
+    }
+    /* Five tool buttons leave the zoom menu unusably narrow here; let the row wrap instead. */
+    .pdf-tools {
+      flex-wrap: wrap;
+      row-gap: var(--space-1);
+    }
+    .pdf-zoom {
+      min-width: 7em;
     }
   }
   @media (max-width: 959px) {
@@ -540,6 +1126,10 @@
   @media (prefers-reduced-motion: reduce) {
     .pdf-container {
       scroll-behavior: auto;
+    }
+    .file-drop,
+    .pdf-toolbar {
+      transition: none;
     }
   }
 }

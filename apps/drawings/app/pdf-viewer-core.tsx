@@ -97,7 +97,8 @@ export default function PdfViewerCore({
         viewer: viewerElement.current,
         eventBus: bus,
         linkService: links,
-        removePageBorders: false,
+        // Tanpa border 9px dan padding scrollbar 40px bawaan, "Fit lebar" memakai lebar penuh viewer.
+        removePageBorders: true,
         enableDetailCanvas: true,
         maxCanvasPixels: 16_777_216,
         enableAutoLinking: false,
@@ -270,6 +271,8 @@ export default function PdfViewerCore({
     if (element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight) return;
     drag.current = { x: e.clientX, y: e.clientY, left: element.scrollLeft, top: element.scrollTop };
     element.setPointerCapture(e.pointerId);
+    // Toolbar mengambang meredup selama drag agar tepi bawah drawing tetap terlihat.
+    frame.current?.classList.add('is-dragging');
   };
   const pointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const element = container.current;
@@ -277,7 +280,10 @@ export default function PdfViewerCore({
     element.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
     element.scrollTop = drag.current.top - (e.clientY - drag.current.y);
   };
-  const pointerUp = () => (drag.current = null);
+  const pointerUp = () => {
+    drag.current = null;
+    frame.current?.classList.remove('is-dragging');
+  };
 
   // Keyboard shortcuts apply only while focus is inside the viewer; Ctrl/Cmd+K and +B stay with the shell.
   const keyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -325,6 +331,7 @@ export default function PdfViewerCore({
             type="button"
             className="icon-button"
             aria-label="Halaman sebelumnya"
+            title="Halaman sebelumnya (PageUp)"
             disabled={!ready || page <= 1}
             onClick={() => goTo(page - 1)}
           >
@@ -349,6 +356,7 @@ export default function PdfViewerCore({
             type="button"
             className="icon-button"
             aria-label="Halaman berikutnya"
+            title="Halaman berikutnya (PageDown)"
             disabled={!ready || page >= pages}
             onClick={() => goTo(page + 1)}
           >
@@ -360,6 +368,7 @@ export default function PdfViewerCore({
             type="button"
             className="icon-button"
             aria-label="Perkecil"
+            title="Perkecil (−)"
             disabled={!ready || scale <= MIN_SCALE}
             onClick={() => zoom(-1)}
           >
@@ -383,6 +392,7 @@ export default function PdfViewerCore({
             type="button"
             className="icon-button"
             aria-label="Perbesar"
+            title="Perbesar (+)"
             disabled={!ready || scale >= MAX_SCALE}
             onClick={() => zoom(1)}
           >
@@ -392,6 +402,7 @@ export default function PdfViewerCore({
             type="button"
             className="icon-button"
             aria-label="Putar 90 derajat"
+            title="Putar 90 derajat"
             disabled={!ready}
             onClick={rotate}
           >
@@ -408,16 +419,18 @@ export default function PdfViewerCore({
           >
             <Icon name="move" />
           </button>
-        </div>
-        <div className="pdf-toolbar-group pdf-actions">
+          {/* Sits with the view tools: on a phone the page row has no room for a fourth file action. */}
           <button
             type="button"
             className="icon-button"
             aria-label={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
+            title={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
             onClick={() => void toggleFullscreen()}
           >
             <Icon name={fullscreen ? 'shrink' : 'expand'} />
           </button>
+        </div>
+        <div className="pdf-toolbar-group pdf-actions">
           {url && (
             <a
               className="icon-button"
@@ -425,17 +438,25 @@ export default function PdfViewerCore({
               target="_blank"
               rel="noopener"
               aria-label="Buka di tab baru"
+              title="Buka di tab baru"
             >
-              <Icon name="arrow" />
+              <Icon name="external" />
             </a>
           )}
           {printUrl && (
-            <a className="icon-button" href={printUrl} target="_blank" rel="noopener" aria-label="Print">
+            <a
+              className="icon-button"
+              href={printUrl}
+              target="_blank"
+              rel="noopener"
+              aria-label="Print"
+              title="Print"
+            >
               <Icon name="print" />
             </a>
           )}
           {downloadUrl && (
-            <a className="icon-button" href={downloadUrl} aria-label="Download">
+            <a className="icon-button" href={downloadUrl} aria-label="Download" title="Download">
               <Icon name="download" />
             </a>
           )}

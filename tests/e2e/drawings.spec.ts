@@ -427,7 +427,7 @@ test('UI: leader review room and approver tasks badge', async ({ page }) => {
   const violations = watchCsp(page);
   await login(page, leader);
   await page.goto('/drawings/tasks');
-  await expect(page.getByRole('heading', { name: /Menunggu Check/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Waiting Check/ })).toBeVisible();
   await page.goto(`/drawings/library/${d.id}/review`);
   await expect(page.locator('.pdfViewer canvas').first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Tolak', exact: true }).click();
