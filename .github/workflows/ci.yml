@@ -5,7 +5,9 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # A normal run takes about 15 minutes. Playwright's Ubuntu packages are cached below; the
+    # headroom covers a cold cache on a slow mirror (125 MB took 18 minutes on 2026-11-18).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -28,7 +30,49 @@ jobs:
         run: |
           openssl req -x509 -newkey rsa:2048 -nodes -keyout infra/certs/tls.key -out infra/certs/tls.crt -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1
           docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml up -d --build --wait nginx backup
-      - run: pnpm exec playwright install --with-deps chromium webkit
+      # Browsers and their Ubuntu packages come from a cache so a slow mirror cannot eat the job
+      # budget. The key follows the Playwright version and rotates monthly for security updates.
+      - name: Playwright cache key
+        id: pw-key
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          echo "key=playwright-${{ runner.os }}-${{ runner.arch }}-ubuntu24.04-$version-$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - name: Restore Playwright browsers and system packages
+        id: pw-cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.pw-key.outputs.key }}
+      - name: Install Playwright browsers and system packages
+        run: |
+          # Retry stalled downloads instead of waiting on a slow mirror, and keep downloaded packages.
+          sudo tee /etc/apt/apt.conf.d/80-ci-resilience > /dev/null <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          APT::Keep-Downloaded-Packages "true";
+          Binary::apt-get::APT::Keep-Downloaded-Packages "true";
+          EOF
+          debs="$HOME/.cache/playwright-apt"
+          mkdir -p "$debs"
+          # Cached packages satisfy apt locally; only versions newer than the cache are downloaded.
+          if compgen -G "$debs/*.deb" > /dev/null; then
+            sudo cp "$debs"/*.deb /var/cache/apt/archives/
+          fi
+          pnpm exec playwright install --with-deps chromium webkit
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t "$debs" {} +
+          echo "Cached Ubuntu packages: $(find "$debs" -name '*.deb' | wc -l)"
+      # Saved right after install, so a later e2e failure still leaves the cache for the next run.
+      - name: Save Playwright browsers and system packages
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.pw-cache.outputs.cache-primary-key }}
       - run: pnpm test:e2e
       - name: WebKit menu focus regression
         run: pnpm exec playwright test tests/e2e/menu-focus.spec.ts --browser=webkit
