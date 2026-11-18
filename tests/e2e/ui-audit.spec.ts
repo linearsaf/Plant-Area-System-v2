@@ -619,10 +619,16 @@ test.describe('gesture regression', () => {
     await start(page, 'no-preference');
     await page.goto('/');
     const cdp = await page.context().newCDPSession(page);
+    // Event times come from a virtual 60 Hz clock instead of CDP round trips. The drawer's release
+    // velocity only looks at the last 100 ms, so on a slow runner real delivery gaps turned the
+    // flick below into a slow drag and the drawer stayed open.
+    let clock = 0;
     const touch = async (type: 'touchStart' | 'touchMove' | 'touchEnd', x?: number) => {
+      clock = type === 'touchStart' ? Date.now() / 1000 : clock + 0.016;
       await cdp.send('Input.dispatchTouchEvent', {
         type,
         touchPoints: x === undefined ? [] : [{ x, y: 180, id: 1 }],
+        timestamp: clock,
       });
     };
     const trigger = page.getByRole('button', { name: 'Buka navigasi', exact: true });
