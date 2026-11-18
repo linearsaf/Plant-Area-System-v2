@@ -12,8 +12,21 @@
     overflow: hidden;
   }
   .pdf-frame.is-fullscreen {
-    --pdf-height: calc(100vh - 64px);
+    height: 100dvh;
+    border: 0;
     border-radius: 0;
+  }
+  .pdf-frame.is-fullscreen .pdf-stage {
+    height: auto;
+    min-height: 0;
+  }
+  /* iPhone Safari cannot fullscreen an element: the frame covers the viewport instead. */
+  .pdf-frame.is-pseudo-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
   }
   .pdf-toolbar {
     display: flex;
@@ -299,7 +312,7 @@
     place-items: center;
     min-width: 22px;
     height: 20px;
-    margin-left: var(--space-2);
+    margin-left: var(--space-1);
     padding: 0 6px;
     border-radius: var(--radius-pill);
     background: var(--surfaceSunken);
@@ -721,7 +734,7 @@
     margin-top: var(--space-2);
     margin-bottom: calc(var(--space-2) * -1);
   }
-  /* Detail title: Drawing Name by default; one click swaps it with Drawing Number · Rev. */
+  /* Detail title: Drawing Name, fixed; Drawing Number · Rev reads as the second line. */
   .drawing-title {
     text-wrap: balance;
   }
@@ -748,50 +761,63 @@
       gap: var(--space-3);
     }
   }
-  .title-swap {
-    display: inline;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    letter-spacing: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-  .title-swap > span {
-    text-decoration: underline dotted transparent;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.18em;
-    transition: text-decoration-color var(--duration-base) var(--ease-standard);
-  }
-  .title-swap > svg {
-    width: 0.6em;
-    height: 0.6em;
-    margin-left: 0.3em;
-    vertical-align: 0.05em;
+  /* Back to the Library: a full-height touch target whose text still lines up with the title. */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 44px;
+    margin-top: calc(var(--space-3) * -1);
+    margin-bottom: 0;
+    padding-right: var(--space-2);
     color: var(--textSecondary);
-    opacity: 0;
-    transition: opacity var(--duration-base) var(--ease-standard);
-  }
-  .title-swap:hover > span,
-  .title-swap:focus-visible > span {
-    text-decoration-color: var(--textSecondary);
-  }
-  .title-swap:hover > svg,
-  .title-swap:focus-visible > svg {
-    opacity: 1;
-  }
-  .title-swap:focus-visible {
-    outline: 2px solid var(--focusBorder);
-    outline-offset: 4px;
+    text-decoration: none;
     border-radius: var(--radius-control);
   }
-  /* Touch has no hover: keep the swap hint visible so the affordance is discoverable. */
-  @media (hover: none) {
-    .title-swap > svg {
-      opacity: 1;
+  .back-link svg {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-left: -2px;
+    transform: rotate(180deg);
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .back-link:hover {
+    color: var(--textPrimary);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .back-link:hover svg {
+      transform: rotate(180deg) translateX(2px);
+    }
+  }
+  .back-link:focus-visible {
+    outline: 2px solid var(--focusBorder);
+    outline-offset: 2px;
+  }
+  /* Drawing Number · Rev with its copy button; the button's hit area overhangs the text line. */
+  .drawing-number {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+  }
+  .drawing-number .copy-number {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    margin-block: calc(var(--space-2) * -1);
+    color: var(--textSecondary);
+  }
+  .drawing-number .copy-number svg {
+    width: 18px;
+    height: 18px;
+  }
+  @media (pointer: coarse) {
+    .drawing-number .copy-number {
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
     }
   }
   /* File picker: a drop target in the product's own language instead of the browser's button. */
@@ -979,42 +1005,57 @@
     container-type: inline-size;
   }
   @container (max-width: 699px) {
-    /* Two rows: page controls + file actions, then zoom tools. */
+    /* One row: page controls, then rotate, download, fullscreen and the overflow menu. */
     .pdf-toolbar {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas:
-        'nav actions'
-        'tools tools';
-      align-items: center;
-      gap: var(--space-1) var(--space-2);
-      padding: var(--space-2);
+      flex-wrap: wrap;
+      gap: var(--space-1);
+      min-height: 0;
+      padding: var(--space-1);
     }
     .pdf-toolbar-group {
       min-width: 0;
-      gap: 2px;
-    }
-    .pdf-nav {
-      grid-area: nav;
+      gap: 0;
     }
     .pdf-tools {
-      grid-area: tools;
-    }
-    .pdf-actions {
-      grid-area: actions;
-      justify-content: flex-end;
+      margin-left: auto;
     }
     .pdf-toolbar .icon-button {
       flex: none;
+      width: 40px;
     }
     .pdf-page input {
-      width: 3em;
+      width: 2.75em;
+      padding-inline: var(--space-1);
     }
-    .pdf-zoom {
-      flex: 1;
-      min-width: 0;
-      /* Tighter inline padding so "Otomatis" clears the native arrow at phone width. */
-      padding-inline: var(--space-2) var(--space-1);
+    .pdf-toolbar .pdf-wide-only {
+      display: none;
+    }
+    /* Touch phones zoom and pan with the fingers: the manual zoom and pan controls step aside. */
+    @media (pointer: coarse) {
+      .pdf-toolbar .pdf-pointer-only {
+        display: none;
+      }
+    }
+    /* A mouse on a narrow window keeps zoom; it takes its own row under the page controls. */
+    @media (pointer: fine) {
+      .pdf-tools {
+        order: 3;
+        flex-basis: 100%;
+        margin-left: 0;
+      }
+      .pdf-zoom {
+        flex: 1;
+        min-width: 0;
+        padding-inline: var(--space-2) var(--space-1);
+      }
+      .pdf-actions {
+        margin-left: auto;
+      }
+    }
+  }
+  @container (min-width: 700px) {
+    .pdf-toolbar .pdf-narrow-only {
+      display: none;
     }
   }
   /*
@@ -1092,30 +1133,18 @@
     }
     /* The toolbar no longer takes a row, so fullscreen gives the whole screen to the sheet. */
     .is-fullscreen .pdf-stage {
-      height: 100vh;
+      height: 100dvh;
     }
   }
-  @container (max-width: 339px) {
-    /* Page controls and file actions no longer share a row on the narrowest phones. */
-    .pdf-toolbar {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-areas:
-        'nav'
-        'actions'
-        'tools';
+  @container (max-width: 319px) {
+    /* Narrowest phones: scrolling the sheet still turns pages, so the step buttons give way. */
+    .pdf-nav > .icon-button {
+      display: none;
     }
-    .pdf-nav,
-    .pdf-actions {
-      justify-content: space-between;
-    }
-    /* Five tool buttons leave the zoom menu unusably narrow here; let the row wrap instead. */
-    .pdf-tools {
-      flex-wrap: wrap;
-      row-gap: var(--space-1);
-    }
-    .pdf-zoom {
-      min-width: 7em;
-    }
+  }
+  /* Viewer/data tabs exist only while the two share one column. */
+  .detail-tabs {
+    display: none;
   }
   @media (max-width: 959px) {
     .drawing-detail,
@@ -1124,6 +1153,20 @@
     }
     .panel.viewer-panel {
       position: static;
+    }
+    .detail-tabs {
+      display: flex;
+      width: 100%;
+      margin-bottom: var(--space-4);
+    }
+    .detail-tabs button {
+      flex: 1;
+      padding: 0 var(--space-3);
+      white-space: nowrap;
+    }
+    .drawing-detail[data-pane='info'] > .viewer-panel,
+    .drawing-detail[data-pane='drawing'] > .detail-side {
+      display: none;
     }
   }
   @media (max-width: 767px) {

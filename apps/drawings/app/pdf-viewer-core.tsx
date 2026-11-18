@@ -3,7 +3,7 @@
 // (PDFViewer, EventBus, PDFLinkService), mengikuti contoh simpleviewer.
 import 'pdfjs-dist/web/pdf_viewer.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Icon } from '@plant/ui';
+import { Icon, Overlay } from '@plant/ui';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist';
 import type { EventBus, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs';
 
@@ -47,6 +47,10 @@ function describe(error: unknown): Failure {
   return { title: 'PDF belum dapat dibuka', detail: 'Periksa koneksi lalu coba lagi.' };
 }
 const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+// Not in lib.dom yet; Chromium on Android supports it while an element is fullscreen.
+type LockableOrientation = ScreenOrientation & { lock?: (orientation: 'landscape') => Promise<void> };
+const orientation = () =>
+  typeof screen === 'undefined' ? undefined : (screen.orientation as LockableOrientation | undefined);
 
 export default function PdfViewerCore({
   url,
@@ -70,8 +74,13 @@ export default function PdfViewerCore({
     [pages, setPages] = useState(0),
     [scale, setScale] = useState(1),
     [preset, setPreset] = useState('auto'),
-    [fullscreen, setFullscreen] = useState(false),
-    [panning, setPanning] = useState(true);
+    [nativeFullscreen, setNativeFullscreen] = useState(false),
+    // iPhone Safari has no element fullscreen: the frame covers the viewport instead.
+    [pseudoFullscreen, setPseudoFullscreen] = useState(false),
+    [panning, setPanning] = useState(true),
+    [moreOpen, setMoreOpen] = useState(false);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const fullscreen = nativeFullscreen || pseudoFullscreen;
 
   useEffect(() => {
     if (!url) return;
@@ -176,17 +185,51 @@ export default function PdfViewerCore({
   const rotate = () => {
     if (viewer.current) viewer.current.pagesRotation = (viewer.current.pagesRotation + 90) % 360;
   };
-  const toggleFullscreen = async () => {
+  // Drawings are mostly landscape sheets: on a phone, fullscreen turns the screen sideways.
+  const lockLandscape = async () => {
+    const viewport = viewer.current?.getPageView(page - 1)?.viewport;
+    if (!viewport || viewport.width <= viewport.height || !matchMedia('(pointer: coarse)').matches) return;
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await frame.current?.requestFullscreen();
+      await orientation()?.lock?.('landscape');
     } catch {}
   };
+  const toggleFullscreen = async () => {
+    if (pseudoFullscreen) return setPseudoFullscreen(false);
+    try {
+      if (document.fullscreenElement) return await document.exitFullscreen();
+      if (document.fullscreenEnabled && frame.current?.requestFullscreen) {
+        await frame.current.requestFullscreen({ navigationUI: 'hide' });
+        return await lockLandscape();
+      }
+    } catch {}
+    setPseudoFullscreen(true);
+  };
   useEffect(() => {
-    const update = () => setFullscreen(document.fullscreenElement === frame.current);
+    const update = () => {
+      const active = document.fullscreenElement === frame.current;
+      setNativeFullscreen(active);
+      if (!active)
+        try {
+          orientation()?.unlock();
+        } catch {}
+    };
     document.addEventListener('fullscreenchange', update);
     return () => document.removeEventListener('fullscreenchange', update);
   }, []);
+  useEffect(() => {
+    if (!pseudoFullscreen) return;
+    const root = document.documentElement,
+      previous = root.style.overflow;
+    root.style.overflow = 'hidden';
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPseudoFullscreen(false);
+    };
+    document.addEventListener('keydown', escape);
+    return () => {
+      root.style.overflow = previous;
+      document.removeEventListener('keydown', escape);
+    };
+  }, [pseudoFullscreen]);
 
   // Keep preset zoom (auto / fit) correct when the container changes size (layout, rotation, fullscreen).
   const presetRef = useRef(preset);
@@ -201,7 +244,8 @@ export default function PdfViewerCore({
       lastHeight = -1;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      if (width === lastWidth && height === lastHeight) return;
+      // A hidden viewer (phone "Info & Revisi" tab) has no box to fit; refit once it is shown again.
+      if (!width || !height || (width === lastWidth && height === lastHeight)) return;
       lastWidth = width;
       lastHeight = height;
       cancelAnimationFrame(frameId);
@@ -321,7 +365,7 @@ export default function PdfViewerCore({
   return (
     <div
       ref={frame}
-      className={`pdf-frame${fullscreen ? ' is-fullscreen' : ''}`}
+      className={`pdf-frame${fullscreen ? ' is-fullscreen' : ''}${pseudoFullscreen ? ' is-pseudo-fullscreen' : ''}`}
       style={height ? ({ '--pdf-height': height } as React.CSSProperties) : undefined}
       onKeyDown={keyDown}
     >
@@ -366,7 +410,7 @@ export default function PdfViewerCore({
         <div className="pdf-toolbar-group pdf-tools">
           <button
             type="button"
-            className="icon-button"
+            className="icon-button pdf-pointer-only"
             aria-label="Perkecil"
             title="Perkecil (−)"
             disabled={!ready || scale <= MIN_SCALE}
@@ -376,7 +420,7 @@ export default function PdfViewerCore({
           </button>
           <select
             aria-label="Zoom"
-            className="pdf-zoom"
+            className="pdf-zoom pdf-pointer-only"
             value={preset}
             disabled={!ready}
             onChange={(e) => setZoom(e.target.value)}
@@ -390,7 +434,7 @@ export default function PdfViewerCore({
           </select>
           <button
             type="button"
-            className="icon-button"
+            className="icon-button pdf-pointer-only"
             aria-label="Perbesar"
             title="Perbesar (+)"
             disabled={!ready || scale >= MAX_SCALE}
@@ -410,7 +454,7 @@ export default function PdfViewerCore({
           </button>
           <button
             type="button"
-            className="icon-button"
+            className="icon-button pdf-pointer-only"
             aria-label="Mode geser"
             aria-pressed={panning}
             title="Geser halaman"
@@ -419,21 +463,11 @@ export default function PdfViewerCore({
           >
             <Icon name="move" />
           </button>
-          {/* Sits with the view tools: on a phone the page row has no room for a fourth file action. */}
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
-            title={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
-            onClick={() => void toggleFullscreen()}
-          >
-            <Icon name={fullscreen ? 'shrink' : 'expand'} />
-          </button>
         </div>
         <div className="pdf-toolbar-group pdf-actions">
           {url && (
             <a
-              className="icon-button"
+              className="icon-button pdf-wide-only"
               href={url}
               target="_blank"
               rel="noopener"
@@ -445,7 +479,7 @@ export default function PdfViewerCore({
           )}
           {printUrl && (
             <a
-              className="icon-button"
+              className="icon-button pdf-wide-only"
               href={printUrl}
               target="_blank"
               rel="noopener"
@@ -459,6 +493,68 @@ export default function PdfViewerCore({
             <a className="icon-button" href={downloadUrl} aria-label="Download" title="Download">
               <Icon name="download" />
             </a>
+          )}
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
+            title={fullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
+            onClick={() => void toggleFullscreen()}
+          >
+            <Icon name={fullscreen ? 'shrink' : 'expand'} />
+          </button>
+          {/* Narrow viewers: rarely used file actions sit behind one button so the toolbar stays one row. */}
+          {url && (
+            <>
+              <button
+                ref={moreButton}
+                type="button"
+                className="icon-button pdf-narrow-only"
+                aria-label="Aksi file lain"
+                aria-haspopup="menu"
+                aria-expanded={moreOpen}
+                title="Aksi file lain"
+                onClick={() => setMoreOpen(true)}
+              >
+                <Icon name="more" strokeWidth={3} />
+              </button>
+              <Overlay
+                open={moreOpen}
+                onClose={() => setMoreOpen(false)}
+                title="Aksi file lain"
+                kind="menu"
+                placement="bottom-end"
+                anchor={moreButton}
+                hideTitle
+              >
+                <div className="menu-list" role="menu" aria-label="Aksi file lain">
+                  <a
+                    className="menu-item"
+                    role="menuitem"
+                    href={url}
+                    target="_blank"
+                    rel="noopener"
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    <Icon name="external" />
+                    <span>Buka di tab baru</span>
+                  </a>
+                  {printUrl && (
+                    <a
+                      className="menu-item"
+                      role="menuitem"
+                      href={printUrl}
+                      target="_blank"
+                      rel="noopener"
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      <Icon name="print" />
+                      <span>Print</span>
+                    </a>
+                  )}
+                </div>
+              </Overlay>
+            </>
           )}
         </div>
       </div>

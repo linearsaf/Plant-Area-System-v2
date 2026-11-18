@@ -31,6 +31,7 @@ const paths = {
   external: 'M14 4h6v6m0-6-9 9m7 1v6H4V6h6',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   swap: 'M7 4 3 8l4 4M3 8h14m0 12 4-4-4-4m4 4H7',
+  copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   calendar: 'M4 5h16v16H4zM8 2v6m8-6v6M4 11h16',
   filter: 'M3 4h18l-7 8v7l-4 2v-9Z',
   drawing: 'M6 3h8l4 4v14H6Zm8 0v4h4M9 12h6m-6 4h4',
