@@ -735,6 +735,10 @@
     .heading:has(+ .drawing-library) .muted {
       display: none;
     }
+    /* Field users open the Library to find drawings; Create Drawing stays in the navigation menu. */
+    .heading:has(+ .drawing-library) > a.button.primary {
+      display: none;
+    }
   }
   @media (max-width: 767px) {
     /* Status badges sit under the title on a phone instead of squeezing it. */
