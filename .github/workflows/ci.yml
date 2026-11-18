@@ -5,7 +5,9 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # A normal run takes about 15 minutes. The headroom covers a slow Ubuntu mirror during
+    # `playwright install --with-deps` (125 MB took 18 minutes on 2026-11-18).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
