@@ -195,6 +195,15 @@ node --env-file=.test-runtime/host.env --import tsx scripts/test-gateway-recover
 - Laporan browser ada di `playwright-report/` dan screenshot di `test-results/`; keduanya lokal dan tidak dikomit.
 - Untuk mengembalikan keadaan kosong, gunakan script reset hanya pada database uji lalu jalankan bootstrap lagi. Ini menghapus akun dan transaksi uji.
 
+**Pemilihan tes browser di CI.** Typecheck, unit test, dan integration test selalu berjalan penuh. Untuk tes browser:
+
+- Push ke `main` dan run manual (`workflow_dispatch`) menjalankan seluruh suite browser dan tes operasi.
+- Push ke branch lain dan pull request hanya menjalankan spec untuk app yang berubah. Petanya ada di `specAreas` dalam [scripts/e2e-selection.ts](scripts/e2e-selection.ts).
+- Perubahan pada kode bersama (`packages/ui`, `contracts`, `server`, `auth-core`), Auth, Portal, `infra`, konfigurasi, atau path yang belum dipetakan selalu menjalankan seluruh suite.
+- Perubahan yang hanya menyentuh dokumentasi atau unit/integration test melewati tes browser.
+- Spec baru wajib ditambahkan ke `specAreas`; unit test `tests/unit/e2e-selection.test.ts` gagal bila ada spec yang belum dipetakan. Sebelum dipetakan pun, spec itu tetap ikut di setiap run.
+- Halaman ringkasan run CI menampilkan spec yang dipilih beserta alasannya.
+
 Hasil pemeriksaan aktual tiap rilis dicatat di [hasil validasi](docs/VALIDATION.md).
 
 ## Deployment

@@ -1,5 +1,9 @@
 name: Platform checks
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # Manual runs always execute the full browser suite.
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -10,6 +14,9 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          # Full history so the browser-test selection can diff against the PR base or main.
+          fetch-depth: 0
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 26.12.1
@@ -18,6 +25,16 @@ jobs:
       - name: Verify generated brand assets
         run: node scripts/generate-brand.mjs --check
       - run: pnpm typecheck && pnpm test
+      # Picks the browser specs this change needs (scripts/e2e-selection.ts). main and manual runs
+      # get the full suite; unmapped or shared paths fall back to it too.
+      - name: Select browser tests for this change
+        id: e2e
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: node --import tsx scripts/select-e2e.ts
       - name: Prepare isolated MySQL
         run: |
           node --import tsx scripts/prepare-test.ts
@@ -27,6 +44,7 @@ jobs:
       - name: MySQL integration tests
         run: node --env-file=.test-runtime/host.env --import tsx --test --test-concurrency=1 tests/integration/*.test.ts
       - name: Build independent containers and start HTTPS gateway
+        if: steps.e2e.outputs.mode != 'none'
         run: |
           openssl req -x509 -newkey rsa:2048 -nodes -keyout infra/certs/tls.key -out infra/certs/tls.crt -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1
           docker compose --env-file .test-runtime/stack.env -p plant-v2-test -f compose.yaml -f .test-runtime/compose.yaml up -d --build --wait nginx backup
@@ -34,11 +52,13 @@ jobs:
       # budget. The key follows the Playwright version and rotates monthly for security updates.
       - name: Playwright cache key
         id: pw-key
+        if: steps.e2e.outputs.mode != 'none'
         run: |
           version=$(node -p "require('@playwright/test/package.json').version")
           echo "key=playwright-${{ runner.os }}-${{ runner.arch }}-ubuntu24.04-$version-$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright browsers and system packages
         id: pw-cache
+        if: steps.e2e.outputs.mode != 'none'
         uses: actions/cache/restore@v6.1.0
         with:
           path: |
@@ -46,6 +66,7 @@ jobs:
             ~/.cache/playwright-apt
           key: ${{ steps.pw-key.outputs.key }}
       - name: Install Playwright browsers and system packages
+        if: steps.e2e.outputs.mode != 'none'
         run: |
           # Retry stalled downloads instead of waiting on a slow mirror, and keep downloaded packages.
           sudo tee /etc/apt/apt.conf.d/80-ci-resilience > /dev/null <<'EOF'
@@ -66,20 +87,31 @@ jobs:
           echo "Cached Ubuntu packages: $(find "$debs" -name '*.deb' | wc -l)"
       # Saved right after install, so a later e2e failure still leaves the cache for the next run.
       - name: Save Playwright browsers and system packages
-        if: steps.pw-cache.outputs.cache-hit != 'true'
+        if: steps.e2e.outputs.mode != 'none' && steps.pw-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/.cache/ms-playwright
             ~/.cache/playwright-apt
           key: ${{ steps.pw-cache.outputs.cache-primary-key }}
-      - run: pnpm test:e2e
+      - name: Browser tests
+        if: steps.e2e.outputs.mode != 'none'
+        env:
+          # Empty in full mode, so Playwright discovers every spec itself.
+          SPECS: ${{ steps.e2e.outputs.specs }}
+        run: pnpm exec playwright test $SPECS
       - name: WebKit menu focus regression
+        if: steps.e2e.outputs.webkit_menu == 'true'
         run: pnpm exec playwright test tests/e2e/menu-focus.spec.ts --browser=webkit
       - name: Drawing Database on WebKit
+        if: steps.e2e.outputs.webkit_drawings == 'true'
         run: pnpm exec playwright test tests/e2e/drawings.spec.ts --browser=webkit
-      - run: node --env-file=.test-runtime/host.env --import tsx scripts/test-operations.ts
+      # Operations and gateway recovery exercise the whole stack; they run with the full suite.
+      - name: Operations (auth outage, service guards, backup restore, restart persistence)
+        if: steps.e2e.outputs.mode == 'full'
+        run: node --env-file=.test-runtime/host.env --import tsx scripts/test-operations.ts
       - name: Gateway recovery after application IP changes
+        if: steps.e2e.outputs.mode == 'full'
         run: node --env-file=.test-runtime/host.env --import tsx scripts/test-gateway-recovery.ts
       - name: Diagnose failed test stack
         if: failure()
