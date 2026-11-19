@@ -189,8 +189,7 @@ export function PortalActivityChart({
   const seriesConfig = useMemo(() => {
     return activeApps.map((app, index) => {
       const color = SERIES_COLORS[Math.min(index, SERIES_COLORS.length - 1)];
-      const outline = index >= 2;
-      return { appId: app.id, appName: app.name, color, outline };
+      return { appId: app.id, appName: app.name, color };
     });
   }, [activeApps]);
 
@@ -202,7 +201,6 @@ export function PortalActivityChart({
         appId: string;
         count: number;
         color: string;
-        outline: boolean;
       }[] = [];
 
       for (let idx = 0; idx < activeApps.length; idx++) {
@@ -213,8 +211,7 @@ export function PortalActivityChart({
         total += count;
 
         const color = SERIES_COLORS[Math.min(idx, SERIES_COLORS.length - 1)];
-        const outline = idx >= 2;
-        segments.push({ appId: app.id, count, color, outline });
+        segments.push({ appId: app.id, count, color });
       }
 
       // Format date range e.g. "3–9 Nov 2026"
@@ -274,12 +271,7 @@ export function PortalActivityChart({
         <div className="chart-legend">
           {seriesConfig.map((item) => (
             <span key={item.appId}>
-              <i
-                style={{
-                  background: item.color,
-                  ...(item.outline ? { boxShadow: 'inset 0 0 0 1px var(--series-accent-outline)' } : {}),
-                }}
-              />
+              <i style={{ background: item.color }} />
               {item.appName}
             </span>
           ))}
@@ -330,9 +322,6 @@ export function PortalActivityChart({
                         style={{
                           height: `${(seg.count / max) * 100}%`,
                           background: isActive ? seg.color : 'var(--placeholder)',
-                          ...(seg.outline
-                            ? { boxShadow: 'inset 0 0 0 1px var(--series-accent-outline)' }
-                            : {}),
                         }}
                       />
                     ))

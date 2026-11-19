@@ -6,8 +6,8 @@ import { formatWib, getJson } from './client-api';
 import { ToneBadge } from './status-badge';
 
 const series: ChartSeries[] = [
-  { key: 'released', label: 'Lewat approval', color: 'var(--series-1)' },
-  { key: 'legacy', label: 'Legacy Ready', color: 'var(--series-2)', hatch: true },
+  { key: 'released', label: 'Lewat approval', color: 'var(--primary-500)' },
+  { key: 'legacy', label: 'Legacy Ready', color: 'var(--primary-200)', hatch: true },
 ];
 const n = (v: number) => v.toLocaleString('id-ID');
 

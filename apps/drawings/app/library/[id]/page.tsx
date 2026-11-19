@@ -33,6 +33,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <DrawingTitle
         name={drawing.title || null}
         number={shown ? `${number} · Rev ${shown.revisionNo}` : number}
+        copyValue={drawing.number || null}
       >
         <span className="detail-actions">
           {drawing.released && !drawing.voided ? (
