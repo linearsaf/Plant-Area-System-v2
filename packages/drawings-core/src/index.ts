@@ -58,6 +58,7 @@ export {
   cleanupStagedFiles,
   fileObjects,
   serveFile,
+  serveImage,
   parseRange,
   contentDisposition,
   requireUpload,

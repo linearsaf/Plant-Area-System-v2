@@ -19,13 +19,16 @@ import {
   requireContentType,
   requireUpload,
   serveFile,
+  serveImage,
   stampPdf,
   stampPlacement,
   stampWidth,
   storageConfig,
   storageKey,
+  thumbKey,
   uploadLimit,
   validatePdf,
+  type Storage,
 } from '@plant/drawings-core';
 import { AppError, type DrawingsRole, type Identity } from '@plant/contracts';
 
@@ -278,3 +281,94 @@ test('upload kinds follow the role matrix; SVG is never an accepted image type',
 });
 
 test('image upload limit is 25 MB', () => assert.equal(uploadLimit('image'), 25 * 1024 * 1024));
+
+async function imageFixture() {
+  const storage = new FsStorage(join(dir, 'images'));
+  const id = '31111111-2222-4333-8444-555555555555';
+  const full = Buffer.from('RIFF full image bytes'),
+    thumb = Buffer.from('RIFF thumb');
+  const row = {
+    storageKey: storageKey(id, 'webp'),
+    size: full.length,
+    sha256: sha(full),
+    mime: 'image/webp',
+    thumbStorageKey: thumbKey(id),
+    thumbSize: thumb.length,
+    thumbSha256: sha(thumb),
+  };
+  if (!(await storage.head(row.storageKey))) {
+    await storage.put(row.storageKey, await file('full.webp', full), {
+      size: full.length,
+      contentType: '',
+      sha256: '',
+    });
+    await storage.put(row.thumbStorageKey, await file('thumb.webp', thumb), {
+      size: thumb.length,
+      contentType: '',
+      sha256: '',
+    });
+  }
+  return { storage, row, full, thumb };
+}
+
+test('revalidate cache returns 304 on matching If-None-Match without touching storage', async () => {
+  const { storage, row } = await imageFixture();
+  const failing = {
+    ...storage,
+    driver: 'fs',
+    get: () => Promise.reject(Error('tidak boleh dibaca')),
+  } as unknown as Storage;
+  const request = new Request('https://x/', { headers: { 'if-none-match': `"${row.sha256}"` } });
+  const res = await serveFile(request, row, { name: 'a.webp', cache: 'revalidate', storage: failing });
+  assert.equal(res.status, 304);
+  assert.equal(res.headers.get('cache-control'), 'private, no-cache, no-transform');
+  assert.equal(res.headers.get('etag'), `"${row.sha256}"`);
+  const other = await serveFile(new Request('https://x/', { headers: { 'if-none-match': '"zzz"' } }), row, {
+    name: 'a.webp',
+    cache: 'revalidate',
+    storage,
+  });
+  assert.equal(other.status, 200);
+  assert.equal(other.headers.get('cache-control'), 'private, no-cache, no-transform');
+});
+
+test('pdf responses stay no-store even with If-None-Match', async () => {
+  const { storage, row, full } = await imageFixture();
+  const res = await serveFile(
+    new Request('https://x/', { headers: { 'if-none-match': `"${row.sha256}"` } }),
+    row,
+    {
+      name: 'a.pdf',
+      storage,
+    },
+  );
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'private, no-store, no-transform');
+  assert.equal(Buffer.from(await res.arrayBuffer()).equals(full), true);
+});
+
+test('serveImage serves the thumbnail variant', async () => {
+  const { storage, row, thumb } = await imageFixture();
+  const res = await serveImage(new Request('https://x/'), row, { name: 'a.webp', variant: 'thumb', storage });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/webp');
+  assert.equal(res.headers.get('content-length'), String(thumb.length));
+  assert.equal(res.headers.get('etag'), `"${row.thumbSha256}"`);
+  assert.equal(res.headers.get('cache-control'), 'private, no-cache, no-transform');
+  assert.match(res.headers.get('content-disposition')!, /^inline;/);
+  assert.equal(Buffer.from(await res.arrayBuffer()).equals(thumb), true);
+});
+
+test('variant=thumb falls back to full file for legacy images', async () => {
+  const { storage, row, full } = await imageFixture();
+  const legacy = { ...row, mime: 'image/png', thumbStorageKey: null, thumbSize: null, thumbSha256: null };
+  const res = await serveImage(new Request('https://x/'), legacy, {
+    name: 'a.png',
+    variant: 'thumb',
+    storage,
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/png');
+  assert.equal(res.headers.get('etag'), `"${row.sha256}"`);
+  assert.equal(Buffer.from(await res.arrayBuffer()).equals(full), true);
+});

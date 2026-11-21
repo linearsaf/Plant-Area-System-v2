@@ -18,6 +18,7 @@ import {
   requireUpload,
   revisionFile,
   serveFile,
+  serveImage,
   stageUpload,
   stagedFileForOwner,
   transferOwner,
@@ -57,6 +58,9 @@ const replayable = (r: { status: number; body: unknown; replayed: boolean }) =>
 const directory = () => fetchDirectory('drawings');
 // Inactive-approver marks are best effort: without the directory, tasks and detail still load.
 const peopleOrNull = () => directory().catch(() => null);
+
+/** `?variant=thumb` meminta thumbnail; nilai lain → file penuh. */
+const imageVariant = (params: URLSearchParams) => (params.get('variant') === 'thumb' ? 'thumb' : 'full');
 
 export async function GET(request: Request, context: Context) {
   try {
@@ -123,7 +127,7 @@ export async function GET(request: Request, context: Context) {
       const file = await attachmentFile(actor, segments[1]).catch((e) =>
         e instanceof AppError && e.status === 404 ? requestImage(actor, segments[1]) : Promise.reject(e),
       );
-      return await serveFile(request, file, { disposition: 'inline', name: file.originalName });
+      return await serveImage(request, file, { name: file.originalName, variant: imageVariant(params) });
     }
     if (segments.length === 3 && segments[0] === 'drawings' && segments[2] === 'timeline')
       return json(await drawingTimeline(actor, segments[1], params.get('cursor')));
@@ -139,6 +143,8 @@ export async function GET(request: Request, context: Context) {
     // Pratinjau file staged milik pengunggah, sebelum dirujuk drawing. Hanya inline/view.
     if (segments.length === 3 && segments[0] === 'uploads' && segments[2] === 'file') {
       const file = await stagedFileForOwner(actor, segments[1]);
+      if (file.kind === 'image')
+        return await serveImage(request, file, { name: file.originalName, variant: imageVariant(params) });
       return await serveFile(request, file, { disposition: 'inline', name: file.originalName });
     }
     throw new AppError(404, 'Endpoint tidak ditemukan.');

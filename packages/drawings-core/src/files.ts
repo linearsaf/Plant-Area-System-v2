@@ -274,6 +274,8 @@ export function contentDisposition(type: 'inline' | 'attachment', name: string) 
 /**
  * Mengalirkan file dari storage tanpa memuat seluruh isi ke memori; mendukung Range.
  * `no-transform` mencegah kompresi otomatis yang merusak range request.
+ * `cache: 'revalidate'` (gambar) mengizinkan browser menyimpan salinan pribadi yang selalu
+ * divalidasi ulang: ETag cocok → 304 tanpa membaca storage. Izin diperiksa pemanggil lebih dulu.
  */
 export async function serveFile(
   request: Request,
@@ -282,13 +284,24 @@ export async function serveFile(
     disposition = 'inline',
     name,
     storage,
-  }: { disposition?: 'inline' | 'attachment'; name: string; storage?: Storage },
+    cache = 'no-store',
+  }: {
+    disposition?: 'inline' | 'attachment';
+    name: string;
+    storage?: Storage;
+    cache?: 'no-store' | 'revalidate';
+  },
 ) {
+  const etag = `"${file.sha256}"`,
+    cacheControl =
+      cache === 'revalidate' ? 'private, no-cache, no-transform' : 'private, no-store, no-transform';
+  if (cache === 'revalidate' && matchesEtag(request.headers.get('if-none-match'), etag))
+    return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': cacheControl } });
   const range = parseRange(request.headers.get('range'), file.size);
   const common = {
     'Accept-Ranges': 'bytes',
-    ETag: `"${file.sha256}"`,
-    'Cache-Control': 'private, no-store, no-transform',
+    ETag: etag,
+    'Cache-Control': cacheControl,
     'X-Content-Type-Options': 'nosniff',
     'Content-Type': file.mime,
     'Content-Disposition': contentDisposition(disposition, name),
@@ -316,4 +329,23 @@ export async function serveFile(
       'Content-Range': `bytes ${range.start}-${range.end}/${file.size}`,
     },
   });
+}
+
+function matchesEtag(header: string | null, etag: string) {
+  return !!header && header.split(',').some((tag) => tag.trim().replace(/^W\//, '') === etag);
+}
+
+/** Gambar lampiran: thumbnail bila diminta dan tersedia (gambar lama tanpa thumbnail → file penuh). */
+export function serveImage(
+  request: Request,
+  file: StoredFile,
+  { name, variant, storage }: { name: string; variant: 'full' | 'thumb'; storage?: Storage },
+) {
+  const [full, thumb] = fileObjects(file);
+  const chosen = variant === 'thumb' && thumb ? thumb : full;
+  return serveFile(
+    request,
+    { storageKey: chosen.key, size: chosen.size, sha256: chosen.sha256, mime: chosen.mime },
+    { name, storage, disposition: 'inline', cache: 'revalidate' },
+  );
 }
