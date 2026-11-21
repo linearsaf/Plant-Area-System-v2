@@ -252,7 +252,7 @@ Bukti privat: `.deploy/map-mobile/build-bulk-polish-*.log` dan `bulk-polish-qa/`
 
 ## Pemilihan banyak bag dan Urungkan — 3 November 2026
 
-Ditambahkan sheet **Pilih banyak** pada detail kompartemen untuk operator/admin: beberapa kompartemen penuh atau area inklusif kolom/baris. Titik rentang terbalik dinormalisasi dan posisi tumpang tindih tidak digandakan. Pratinjau jumlah serta pesan kelebihan batas tetap terlihat di footer saat daftar digulir. Penambahan yang melewati 500 ditolak seluruhnya. **Urungkan pilihan terakhir** memulihkan satu perubahan seleksi, termasuk clear dan satu gestur drag; pembatalan/overflow drag mengembalikan basis pilihannya. Form pencatatan memakai kelompok kompartemen tertutup dengan koordinat yang dapat dibuka/dikeluarkan individual.
+Ditambahkan sheet **Pilih banyak** pada detail kompartemen untuk operator/admin: beberapa kompartemen penuh atau area inklusif kolom/baris. Titik rentang terbalik dinormalisasi dan posisi tumpang tindih tidak digandakan. Pratinjau jumlah serta pesan kelebihan batas tetap terlihat di footer saat daftar digulir. Penambahan yang melewati 500 ditolak seluruhnya. **Undo** memulihkan satu perubahan seleksi, termasuk clear dan satu gestur drag; pembatalan/overflow drag mengembalikan basis pilihannya. Form pencatatan memakai kelompok kompartemen tertutup dengan koordinat yang dapat dibuka/dikeluarkan individual.
 
 Pemeriksaan aktual yang lulus:
 

@@ -132,10 +132,7 @@ test('408 + 42 mixed selection, grouped review, undo and a lost save response pr
   await expect(repeated.getByRole('button', { name: 'Tambahkan pilihan', exact: true })).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Pilih banyak', exact: true })).toBeFocused();
-  await page
-    .locator('.bulk-selection-tools')
-    .getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true })
-    .click();
+  await page.locator('.bulk-selection-tools').getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.locator('.selection-bar strong')).toHaveText('408 posisi dipilih');
   await (
     await area(page, '4A', 'G', '6')
@@ -144,10 +141,7 @@ test('408 + 42 mixed selection, grouped review, undo and a lost save response pr
     .click();
   await page.locator('.bag-cell').first().click();
   await expect(page.locator('.selection-bar strong')).toHaveText('449 posisi dipilih');
-  await page
-    .locator('.bulk-selection-tools')
-    .getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true })
-    .click();
+  await page.locator('.bulk-selection-tools').getByRole('button', { name: 'Undo', exact: true }).click();
   await page.locator('[data-sheet-trigger]:visible').click();
   const form = page.getByRole('dialog', { name: 'Pencatatan penggantian', exact: true });
   await expect(form.locator('.selection-group')).toHaveCount(4);
@@ -158,11 +152,11 @@ test('408 + 42 mixed selection, grouped review, undo and a lost save response pr
   await last.locator('summary').click();
   await last.getByRole('button', { name: 'Hapus 4A A6', exact: true }).click();
   await expect(form.getByRole('heading', { name: '449 posisi dipilih', exact: true })).toBeVisible();
-  await form.getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true }).click();
+  await form.getByRole('button', { name: 'Undo', exact: true }).click();
   await last.locator('summary').click();
   await form.getByRole('button', { name: 'Bersihkan semua', exact: true }).click();
   await expect(form.getByRole('heading', { name: '0 posisi dipilih', exact: true })).toBeVisible();
-  await form.getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true }).click();
+  await form.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(form.getByRole('heading', { name: '450 posisi dipilih', exact: true })).toBeVisible();
   await form.screenshot({ path: 'test-results/bulk-review-450-desktop.png' });
   await choose(page, 'Brand/Pabrikan', 'Filtras');
@@ -219,9 +213,7 @@ test('408 + 42 mixed selection, grouped review, undo and a lost save response pr
   expect(history.items[0].positions).toHaveLength(450);
   expect(history.items[0].positions.map(positionKey).sort()).toEqual(expected.map(positionKey).sort());
   await expect(
-    page
-      .locator('.bulk-selection-tools')
-      .getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true }),
+    page.locator('.bulk-selection-tools').getByRole('button', { name: 'Undo', exact: true }),
   ).toBeDisabled();
 });
 
@@ -306,15 +298,12 @@ test('exactly 500 succeeds, 501 preserves selection and undo; viewer and out-of-
   await page.locator('.bag-cell').filter({ hasText: 'H17' }).click();
   await expect(page.locator('.selection-bar strong')).toHaveText('500 posisi dipilih');
   await expect(page.getByRole('main').getByRole('alert')).toContainText('sebanyak 1 bag');
-  await page
-    .locator('.bulk-selection-tools')
-    .getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true })
-    .click();
+  await page.locator('.bulk-selection-tools').getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.locator('.selection-bar strong')).toHaveText('496 posisi dipilih');
   await login(page, 1);
   await page.goto('/bag-filter/equipment/422-bf1');
   await expect(page.getByRole('button', { name: 'Pilih banyak', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Urungkan pilihan terakhir', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
   await page.locator('.bag-cell').first().click();
   await expect(page.locator('.selection-bar')).toHaveCount(0);
   expect(

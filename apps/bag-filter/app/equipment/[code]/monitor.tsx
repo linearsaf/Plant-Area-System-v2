@@ -755,7 +755,7 @@ export default function BagMonitor({
                   disabled={busy || selection.previous === null}
                   onClick={undoSelection}
                 >
-                  Urungkan pilihan terakhir
+                  Undo
                 </button>
               </div>
             )}
@@ -913,7 +913,7 @@ export default function BagMonitor({
             <p className="fine" style={{ marginTop: 18 }}>
               Arahkan mouse untuk info cepat; tap bag untuk memperbarui Riwayat koordinat.{' '}
               {writable
-                ? 'Gunakan Pilih banyak untuk kompartemen/area, atau klik ulang bag untuk menghapus pilihan. Desktop juga mendukung Shift+klik dan seret mouse.'
+                ? 'Gunakan Pilih banyak untuk kompartemen/area.'
                 : 'Klik posisi untuk membaca riwayat.'}
             </p>
           </section>
@@ -965,7 +965,7 @@ export default function BagMonitor({
                             disabled={busy || selection.previous === null}
                             onClick={undoSelection}
                           >
-                            Urungkan pilihan terakhir
+                            Undo
                           </button>
                           {selected.length > 0 && (
                             <button
