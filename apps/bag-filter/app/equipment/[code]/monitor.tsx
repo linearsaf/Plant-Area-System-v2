@@ -9,6 +9,7 @@ import { compartmentOptions, groupSelection, initialSelection, selectionReducer 
 import {
   ageHours,
   ageStops,
+  compartmentFromLabel,
   ageBucket,
   bagAgeScaleDays,
   bagColor,
@@ -159,7 +160,14 @@ export default function BagMonitor({
   const inputMode = useRef('keyboard');
   const tooltipId = useId();
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('age') === '1260') setBucket(6);
+    // Deep link dari Ringkasan: ?age=<batas bucket hari> dan ?compartment=<label tampilan>.
+    const params = new URLSearchParams(window.location.search);
+    const age = params.get('age'),
+      ageIndex = age === null ? -1 : ageStops.findIndex((stop) => String(stop.days) === age);
+    if (ageIndex !== -1) setBucket(ageIndex);
+    const label = params.get('compartment');
+    const target = label ? compartmentFromLabel(label, eq) : undefined;
+    if (target) showComp(target.side, target.compartment);
   }, []);
   const latest = useMemo(() => new Map(data.positions.map((p) => [positionKey(p), p])), [data.positions]);
   const ages = useMemo(() => activeAgeSummary(latest.values(), now), [latest, now]);
