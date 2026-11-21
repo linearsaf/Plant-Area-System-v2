@@ -124,6 +124,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   for (const [i, c] of result.compartments.entries()) {
     assert.ok(c.older1260 > 0 || c.warning > 0);
     assert.equal(c.label, displayCompartment(c, eq422));
+    assert.ok(Number.isFinite(Date.parse(c.oldestInstalledAt)));
     const next = result.compartments[i + 1];
     if (next)
       assert.ok(
@@ -132,8 +133,11 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   }
   const fixture = result.compartments.find((c) => c.side === c1.side && c.compartment === c1.compartment);
   const last = result.compartments.at(-1);
-  if (fixture) assert.deepEqual([fixture.installed, fixture.older1260, fixture.warning], [8, 3, 2]);
-  else
+  if (fixture) {
+    assert.deepEqual([fixture.installed, fixture.older1260, fixture.warning], [8, 3, 2]);
+    // Bag tertua yang masih terpasang adalah batch 1.300 hari.
+    assert.ok(Math.abs(Date.parse(fixture.oldestInstalledAt) - (now - 1300 * day)) < 1000);
+  } else
     assert.ok(
       result.compartments.length === 3 &&
         last &&

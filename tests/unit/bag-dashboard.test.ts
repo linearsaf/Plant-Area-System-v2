@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   bagWarningDays,
   compareBagLoad,
+  formatDateWib,
   formatPercent,
   hasWorkOrder,
   pickPriority,
@@ -78,4 +79,9 @@ test('hasWorkOrder needs a letter or digit', () => {
   assert.equal(hasWorkOrder('12345'), true);
   for (const value of ['', '   ', '-', ' — ', '--', '.', null, undefined])
     assert.equal(hasWorkOrder(value), false);
+});
+
+test('formatDateWib prints the WIB calendar day without time', () => {
+  assert.equal(formatDateWib('2022-05-08T17:30:00Z'), '9 Mei 2022');
+  assert.equal(formatDateWib('2022-05-08T16:59:00Z'), '8 Mei 2022');
 });

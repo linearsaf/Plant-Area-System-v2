@@ -69,7 +69,7 @@ Urutan: **Total posisi**, lalu **Mendekati batas**, lalu **Umur ≥ 1.260 hari**
 
 - Tiga kompartemen teratas lintas unit dalam cakupan. Kunci urutan: `older1260` turun, lalu `warning` (1.050–1.259) turun, lalu urutan katalog (unit, sisi, nomor kompartemen).
 - Kompartemen yang nilai keduanya 0 tidak ditampilkan. Jika daftar kosong, tampilkan keadaan sehat: `Tidak ada kompartemen ≥ 1.050 hari.`
-- Baris: `L62-BF1 · Comp. 12` (awalan `Comp.` sama dengan peta; label tampilan dari `displayCompartment`), lalu `N/kapasitas kritis · M/kapasitas mendekati` (kapasitas = bag per kompartemen, mis. `136/136 kritis`). Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
+- Baris: `L62-BF1 · Comp. 12`, lalu keterangan `136/136 kritis  Terpasang 9 Mei 2022` (tanggal WIB dari `oldestInstalledAt`, yaitu bag tertua yang masih terpasang; tanggal turun utuh ke baris berikutnya bila kartu sempit; awalan `Comp.` sama dengan peta; label tampilan dari `displayCompartment`); keterangan berisi `N/kapasitas kritis`, `M/kapasitas mendekati` (kapasitas = bag per kompartemen, mis. `136/136 kritis`). Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
 - Teks edukasi "Pilih hingga 500 bag…" dihapus dari dashboard.
 - Mosaic 4×4 dipertahankan apa adanya dari kartu tip lama (warna dan posisi di kanan, dalam alur). Percobaan menjadikannya latar kartu dibatalkan karena visualnya memburuk. Agar muat di samping mosaic pada 1280–1366 px, jumlah kritis ditulis di bawah nama kompartemen, bukan rata kanan.
 
@@ -141,6 +141,7 @@ compartments: {          // baru: maksimal 3, sudah diurutkan (aturan 3.4)
   installed: number;
   older1260: number;
   warning: number;       // 1.050–1.259 hari
+  oldestInstalledAt: string; // ISO, pemasangan tertua yang masih terpasang
 }[];
 woCompliance: {          // baru: tahun terpilih, batch tidak dibatalkan
   bags: number;

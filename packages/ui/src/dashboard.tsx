@@ -9,6 +9,7 @@ import {
   equipment,
   equipmentSideSummary,
   formatDate,
+  formatDateWib,
   formatPercent,
   hasWorkOrder,
   type BagPriority,
@@ -44,6 +45,7 @@ type Data = {
     installed: number;
     older1260: number;
     warning: number;
+    oldestInstalledAt: string;
   }[];
   woCompliance: { bags: number; bagsWithWo: number; batches: number; batchesWithoutWo: number };
   priority: BagPriority;
@@ -574,21 +576,24 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                             age: c.older1260 ? bagAgeScaleDays : bagWarningDays,
                           })}
                         >
-                          <span>
+                          <span className="compartment-name">
                             <span className="code-text">{c.equipmentCode}</span> · Comp. {c.label}
                           </span>
-                          <small>
+                          <small className="compartment-meta">
                             {c.older1260 ? (
                               <b className="negative-text">
                                 {n(c.older1260)}/{n(compartmentCapacity(c.equipmentCode))} kritis
                               </b>
                             ) : null}
-                            {c.older1260 && c.warning ? ' · ' : ''}
                             {c.warning ? (
                               <b className="warning-text">
                                 {n(c.warning)}/{n(compartmentCapacity(c.equipmentCode))} mendekati
                               </b>
                             ) : null}
+                            <span>
+                              Terpasang{' '}
+                              <time dateTime={c.oldestInstalledAt}>{formatDateWib(c.oldestInstalledAt)}</time>
+                            </span>
                           </small>
                         </a>
                       </li>

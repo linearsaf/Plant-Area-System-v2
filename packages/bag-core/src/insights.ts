@@ -86,6 +86,7 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
       installed: number;
       older1260: number;
       warning: number;
+      oldestInstalledAt: string;
     }
   >();
   const woCompliance = { bags: 0, bagsWithWo: 0, batches: 0, batchesWithoutWo: 0 };
@@ -101,7 +102,8 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
       compartment: number | string;
       installedAt: Date | string;
     }[]) {
-      const hours = ageHours(iso(p.installedAt), now)!;
+      const installedAt = iso(p.installedAt),
+        hours = ageHours(installedAt, now)!;
       const bucket = ageBucket(hours);
       distribution[bucket]++;
       const target = perEquipment.find((e) => e.code === p.equipmentCode)!;
@@ -121,9 +123,11 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
           installed: 0,
           older1260: 0,
           warning: 0,
+          oldestInstalledAt: installedAt,
         };
         compartmentLoads.set(key, load);
       }
+      if (installedAt < load.oldestInstalledAt) load.oldestInstalledAt = installedAt;
       load.installed++;
       if (hours >= bagAgeScaleDays * 24) load.older1260++;
       else if (hours >= bagWarningDays * 24) load.warning++;

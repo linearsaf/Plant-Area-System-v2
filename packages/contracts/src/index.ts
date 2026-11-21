@@ -144,6 +144,9 @@ export const formatDate = (value: string) =>
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+const wibDay = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium' });
+/** Tanggal WIB tanpa jam, mis. `9 Mei 2022`. */
+export const formatDateWib = (value: string) => wibDay.format(new Date(value));
 const percentFormatters = new Map<number, Intl.NumberFormat>();
 /** Persen gaya id-ID dengan koma desimal, mis. `94,0%`. `value` sudah dalam skala 0–100. */
 export function formatPercent(value: number, digits = 1) {

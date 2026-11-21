@@ -917,6 +917,7 @@ const summaryFixture = (healthy = false) => {
             installed: 136,
             older1260: 136,
             warning: 0,
+            oldestInstalledAt: '2022-05-08T17:30:00Z',
           },
           {
             equipmentCode: '421-BF1',
@@ -926,6 +927,7 @@ const summaryFixture = (healthy = false) => {
             installed: 136,
             older1260: 0,
             warning: 12,
+            oldestInstalledAt: '2023-03-01T00:00:00Z',
           },
         ],
     woCompliance: { bags: 4019, bagsWithWo: 1000, batches: 40, batchesWithoutWo: 30 },
@@ -998,6 +1000,8 @@ test('summary shows operational metrics, priority, WO status and a keyboard map 
   await expect(critical.nth(1)).toHaveAttribute('href', /421-bf1\?compartment=2B&age=1050/);
   await expect(page.locator('.chart-legend')).toContainText('Pabrikan belum diisi');
   await expect(page.locator('.chart-legend')).not.toContainText('Belum tercatat');
+  await expect(critical.first().locator('.compartment-name')).toHaveText('562-BF1 · Comp. 3');
+  await expect(critical.first().locator('.compartment-meta')).toContainText('Terpasang 9 Mei 2022');
   await expect(critical.first()).toContainText('136/136 kritis');
   await expect(critical.nth(1)).toContainText('12/136 mendekati');
   // Prioritas memakai urutan yang sama dengan Beban umur kritis (porsi kritis tertinggi).

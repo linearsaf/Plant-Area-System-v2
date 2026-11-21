@@ -1354,8 +1354,20 @@
   .critical-compartments li a:hover {
     background: var(--surfaceMuted);
   }
-  .critical-compartments li a > span {
+  .compartment-name {
     white-space: nowrap;
+  }
+  /* Jumlah dan tanggal pemasangan tertua: sebaris bila muat, tanggal turun utuh bila kartu sempit. */
+  .compartment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+  }
+  .compartment-meta > * {
+    white-space: nowrap;
+  }
+  .compartment-meta > span {
+    color: var(--textSecondary);
   }
   .critical-compartments li small {
     font-size: var(--type-caption);
@@ -1407,9 +1419,9 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    padding: 2px var(--space-2);
+    /* padding: 2px var(--space-2); */
     border-radius: var(--radius-pill);
-    background: color-mix(in srgb, white 78%, transparent);
+    /* background: color-mix(in srgb, white 78%, transparent); */
     color: var(--gray-950);
     font-weight: 500;
   }
