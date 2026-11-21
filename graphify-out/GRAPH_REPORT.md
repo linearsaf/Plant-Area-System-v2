@@ -1,17 +1,17 @@
 # Graph Report - plant-area-system  (2026-11-21)
 
 ## Corpus Check
-- 354 files · ~269,485 words
+- 361 files · ~276,790 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 34 file(s) not represented in the graph (top: (none) 12, .css 12, .conf 4)
 
 ## Summary
-- 2605 nodes · 6677 edges · 165 communities (118 shown, 47 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 138 edges (avg confidence: 0.92)
+- 2679 nodes · 6860 edges · 181 communities (135 shown, 46 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 154 edges (avg confidence: 0.92)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5c55d8d2`
+- Built from commit: `8f9a7cb9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,15 +19,15 @@
 - selection.ts
 - Operasional pilot
 - Consumable Order Carts
-- packages_ui_src_index_button
-- Identity
+- react
+- ref_node_crypto
 - integration/consumables.test.ts
-- test-operations.ts
+- database-backup.mjs
 - Consumable Order Carts
-- requests-ui.tsx
+- drawing-view.tsx
 - server/src/index.ts
 - naming.ts
-- Consumables Workspace Controls
+- app/workspace.tsx
 - Repository Automation Scripts
 - Icon
 - Auth Application Dependencies
@@ -41,7 +41,7 @@
 - pageIdentity
 - bag-core/src/index.ts
 - dependencies
-- AppError
+- approval.ts
 - Application Theme Layouts
 - Consumables Inventory Schema
 - User Administration Services
@@ -52,7 +52,7 @@
 - Database Migration Containers
 - Consumables Core Dependencies
 - drawings-core/src/index.ts
-- S3Storage
+- storage.ts
 - Continuous Integration Validation
 - Auth Core Dependencies
 - Shared TypeScript Configuration
@@ -65,7 +65,7 @@
 - Nginx Service Routing
 - Cross Application UI Design
 - dev.ts
-- approval.ts
+- drawings-core/src/drawings.ts
 - Service Authentication Configuration
 - MySQL Credential Configuration
 - Authentication Storage Schema
@@ -106,7 +106,7 @@
 - TLS Certificate Setup
 - Database Backup Shell
 - Database Initialization Shell
-- Review Focus
+- requests-ui.tsx
 - Auth Migration Checkpoints
 - Bag Migration Checkpoints
 - Batch Cancellation Migration
@@ -122,7 +122,7 @@
 - Consumable Room v1.1 R22
 - drawings/tsconfig.json
 - Panduan agen untuk Plant Area System v2
-- notifications.ts
+- drawings-core/src/support.ts
 - Identity
 - Hasil validasi implementasi v2
 - services
@@ -130,54 +130,70 @@
 - drawings
 - Runbook rilis Drawing Database v1
 - 4. Alur kerja
-- Q: `packages/ui/src/tokens.css` seharusnya jangan dilewati. lalu docs\testing dan `AppError` apakah itu penting sehingga harus dimasukkan dalam graph?
+- AppError
 - drawings/app/health/live/route.ts
 - CLAUDE.md
-- ref_node_crypto
+- bag-bulk-selection.spec.ts
 - drawings.spec.ts
 - 15. Prompt implementasi untuk developer
-- Plant Area System v2
+- index.tsx
 - ref_node_fs
 - package.json
 - integration/drawings-files.test.ts
-- Storage
-- platform.test.ts
+- library.tsx
+- files.ts
 - 6. File, storage dan stamp
-- drawings-migration.ts
+- dashboard.tsx
 - 8. Arsitektur dan integrasi platform
 - engines
-- bag-core/src/index.ts
-- index.tsx
+- Overlay
+- Workspace
+- stock-summary.tsx
+- Button
 - Desain: kompresi gambar Drawing Database ke WebP
 - image-upload.tsx
-- AGENTS.md
+- Rencana implementasi R22
+- tokens.css
 - canSeeWip
-- drawings-images.test.ts
-- consumables.spec.ts
+- ref_node_fs
+- summary.ts
+- select-e2e.ts
+- summary.tsx
+- masters.ts
+- pdf-viewer-core.tsx
+- 3. Spesifikasi per widget
+- consumables-ui.spec.ts
+- documents/[id]/page.tsx
+- copy-pdfjs-assets.mjs
+- updateDrawing
+- test-operations.ts
+- brand.tsx
+- scripts
+- drawings/app/health/ready/route.ts
 
 ## God Nodes (most connected - your core abstractions)
 1. `AppError` - 196 edges
-2. `Identity` - 61 edges
-3. `react` - 49 edges
-4. `db()` - 43 edges
-5. `BagMonitor()` - 40 edges
-6. `pageIdentity()` - 38 edges
-7. `Icon()` - 37 edges
-8. `canDraw()` - 34 edges
-9. `mutate()` - 34 edges
-10. `Heading()` - 33 edges
+2. `Identity` - 62 edges
+3. `BagMonitor()` - 50 edges
+4. `react` - 49 edges
+5. `Icon()` - 46 edges
+6. `db()` - 43 edges
+7. `Overlay()` - 38 edges
+8. `pageIdentity()` - 38 edges
+9. `Button()` - 37 edges
+10. `canDraw()` - 36 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Pengujian` --references--> `needsConversion()`  [INFERRED]
-  docs/superpowers/specs/2026-11-21-drawings-image-compression-design.md → packages/drawings-core/src/images.ts
-- `8.1 Bagian baru dan yang berubah` --references--> `DrawingsGrant`  [INFERRED]
-  docs/DRAWING-DATABASE-PRD.md → packages/contracts/src/drawings.ts
+- `3.11 Format angka` --references--> `portalSummary()`  [INFERRED]
+  docs/design/BAG-FILTER-DASHBOARD-POLISH.md → packages/bag-core/src/insights.ts
+- `3.7 Spotlight "Prioritas tertinggi"` --references--> `portalSummary()`  [INFERRED]
+  docs/design/BAG-FILTER-DASHBOARD-POLISH.md → packages/bag-core/src/insights.ts
+- `3.4 Kompartemen paling kritis (menggantikan "Satu batch, banyak posisi")` --references--> `displayCompartment()`  [INFERRED]
+  docs/design/BAG-FILTER-DASHBOARD-POLISH.md → packages/contracts/src/index.ts
 - `Cakupan graph proyek` --references--> `AppError`  [INFERRED]
   AGENTS.md → packages/contracts/src/index.ts
-- `3. Skema` --references--> `cleanupStagedFiles()`  [INFERRED]
-  docs/superpowers/specs/2026-11-21-drawings-image-compression-design.md → packages/drawings-core/src/files.ts
-- `Kontrak ringkasan aplikasi (inti skalabilitas)` --references--> `drawing()`  [INFERRED]
-  docs/design/UI-FOLLOWUP-FONT-PORTAL-MENU.md → tests/unit/drawings-model.test.ts
+- `7. Validasi` --references--> `installed()`  [INFERRED]
+  docs/design/BAG-FILTER-DASHBOARD-POLISH.md → tests/unit/bag-age-summary.test.ts
 
 ## Import Cycles
 - None detected.
@@ -185,63 +201,59 @@
 ## Hyperedges (group relationships)
 - **Cross-application UI modernization** — docs_design_ui_audit_portal_consumables_operational_hub, docs_design_ui_audit_portal_consumables_reversible_overlays, docs_design_ui_audit_portal_consumables_accessible_design_tokens, docs_design_ui_audit_portal_consumables_shell_skeleton, docs_design_ui_audit_portal_consumables_stock_query_feedback, docs_design_ui_audit_portal_consumables_reversible_cart [EXTRACTED 1.00]
 
-## Communities (165 total, 47 thin omitted)
+## Communities (181 total, 46 thin omitted)
 
 ### Community 0 - "selection.ts"
-Cohesion: 0.23
-Nodes (19): BulkSelection(), BulkSelectionForm(), Props, areaPositions(), BagArea, Compartment, compartmentChoices(), compartmentOptions() (+11 more)
+Cohesion: 0.21
+Nodes (21): BulkSelection(), BulkSelectionForm(), Props, areaPositions(), BagArea, Compartment, compartmentChoices(), compartmentOptions() (+13 more)
 
 ### Community 1 - "Operasional pilot"
-Cohesion: 0.22
-Nodes (14): Migrasi database lokal ke VPS, Single writer database cutover, Handover OpenClaw database, Database migration checkpoints M0 M8, Deployment checkpoints C0 C12, Handover OpenClaw deployment, Deployment VPS tq-cmms.com, VPS resource budget and serial builds (+6 more)
+Cohesion: 0.20
+Nodes (16): Migrasi database lokal ke VPS, Portable schema and data fingerprint, Single writer database cutover, Handover OpenClaw database, Database migration checkpoints M0 M8, Deployment checkpoints C0 C12, Handover OpenClaw deployment, Deployment VPS tq-cmms.com (+8 more)
 
 ### Community 2 - "Consumable Order Carts"
-Cohesion: 0.13
-Nodes (7): MaterialSearch(), OrderCart(), Picklist(), stockApi(), StockApiError, useCartFeedback(), Toast()
+Cohesion: 0.10
+Nodes (12): MaterialSearch(), OrderCart(), Picklist(), stockApi(), StockApiError, descriptions, dynamic, Page() (+4 more)
 
-### Community 3 - "packages_ui_src_index_button"
-Cohesion: 0.26
-Nodes (7): FileDrop(), formatSize(), PdfUpload(), Staged, PdfViewerProps, PdfViewer(), Core
+### Community 3 - "react"
+Cohesion: 0.11
+Nodes (13): Mode, Person, Props, FileDrop(), Item, TYPES, kinds, formatSize() (+5 more)
 
-### Community 4 - "Identity"
-Cohesion: 0.06
-Nodes (17): closeAuthDb(), authSchema, equipmentCodes, Identity, better-auth, @playwright/test, paths, actor (+9 more)
+### Community 4 - "ref_node_crypto"
+Cohesion: 0.07
+Nodes (16): authSchema, appCatalog, better-auth, migrateDrawingsCatalog(), provision(), provisionDrawings(), layouts, actor (+8 more)
 
 ### Community 5 - "integration/consumables.test.ts"
 Cohesion: 0.18
-Nodes (17): mutate(), consumablesSchema, postMovement(), replay(), saveInventory(), saveMaterial(), code(), entry() (+9 more)
-
-### Community 6 - "test-operations.ts"
-Cohesion: 0.15
-Nodes (5): args, compose, docker(), persistedSql, run
+Nodes (20): mutate(), hecSuggestions(), consumablesSchema, materialDetail(), postMovement(), saveInventory(), saveMaterial(), code() (+12 more)
 
 ### Community 7 - "Consumable Order Carts"
-Cohesion: 0.13
-Nodes (33): AddToOrder(), QuantityDialog(), createDocument(), replay(), readResult(), parseNamingCsv(), amount, canConsume() (+25 more)
+Cohesion: 0.14
+Nodes (25): createDocument(), amount, allowsDecimals(), canonicalDocumentPayload(), ConsumablesGrant, ConsumablesRole, consumablesRoles, COUNT_UNITS (+17 more)
 
-### Community 8 - "requests-ui.tsx"
-Cohesion: 0.04
-Nodes (60): actionLabels, AuditList(), Item, Page, ClampText(), ApiError, formatWib(), getJson() (+52 more)
+### Community 8 - "drawing-view.tsx"
+Cohesion: 0.11
+Nodes (32): ClampText(), ApiError, getJson(), newKey(), parse(), sendJson(), wib, DrawingForm() (+24 more)
 
 ### Community 9 - "server/src/index.ts"
-Cohesion: 0.17
-Nodes (19): dynamic, GET(), dynamic, GET(), dynamic, GET(), dynamic, GET (+11 more)
+Cohesion: 0.12
+Nodes (27): dynamic, POST(), dynamic, GET(), dynamic, GET(), dynamic, GET() (+19 more)
 
 ### Community 10 - "naming.ts"
-Cohesion: 0.14
-Nodes (14): dynamic, GET(), cache, closeConsumablesDb(), create(), getConsumablesDb(), importCatalog(), parseCatalog() (+6 more)
+Cohesion: 0.16
+Nodes (14): dynamic, GET(), cache, closeConsumablesDb(), create(), getConsumablesDb(), headers, importNaming() (+6 more)
 
-### Community 11 - "Consumables Workspace Controls"
-Cohesion: 0.09
-Nodes (43): BatchCancellationDialog(), AliasInput(), AuditItem, ConsumablesWorkspace(), openMaterial(), Enrollment(), get(), InventoryEditor() (+35 more)
+### Community 11 - "app/workspace.tsx"
+Cohesion: 0.13
+Nodes (26): AliasInput(), Loading(), AuditItem, ConsumablesWorkspace(), openMaterial(), Enrollment(), get(), InventoryEditor() (+18 more)
 
 ### Community 12 - "Repository Automation Scripts"
 Cohesion: 0.06
 Nodes (31): scripts, bootstrap, brand:generate, build, check:export, consumables:import, consumables:import-naming, consumables:preflight (+23 more)
 
 ### Community 13 - "Icon"
-Cohesion: 0.06
-Nodes (64): OverviewMap(), Commit 2: `feat(portal): rebuild hub on the Bag Filter dashboard system`, 3. Portal: hub yang tenang tapi berisi, dan siap untuk aplikasi baru, Kondisi sekarang, Kontrak ringkasan aplikasi (inti skalabilitas), Kriteria selesai (Portal), Prinsip desain, Tata letak target (+56 more)
+Cohesion: 0.10
+Nodes (28): OverviewMap(), dynamic, Portal(), wibDateFormatter, 6. Impor arsip Legacy Ready, Commit 2: `feat(portal): rebuild hub on the Bag Filter dashboard system`, AppId, formatRelativeWib() (+20 more)
 
 ### Community 14 - "Auth Application Dependencies"
 Cohesion: 0.10
@@ -257,11 +269,11 @@ Nodes (24): dependencies, next@16.4.2, @plant/consumables-core@workspace:*, @pla
 
 ### Community 17 - "Shared Errors and Stock Transactions"
 Cohesion: 0.13
-Nodes (15): common, inventoryInput, materialInput, MoveKind, schemas, Executor, invCols, joinInv (+7 more)
+Nodes (15): common, inventoryInput, materialInput, MoveKind, schemas, R22_ROOM_ID, Executor, invCols (+7 more)
 
 ### Community 18 - "drawings-workflow.ts"
-Cohesion: 0.07
-Nodes (25): IMAGE_MAX_PER_ITEM, RevisionStatus, ApprovalActionView, approvalDecisionSchema, ApprovalLevel, approvalLevels, approvalPlanSchema, ApprovalStep (+17 more)
+Cohesion: 0.08
+Nodes (23): IMAGE_MAX_PER_ITEM, RevisionStatus, ApprovalActionView, approvalDecisionSchema, ApprovalLevel, approvalLevels, approvalPlanSchema, ApprovalStep (+15 more)
 
 ### Community 19 - "Portal Application Dependencies"
 Cohesion: 0.11
@@ -272,48 +284,52 @@ Cohesion: 0.21
 Nodes (11): args, capture(), compare(), databases, ephemeral, identifier(), migrationsHash(), walk() (+3 more)
 
 ### Community 21 - "8.1 Bagian baru dan yang berubah"
-Cohesion: 0.43
-Nodes (5): 8.1 Bagian baru dan yang berubah, Grant, migrateConsumablesCatalog(), provision(), provisionConsumables()
+Cohesion: 0.31
+Nodes (7): 8.1 Bagian baru dan yang berubah, DrawingsGrant, nextRevisionNo(), Grant, migrateConsumablesCatalog(), provision(), provisionConsumables()
 
 ### Community 22 - "pageIdentity"
-Cohesion: 0.07
-Nodes (40): AuditList(), Event, Audit(), dynamic, BagFilter(), dynamic, dynamic, Page() (+32 more)
+Cohesion: 0.15
+Nodes (15): dynamic, Page(), dynamic, Page(), PdfViewerProps, PdfViewer(), Core, dynamic (+7 more)
 
 ### Community 23 - "bag-core/src/index.ts"
-Cohesion: 0.13
-Nodes (22): Context, dynamic, GET(), json(), POST(), dynamic, EquipmentPage(), auditHistory() (+14 more)
+Cohesion: 0.09
+Nodes (44): Context, dynamic, GET(), json(), POST(), dynamic, EquipmentPage(), CancellationColumns (+36 more)
 
 ### Community 24 - "dependencies"
 Cohesion: 0.11
 Nodes (18): dependencies, better-auth@1.7.12, drizzle-orm@0.45.4, mysql2@3.24.6, @plant/auth-core@workspace:*, @plant/bag-core@workspace:*, @plant/consumables-core@workspace:*, @plant/contracts@workspace:* (+10 more)
 
-### Community 25 - "AppError"
-Cohesion: 0.11
-Nodes (56): json(), mutate(), replayable(), AppError, attachImages(), bump(), cancelRevision(), checkRevision() (+48 more)
+### Community 25 - "approval.ts"
+Cohesion: 0.12
+Nodes (41): mutate(), attachImages(), bump(), cancelRevision(), checkRevision(), createRevision(), decideApproval(), Directory (+33 more)
 
 ### Community 26 - "Application Theme Layouts"
-Cohesion: 0.07
-Nodes (37): inter, Layout(), metadata, inter, Layout(), metadata, inter, Layout() (+29 more)
+Cohesion: 0.11
+Nodes (18): inter, Layout(), metadata, inter, Layout(), metadata, inter, Layout() (+10 more)
 
 ### Community 27 - "Consumables Inventory Schema"
 Cohesion: 0.18
 Nodes (19): `catalog_imports`, `consumables_audit`, consumables_audit_time_idx, `inventory`, inventory_location_idx, `locations`, material_category_idx, `materials` (+11 more)
 
 ### Community 28 - "User Administration Services"
-Cohesion: 0.23
-Nodes (23): Context, dynamic, GET(), POST(), getAuthDb(), auditEntry(), authAudit(), changePassword() (+15 more)
+Cohesion: 0.17
+Nodes (28): Context, dynamic, GET(), POST(), getAuthDb(), auditEntry(), authAudit(), changePassword() (+20 more)
 
 ### Community 29 - "documents.ts"
 Cohesion: 0.11
-Nodes (22): date, docCols, DocumentConflict, header, hec, pickLine, qtyLine, requester (+14 more)
+Nodes (19): date, docCols, DocumentConflict, header, hec, pickLine, qtyLine, requester (+11 more)
 
 ### Community 30 - "Compose Runtime Services"
 Cohesion: 0.10
 Nodes (19): command, depends_on, image, networks, profiles, name, networks, gateway (+11 more)
 
 ### Community 31 - "insights.ts"
-Cohesion: 0.29
-Nodes (14): dynamic, GET(), createDatabase(), getBagDb(), activity(), ageTones, allowed(), dashboard() (+6 more)
+Cohesion: 0.20
+Nodes (22): dynamic, GET(), 1. Temuan dari screenshot dan source, 2. Tata letak baru, 4. Perubahan API (aditif), 6. Urutan pengerjaan (satu PR, commit bertahap), 7. Validasi, 8. Di luar cakupan (+14 more)
+
+### Community 32 - "ref_node_assert"
+Cohesion: 0.19
+Nodes (8): activeAgeSummary(), ageStops, bagAgeScaleDays, bagColor(), dataTextTone(), relativeLuminance(), installed(), now
 
 ### Community 33 - "Database Migration Containers"
 Cohesion: 0.22
@@ -324,16 +340,16 @@ Cohesion: 0.15
 Nodes (16): dependencies, drizzle-orm@0.45.4, mysql2@3.24.6, @plant/contracts@workspace:*, zod@4.5.4, exports, ./import, ./schema (+8 more)
 
 ### Community 35 - "drawings-core/src/index.ts"
-Cohesion: 0.07
-Nodes (64): dynamic, GET(), RFC-4180, RFC-5987, Task 3: Pemrosesan gambar dengan sharp, Task 4: Simpan hasil konversi dan thumbnail, Task 5: Penyajian thumbnail dan cache gambar, Kondisi saat ini (+56 more)
+Cohesion: 0.11
+Nodes (28): RFC-4180, Task 3: Pemrosesan gambar dengan sharp, IMAGE_MAX_BYTES, IMAGE_MAX_INPUT_PIXELS, IMAGE_MAX_SIDE, IMAGE_PASSTHROUGH_MAX_BYTES, maxPdfBytes(), STAGED_TTL_MS (+20 more)
 
-### Community 36 - "S3Storage"
-Cohesion: 0.27
-Nodes (3): 2. Server: periksa, konversi bila perlu, buat thumbnail, assertKey(), S3Storage
+### Community 36 - "storage.ts"
+Cohesion: 0.12
+Nodes (13): Review Focus, Task 1: Batas 10 gambar dan 25 MB, Task 2: Aturan murni gambar dan key thumbnail, Task 7: Anggaran container, build image, dokumentasi, 2. Server: periksa, konversi bila perlu, buat thumbnail, assertKey(), ByteRange, createStorage() (+5 more)
 
 ### Community 37 - "Continuous Integration Validation"
-Cohesion: 0.12
-Nodes (15): jobs, validate, name, on, permissions, contents, if, name (+7 more)
+Cohesion: 0.07
+Nodes (28): BASE_SHA, BEFORE_SHA, EVENT_NAME, GIT_REF, SPECS, jobs, validate, name (+20 more)
 
 ### Community 38 - "Auth Core Dependencies"
 Cohesion: 0.16
@@ -360,8 +376,8 @@ Cohesion: 0.18
 Nodes (13): dependencies, @plant/contracts@workspace:*, react@19.3.1, react-dom@19.3.1, exports, ./styles.css, @plant/contracts, react (+5 more)
 
 ### Community 45 - "generate-brand.mjs"
-Cohesion: 0.13
-Nodes (11): config, config, config, config, config, app, marker, require (+3 more)
+Cohesion: 0.19
+Nodes (6): config, config, config, config, config, next
 
 ### Community 46 - "Nginx Service Routing"
 Cohesion: 0.13
@@ -375,9 +391,9 @@ Nodes (22): Accessible design tokens, Portal and Consumables UI audit, Momentum-
 Cohesion: 0.24
 Nodes (17): apps, compose(), cores, databases, databaseUrls(), docker(), execute(), exists() (+9 more)
 
-### Community 49 - "approval.ts"
-Cohesion: 0.05
-Nodes (25): Directory, Issued, rejectedOrder, taskOrder, DirectoryPerson, DrawingRow, RevisionRow, WipScope (+17 more)
+### Community 49 - "drawings-core/src/drawings.ts"
+Cohesion: 0.10
+Nodes (24): auditList(), countLibrary(), drawingDetailBase(), DrawingRow, drawingTimeline(), hacSuggestions(), libraryOwners(), libraryWhere() (+16 more)
 
 ### Community 50 - "Service Authentication Configuration"
 Cohesion: 0.36
@@ -401,15 +417,15 @@ Nodes (13): environment, AUTH_DATABASE_URL, AUTH_MIGRATION_DATABASE_URL, BAG_DAT
 
 ### Community 55 - "unit/drawings-files.test.ts"
 Cohesion: 0.09
-Nodes (21): requireContentType(), requireUpload(), clampText(), formatStampTime(), invalid(), normalizeRotation(), queue, serialPdfJob() (+13 more)
+Nodes (22): fileNameFromHeader(), requireContentType(), requireUpload(), clampText(), formatStampTime(), invalid(), normalizeRotation(), queue (+14 more)
 
 ### Community 56 - "Server Package Dependencies"
 Cohesion: 0.22
 Nodes (10): dependencies, next@16.4.2, @plant/contracts@workspace:*, exports, next, @plant/contracts, name, private (+2 more)
 
 ### Community 57 - "drawings/package.json"
-Cohesion: 0.08
-Nodes (28): clampScale(), describe(), Failure, PdfViewerCore(), presets, dependencies, next@16.4.2, pdfjs-dist@6.4.299 (+20 more)
+Cohesion: 0.16
+Nodes (15): dependencies, next@16.4.2, @plant/contracts@workspace:*, @plant/drawings-core@workspace:*, @plant/server@workspace:*, @plant/ui@workspace:*, react@19.3.1, @plant/contracts (+7 more)
 
 ### Community 58 - "Auth TypeScript Configuration"
 Cohesion: 0.20
@@ -436,8 +452,8 @@ Cohesion: 0.44
 Nodes (8): `bag_audit`, bag_audit_equipment_time_idx, batch_equipment_time_idx, `coordinates`, `equipment`, installation_position_time_idx, `installations`, `replacement_batches`
 
 ### Community 64 - "drawings-core/src/drawings.ts"
-Cohesion: 0.05
-Nodes (36): DrawingAccessFacts, DrawingCreateInput, drawingCreateSchema, DrawingDetail, DrawingListItem, drawingMetadataFields, DrawingPage, DrawingsMasters (+28 more)
+Cohesion: 0.07
+Nodes (26): DrawingAccessFacts, DrawingCreateInput, drawingCreateSchema, DrawingListItem, drawingMetadataFields, DrawingPage, DrawingUpdateInput, drawingUpdateSchema (+18 more)
 
 ### Community 65 - "Domain Contract Dependencies"
 Cohesion: 0.25
@@ -448,36 +464,36 @@ Cohesion: 0.24
 Nodes (8): actor, compose, docker(), inspect(), names, run, sentinels, services
 
 ### Community 67 - "drawings-import-legacy.ts"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (7): args, dryRun, offline, report, Result, started, sha
 
 ### Community 68 - "requests.ts"
-Cohesion: 0.11
-Nodes (43): canDraw(), drawingsPermission(), drawingsRole(), DrawingPermissions, drawingPermissions(), canSeeRequest(), drafterDecisionSchema, DrawingsDashboard (+35 more)
+Cohesion: 0.12
+Nodes (34): dynamic, Page(), canDraw(), drawingsPermission(), drawingsRole(), DrawingPermissions, drawingPermissions(), canSeeRequest() (+26 more)
 
 ### Community 69 - "contracts/src/index.ts"
-Cohesion: 0.08
-Nodes (28): ageStops, AppId, bagAgeIntervalDays, bagColor(), BagGrant, BagRole, bagRoles, cancellationSchema (+20 more)
+Cohesion: 0.07
+Nodes (27): AuditList(), Event, Audit(), dynamic, bagAgeIntervalDays, BagAgeLoad, BagGrant, BagRole (+19 more)
 
 ### Community 70 - "FsStorage"
-Cohesion: 0.29
-Nodes (4): FsStorage, file(), imageFixture(), sha()
+Cohesion: 0.17
+Nodes (4): FsStorage, Storage, imageFixture(), sha()
 
 ### Community 71 - "monitor.tsx"
-Cohesion: 0.12
-Nodes (18): activeAgeSummary(), BatchRecord, CancellationNotice(), CoordinateHistory(), TimelineItem, Batch, Installed, MarqueeDrag (+10 more)
+Cohesion: 0.16
+Nodes (16): BatchCancellationDialog(), BatchRecord, CancellationNotice(), CoordinateHistory(), TimelineItem, Batch, Installed, MarqueeDrag (+8 more)
 
 ### Community 72 - "drawings-core/package.json"
 Cohesion: 0.12
 Nodes (20): dependencies, @aws-sdk/client-s3@3.1160.0, @cantoo/pdf-lib@2.11.1, drizzle-orm@0.45.4, mysql2@3.24.6, @plant/contracts@workspace:*, sharp@0.35.5, zod@4.5.4 (+12 more)
 
 ### Community 73 - "BagMonitor"
-Cohesion: 0.19
-Nodes (17): BagMonitor(), addPositions(), cellKey(), dismiss(), focus(), hover(), keyboard(), leaveHover() (+9 more)
+Cohesion: 0.18
+Nodes (19): BagMonitor(), addPositions(), cellKey(), dismiss(), focus(), hover(), keyboard(), leaveHover() (+11 more)
 
 ### Community 74 - "consumables/app/api/[...path]/route.ts"
 Cohesion: 0.13
-Nodes (30): Context, dynamic, GET(), json(), PATCH, POST, dateConditions(), documentDetail() (+22 more)
+Nodes (27): Context, dynamic, GET(), json(), PATCH, POST, dateConditions(), listDocuments() (+19 more)
 
 ### Community 75 - "Consumables Application Container"
 Cohesion: 0.40
@@ -485,7 +501,7 @@ Nodes (5): image, init, networks, restart, consumables
 
 ### Community 76 - "platform.test.ts"
 Cohesion: 0.15
-Nodes (17): buildAuth(), cache, createDatabase(), getAuthAdapterDb(), decodeGrant(), DirectoryEntry, account, applications (+9 more)
+Nodes (17): buildAuth(), cache, createDatabase(), getAuthAdapterDb(), decodeGrant(), DirectoryEntry, mysqlCode(), account (+9 more)
 
 ### Community 77 - "Workspace Build Permissions"
 Cohesion: 0.40
@@ -495,13 +511,13 @@ Nodes (4): allowBuilds, esbuild, sharp, packages
 Cohesion: 0.40
 Nodes (4): endOfLine, printWidth, singleQuote, trailingComma
 
-### Community 107 - "Review Focus"
-Cohesion: 0.25
-Nodes (7): Global Constraints, Kompresi Gambar Drawing Database ke WebP — Implementation Plan, Pemeriksaan manual sebelum go-live, Review Focus, Task 1: Batas 10 gambar dan 25 MB, Task 2: Aturan murni gambar dan key thumbnail, Task 7: Anggaran container, build image, dokumentasi
+### Community 107 - "requests-ui.tsx"
+Cohesion: 0.10
+Nodes (16): actionLabels, AuditList(), Item, Page, formatWib(), Page, Person, RequestBadge() (+8 more)
 
 ### Community 116 - "gesture.ts"
-Cohesion: 0.42
-Nodes (7): project(), record(), rubberband(), Sample, shouldDismiss(), spring(), velocity()
+Cohesion: 0.36
+Nodes (9): react-dom@19.3.1, project(), record(), rubberband(), Sample, shouldDismiss(), spring(), velocity() (+1 more)
 
 ### Community 117 - "drawings-ops"
 Cohesion: 0.14
@@ -516,12 +532,12 @@ Cohesion: 0.17
 Nodes (12): 1. Tujuan, 2. Batasan, 3. Hasil audit: Portal dibanding gold standard, 4. Rancangan target (≥1536 px), 5. Langkah implementasi, 6. Kriteria penerimaan, 7. Laporan, 8. Keputusan yang diambil dalam brief ini (dapat dibatalkan pengguna) (+4 more)
 
 ### Community 120 - "integration/drawings-workflow.test.ts"
-Cohesion: 0.08
-Nodes (7): directory(), key(), ownerOf(), people, release(), u, v()
+Cohesion: 0.09
+Nodes (6): directory(), ownerOf(), people, release(), u, v()
 
 ### Community 121 - "drawings/app/api/[...path]/route.ts"
-Cohesion: 0.08
-Nodes (40): Context, directory(), dynamic, GET(), imageVariant(), PATCH, peopleOrNull(), POST (+32 more)
+Cohesion: 0.09
+Nodes (23): Context, directory(), dynamic, GET(), imageVariant(), json(), PATCH, peopleOrNull() (+15 more)
 
 ### Community 122 - "Hasil validasi implementasi v2"
 Cohesion: 0.31
@@ -536,8 +552,8 @@ Cohesion: 0.29
 Nodes (7): 1. Browser: kompresi sebelum upload, 3. Skema, 4. Penyajian dan cache, 5. Batas jumlah gambar, 6. Infra, 7. Dokumentasi, Desain
 
 ### Community 125 - "Consumable Room v1.1 R22"
-Cohesion: 0.18
-Nodes (13): R22 document API, Consumable Room v1.1 R22, HAC SAC and mandatory Cost Center, Picklist K3 auto enrollment, R22 single shared stock, Prompt revisi alur bisnis R22, Warehouse R22 Client material flow, R22 single room preflight (+5 more)
+Cohesion: 0.15
+Nodes (15): Kontrak API v2, R22 document API, Session identity and exact origin, Audit baseline Plant Area System, Legacy Vinext Cloudflare D1 export, Consumable Room v1.1 R22, HAC SAC and mandatory Cost Center, Picklist K3 auto enrollment (+7 more)
 
 ### Community 126 - "drawings/tsconfig.json"
 Cohesion: 0.20
@@ -547,61 +563,61 @@ Nodes (9): compilerOptions, allowJs, incremental, jsx, plugins, exclude, extends
 Cohesion: 0.25
 Nodes (8): Artefak Graphify bersama, Cakupan graph proyek, Dokumentasi library dan platform, Konteks proyek, Memakai Graphify pada sesi baru, Panduan agen untuk Plant Area System v2, Steps, Validasi perubahan
 
-### Community 128 - "notifications.ts"
-Cohesion: 0.21
-Nodes (13): NotificationItem, notificationReadSchema, auditList(), drawingTimeline(), toTimeline(), listNotifications(), markNotificationsRead(), NotificationInput (+5 more)
+### Community 128 - "drawings-core/src/support.ts"
+Cohesion: 0.09
+Nodes (21): IDEMPOTENCY_KEY, NotificationItem, notificationReadSchema, NotificationInput, toItem(), approvalActions, approvalSteps, audit (+13 more)
 
 ### Community 129 - "Identity"
-Cohesion: 0.14
-Nodes (17): canOpenDrawingsSection(), DrawingsAction, drawingsActions, DrawingsGrant, drawingsNavigation(), DrawingsNavItem, drawingsPermissions, DrawingsPermissionValue (+9 more)
+Cohesion: 0.16
+Nodes (16): canOpenDrawingsSection(), DrawingsAction, drawingsActions, drawingsNavigation(), DrawingsNavItem, drawingsPermissions, DrawingsPermissionValue, DrawingsRole (+8 more)
 
 ### Community 130 - "Hasil validasi implementasi v2"
-Cohesion: 0.23
-Nodes (13): Portable schema and data fingerprint, Pengembangan lokal sampai pembaruan VPS, CI verified full SHA release, Handover OpenClaw update R22, R22 production backup rehearsal, Upgrade Consumable Room R22, Private atomic naming CSV import, Rencana implementasi R22 (+5 more)
+Cohesion: 0.26
+Nodes (12): Setup development MacBook, Native Mac development setup, Pengembangan lokal sampai pembaruan VPS, CI verified full SHA release, Handover OpenClaw update R22, R22 production backup rehearsal, Upgrade Consumable Room R22, Private atomic naming CSV import (+4 more)
 
 ### Community 131 - "services"
 Cohesion: 0.25
 Nodes (7): networks, networks, networks, egress, services, drawings, drawings-ops
 
 ### Community 132 - "contracts.test.ts"
-Cohesion: 0.20
-Nodes (14): canonicalReplacement(), seedEquipment(), compartmentFromLabel(), equipmentPositions(), replacementSchema, rowDividerBefore(), validateInstallationDate(), validPosition() (+6 more)
+Cohesion: 0.16
+Nodes (14): canonicalReplacement(), seedEquipment(), equipment, equipmentPositions(), rowDividerBefore(), sequence(), validateInstallationDate(), equipmentMigrationId (+6 more)
 
 ### Community 133 - "drawings"
 Cohesion: 0.33
 Nodes (6): image, init, networks, restart, volumes, drawings
 
 ### Community 134 - "Runbook rilis Drawing Database v1"
-Cohesion: 0.25
-Nodes (8): 1. Persiapan (tanpa downtime), 2. Jendela rilis, 3. Smoke test setelah rilis, 4. Rollback, 5. Pindah driver `fs` → `s3` (setelah go-live), 6. Impor arsip Legacy Ready, Runbook rilis Drawing Database v1, status()
+Cohesion: 0.33
+Nodes (6): 1. Persiapan (tanpa downtime), 2. Jendela rilis, 3. Smoke test setelah rilis, 4. Rollback, 5. Pindah driver `fs` → `s3` (setelah go-live), Runbook rilis Drawing Database v1
 
 ### Community 135 - "4. Alur kerja"
-Cohesion: 0.21
-Nodes (12): cancelled(), 4.1 Status revisi, 4.2 Check dan approval plan, 4.3 Reject, perbaikan dan siklus, 4.4 Revisi baru dan Final Drawing (K7), 4.5 Upload Old Drawing (Legacy Ready), 4.6 Drawing Request, 4.7 Void dan pembatalan revisi (K9) (+4 more)
+Cohesion: 0.19
+Nodes (13): cancelled(), 4.1 Status revisi, 4.2 Check dan approval plan, 4.3 Reject, perbaikan dan siklus, 4.4 Revisi baru dan Final Drawing (K7), 4.5 Upload Old Drawing (Legacy Ready), 4.6 Drawing Request, 4.7 Void dan pembatalan revisi (K9) (+5 more)
 
-### Community 136 - "Q: `packages/ui/src/tokens.css` seharusnya jangan dilewati. lalu docs\testing dan `AppError` apakah itu penting sehingga harus dimasukkan dalam graph?"
-Cohesion: 0.40
-Nodes (4): Answer, Outcome, Q: `packages/ui/src/tokens.css` seharusnya jangan dilewati. lalu docs\testing dan `AppError` apakah itu penting sehingga harus dimasukkan dalam graph?, Source Nodes
-
-### Community 143 - "ref_node_crypto"
+### Community 136 - "AppError"
 Cohesion: 0.13
-Nodes (12): closeBagDb(), bagSchema, createReplacement(), addFull(), area(), choose(), openBulk(), users (+4 more)
+Nodes (15): dynamic, GET(), Answer, Outcome, Q: `packages/ui/src/tokens.css` seharusnya jangan dilewati. lalu docs\testing dan `AppError` apakah itu penting sehingga harus dimasukkan dalam graph?, Source Nodes, replay(), documentDetail() (+7 more)
+
+### Community 143 - "bag-bulk-selection.spec.ts"
+Cohesion: 0.10
+Nodes (11): closeAuthDb(), equipmentCodes, @playwright/test, paths, addFull(), area(), choose(), openBulk() (+3 more)
 
 ### Community 144 - "drawings.spec.ts"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (8): 5. Data dan aturan bisnis, json(), operator, people, Person, png, suffix, version()
 
 ### Community 145 - "15. Prompt implementasi untuk developer"
 Cohesion: 0.33
 Nodes (6): 15.1 Peran dan tujuan, 15.3 Aturan kerja, 15.4 Fase, 15.5 Hal yang sering salah, 15.6 Laporan akhir tiap fase, 15. Prompt implementasi untuk developer
 
-### Community 146 - "Plant Area System v2"
-Cohesion: 0.40
-Nodes (6): Audit baseline Plant Area System, Legacy Vinext Cloudflare D1 export, Setup development MacBook, Native Mac development setup, Plant Area System v2, plant-v2-dev isolated development
+### Community 146 - "index.tsx"
+Cohesion: 0.13
+Nodes (24): AddToOrder(), QuantityDialog(), localDecimal(), MaterialSearchResult, Confirmation, ConfirmationOptions, ConfirmationProvider(), ConfirmFunction (+16 more)
 
 ### Community 147 - "ref_node_fs"
-Cohesion: 0.14
-Nodes (7): verifier, [full, compact], outputs, revision, root, sources, extra
+Cohesion: 0.25
+Nodes (5): [full, compact], outputs, revision, root, sources
 
 ### Community 148 - "package.json"
 Cohesion: 0.11
@@ -609,75 +625,143 @@ Nodes (24): devDependencies, @aws-sdk/client-s3@3.1160.0, @cantoo/pdf-lib@2.11.1
 
 ### Community 149 - "integration/drawings-files.test.ts"
 Cohesion: 0.09
-Nodes (7): storageConfig(), drawingsSchema, report, storage, withHash, dryRun, summary
+Nodes (11): storageConfig(), cache, closeDrawingsDb(), create(), getDrawingsDb(), drawingsSchema, report, storage (+3 more)
 
-### Community 151 - "platform.test.ts"
+### Community 150 - "library.tsx"
 Cohesion: 0.12
-Nodes (13): dynamic, POST(), dynamic, GET(), 15.2 Bacaan wajib sebelum menulis kode, getAuth(), publicOrigin(), login() (+5 more)
+Nodes (14): DrawingTitle(), empty, filterKeys, Filters, first(), dynamic, Page(), Library() (+6 more)
+
+### Community 151 - "files.ts"
+Cohesion: 0.15
+Nodes (25): RFC-5987, Task 4: Simpan hasil konversi dan thumbnail, Task 5: Penyajian thumbnail dan cache gambar, Kondisi saat ini, Body, cleanupStagedFiles(), contentDisposition(), fileObjects() (+17 more)
 
 ### Community 152 - "6. File, storage dan stamp"
 Cohesion: 0.40
 Nodes (5): 6.1 Upload dua tahap, 6.2 Storage (K4), 6.3 Penyajian file, 6.4 Stamp approval (K6), 6. File, storage dan stamp
 
-### Community 153 - "drawings-migration.ts"
-Cohesion: 0.60
-Nodes (3): migrateDrawingsCatalog(), provision(), provisionDrawings()
+### Community 153 - "dashboard.tsx"
+Cohesion: 0.14
+Nodes (21): BagFilter(), dynamic, 3.9 Menu "Buka peta ▾" di header, bagBrands, BagPriority, EquipmentCode, equipmentSideSummary(), AnimatedNumber() (+13 more)
 
 ### Community 154 - "8. Arsitektur dan integrasi platform"
 Cohesion: 0.50
 Nodes (4): 8.2 Database `plant_drawings`, 8.3 API, 8.4 Gateway, 8. Arsitektur dan integrasi platform
 
-### Community 156 - "bag-core/src/index.ts"
-Cohesion: 0.18
-Nodes (16): CancellationColumns, cancellationMetadata(), cancelReplacement(), errorCode(), cache, codeOf(), Cursor, likeText() (+8 more)
+### Community 156 - "Overlay"
+Cohesion: 0.13
+Nodes (16): wibInput(), DateTimeField(), highlight(), TimeColumn(), IconName, paths, Overlay(), move() (+8 more)
 
-### Community 157 - "index.tsx"
-Cohesion: 0.09
-Nodes (31): ChangePassword(), dynamic, LoginForm(), PasswordForm(), dynamic, Login(), Loading(), Loading() (+23 more)
+### Community 157 - "Workspace"
+Cohesion: 0.22
+Nodes (14): ChangePassword(), dynamic, LoginForm(), PasswordForm(), dynamic, Login(), dynamic, Profile() (+6 more)
+
+### Community 158 - "stock-summary.tsx"
+Cohesion: 0.13
+Nodes (15): 3. Portal: hub yang tenang tapi berisi, dan siap untuk aplikasi baru, Kondisi sekarang, Kontrak ringkasan aplikasi (inti skalabilitas), Kriteria selesai (Portal), Prinsip desain, Tata letak target, movementLabels, StockActivity() (+7 more)
+
+### Community 159 - "Button"
+Cohesion: 0.20
+Nodes (14): MastersManager(), Application, Applications(), Admin(), dynamic, AdminWorkspace(), act(), ConsumablesAccess() (+6 more)
 
 ### Community 160 - "Desain: kompresi gambar Drawing Database ke WebP"
-Cohesion: 0.22
-Nodes (9): Anti-goal (gagal walau secara teknis jalan), Desain: kompresi gambar Drawing Database ke WebP, Diserahkan ke builder, Keputusan builder (dibuat saat desain, dapat dikoreksi), Maksud, Non-goal, Pendekatan yang dipertimbangkan, Pengujian (+1 more)
+Cohesion: 0.14
+Nodes (12): Global Constraints, Kompresi Gambar Drawing Database ke WebP — Implementation Plan, Pemeriksaan manual sebelum go-live, Anti-goal (gagal walau secara teknis jalan), Desain: kompresi gambar Drawing Database ke WebP, Diserahkan ke builder, Keputusan builder (dibuat saat desain, dapat dikoreksi), Maksud (+4 more)
 
 ### Community 161 - "image-upload.tsx"
-Cohesion: 0.27
-Nodes (10): compressedName(), compressImage(), encode(), fitWithin(), keepOriginal(), ImageUpload(), add(), Item (+2 more)
+Cohesion: 0.40
+Nodes (8): compressedName(), compressImage(), encode(), fitWithin(), keepOriginal(), add(), Task 6: Kompresi di browser dan thumbnail di UI, file()
 
-### Community 162 - "AGENTS.md"
-Cohesion: 0.22
-Nodes (7): Kontrak API v2, Idempotent Bag Filter batches, Session identity and exact origin, Panduan pembatalan record Bag Filter, Whole batch cancellation, Fixed point atomic stock documents, Deterministic document lock ordering
+### Community 162 - "Rencana implementasi R22"
+Cohesion: 0.20
+Nodes (10): Idempotent Bag Filter batches, Panduan pembatalan record Bag Filter, Whole batch cancellation, Fixed point atomic stock documents, Prompt revisi alur bisnis R22, Warehouse R22 Client material flow, Additive R22 metadata migration, Deterministic document lock ordering (+2 more)
+
+### Community 163 - "tokens.css"
+Cohesion: 0.20
+Nodes (18): SIL Open Font License 1.1, Inter v4.1 Self-Hosted Font Asset, Bag age color scale, Brand color aliases, Design system cascade layers, Chart hatch patterns, Theme aware chart series, Component radius tokens (+10 more)
 
 ### Community 164 - "canSeeWip"
 Cohesion: 1.00
 Nodes (3): canSeeDrawing(), canSeeRevision(), canSeeWip()
 
-### Community 165 - "drawings-images.test.ts"
-Cohesion: 0.20
-Nodes (5): canvas(), clean, fixture(), sha(), vp8()
+### Community 165 - "ref_node_fs"
+Cohesion: 0.11
+Nodes (8): verifier, preflightSingleRoom(), extra, canvas(), clean, fixture(), sha(), vp8()
 
-### Community 166 - "consumables.spec.ts"
-Cohesion: 0.29
-Nodes (6): admin, materials, post(), roleUsers, save(), suffix
+### Community 166 - "summary.ts"
+Cohesion: 0.21
+Nodes (15): inactiveAssignee(), listTasks(), DirectoryPerson, otherHacLike(), drawings, requests, counts(), drawingsDashboard() (+7 more)
+
+### Community 167 - "select-e2e.ts"
+Cohesion: 0.18
+Nodes (14): Area, areaPaths, noBrowserImpact, selectE2e(), Selection, specAreas, changedSince(), decide() (+6 more)
+
+### Community 169 - "summary.tsx"
+Cohesion: 0.19
+Nodes (7): dynamic, Page(), DrawingsSummary(), n(), series, DrawingsDashboard, TaskItem
+
+### Community 170 - "masters.ts"
+Cohesion: 0.23
+Nodes (12): masterCreateSchema, masterUpdateSchema, createMaster(), labels, listMasters(), MasterKind, requireAdmin(), tables (+4 more)
+
+### Community 171 - "pdf-viewer-core.tsx"
+Cohesion: 0.23
+Nodes (9): clampScale(), describe(), Failure, LockableOrientation, orientation(), PdfViewerCore(), presets, pdfjs-dist@6.4.299 (+1 more)
+
+### Community 172 - "3. Spesifikasi per widget"
+Cohesion: 0.18
+Nodes (11): 3.10 Kartu Equipment bawah, 3.11 Format angka, 3.1 KPI rail, 3.2 Banner "Belum tercatat", 3.3 Kepatuhan WO (menggantikan "Cakupan pemasangan"), 3.4 Kompartemen paling kritis (menggantikan "Satu batch, banyak posisi"), 3.5 Indeks Kesehatan Bag (menggantikan gauge "Posisi terpasang"), 3.6 Beban umur kritis per equipment (menggantikan "Per equipment") (+3 more)
+
+### Community 173 - "consumables-ui.spec.ts"
+Cohesion: 0.18
+Nodes (4): actor, temporary, types, year
+
+### Community 174 - "documents/[id]/page.tsx"
+Cohesion: 0.32
+Nodes (4): dynamic, Page(), titles, PrintButton()
+
+### Community 175 - "copy-pdfjs-assets.mjs"
+Cohesion: 0.25
+Nodes (6): app, marker, require, source, target, { version }
+
+### Community 176 - "updateDrawing"
+Cohesion: 0.57
+Nodes (7): attachWorkingFile(), conflictNumber(), createDrawing(), createLegacyDrawing(), replaceOtherHacs(), updateDrawing(), requireActiveMaster()
+
+### Community 177 - "test-operations.ts"
+Cohesion: 0.33
+Nodes (4): compose, docker(), persistedSql, run
+
+### Community 178 - "brand.tsx"
+Cohesion: 0.53
+Nodes (4): brandRevision, compactArtwork, fullArtwork, brandIcon()
+
+### Community 179 - "scripts"
+Cohesion: 0.40
+Nodes (5): scripts, build, dev, start, typecheck
+
+### Community 180 - "drawings/app/health/ready/route.ts"
+Cohesion: 0.67
+Nodes (3): dynamic, GET(), drawingsDatabaseReady()
 
 ## Knowledge Gaps
-- **45 isolated node(s):** `RFC-5987`, `../../tsconfig.json`, `RFC-4180`, `../../tsconfig.json`, `../../tsconfig.json` (+40 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 999 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **47 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **45 isolated node(s):** `../../tsconfig.json`, `RFC-4180`, `RFC-5987`, `../../tsconfig.json`, `../../tsconfig.json` (+40 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1027 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **46 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AppError` connect `AppError` to `notifications.ts`, `contracts.test.ts`, `integration/consumables.test.ts`, `Identity`, `Consumable Order Carts`, `requests-ui.tsx`, `server/src/index.ts`, `Q: `packages/ui/src/tokens.css` seharusnya jangan dilewati. lalu docs\testing dan `AppError` apakah itu penting sehingga harus dimasukkan dalam graph?`, `naming.ts`, `drawings-requests.test.ts`, `ref_node_crypto`, `Shared Errors and Stock Transactions`, `drawings-workflow.ts`, `integration/drawings-files.test.ts`, `pageIdentity`, `bag-core/src/index.ts`, `platform.test.ts`, `bag-core/src/index.ts`, `User Administration Services`, `documents.ts`, `insights.ts`, `drawings-core/src/index.ts`, `drawings-images.test.ts`, `approval.ts`, `unit/drawings-files.test.ts`, `drawings-import-legacy.ts`, `requests.ts`, `contracts/src/index.ts`, `consumables/app/api/[...path]/route.ts`, `platform.test.ts`, `integration/drawings-workflow.test.ts`, `drawings/app/api/[...path]/route.ts`, `Panduan agen untuk Plant Area System v2`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+- **Why does `AppError` connect `AppError` to `drawings-core/src/support.ts`, `contracts.test.ts`, `integration/consumables.test.ts`, `ref_node_crypto`, `Consumable Order Carts`, `server/src/index.ts`, `naming.ts`, `drawings-requests.test.ts`, `Shared Errors and Stock Transactions`, `drawings-workflow.ts`, `integration/drawings-files.test.ts`, `pageIdentity`, `bag-core/src/index.ts`, `library.tsx`, `approval.ts`, `files.ts`, `User Administration Services`, `documents.ts`, `insights.ts`, `drawings-core/src/index.ts`, `storage.ts`, `ref_node_fs`, `summary.ts`, `masters.ts`, `documents/[id]/page.tsx`, `updateDrawing`, `drawings-core/src/drawings.ts`, `unit/drawings-files.test.ts`, `drawings-import-legacy.ts`, `requests.ts`, `contracts/src/index.ts`, `consumables/app/api/[...path]/route.ts`, `platform.test.ts`, `integration/drawings-workflow.test.ts`, `drawings/app/api/[...path]/route.ts`, `Panduan agen untuk Plant Area System v2`?**
+  _High betweenness centrality (0.102) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `AppError` (e.g. with `Cakupan graph proyek` and `15.2 Bacaan wajib sebelum menulis kode`) actually correct?**
   _`AppError` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `RFC-5987`, `../../tsconfig.json`, `RFC-4180` to the rest of the system?**
+- **What connects `../../tsconfig.json`, `RFC-4180`, `RFC-5987` to the rest of the system?**
   _45 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Consumable Order Carts` be split into smaller, more focused modules?**
-  _Cohesion score 0.1265597147950089 - nodes in this community are weakly interconnected._
-- **Why does `Identity` connect `Identity` to `notifications.ts`, `Identity`, `Consumable Order Carts`, `contracts.test.ts`, `integration/consumables.test.ts`, `Consumable Order Carts`, `server/src/index.ts`, `Consumables Workspace Controls`, `Icon`, `drawings-requests.test.ts`, `ref_node_crypto`, `drawings.spec.ts`, `Shared Errors and Stock Transactions`, `integration/drawings-files.test.ts`, `bag-core/src/index.ts`, `platform.test.ts`, `AppError`, `bag-core/src/index.ts`, `documents.ts`, `index.tsx`, `insights.ts`, `User Administration Services`, `drawings-core/src/index.ts`, `consumables.spec.ts`, `approval.ts`, `unit/drawings-files.test.ts`, `drawings-core/src/drawings.ts`, `Gateway Recovery Verification`, `drawings-import-legacy.ts`, `requests.ts`, `contracts/src/index.ts`, `consumables/app/api/[...path]/route.ts`, `platform.test.ts`, `integration/drawings-workflow.test.ts`, `drawings/app/api/[...path]/route.ts`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
-- **Should `Identity` be split into smaller, more focused modules?**
-  _Cohesion score 0.06262626262626263 - nodes in this community are weakly interconnected._
-- **Why does `3. Portal: hub yang tenang tapi berisi, dan siap untuk aplikasi baru` connect `Icon` to `Cross Application UI Design`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+  _Cohesion score 0.10299003322259136 - nodes in this community are weakly interconnected._
+- **Why does `Identity` connect `Identity` to `drawings-core/src/support.ts`, `Consumable Order Carts`, `ref_node_crypto`, `integration/consumables.test.ts`, `contracts.test.ts`, `Consumable Order Carts`, `server/src/index.ts`, `app/workspace.tsx`, `Icon`, `drawings-requests.test.ts`, `bag-bulk-selection.spec.ts`, `drawings.spec.ts`, `Shared Errors and Stock Transactions`, `index.tsx`, `integration/drawings-files.test.ts`, `bag-core/src/index.ts`, `files.ts`, `approval.ts`, `Overlay`, `documents.ts`, `Workspace`, `insights.ts`, `stock-summary.tsx`, `User Administration Services`, `drawings-core/src/index.ts`, `summary.ts`, `masters.ts`, `consumables-ui.spec.ts`, `drawings-core/src/drawings.ts`, `unit/drawings-files.test.ts`, `drawings-core/src/drawings.ts`, `Gateway Recovery Verification`, `drawings-import-legacy.ts`, `requests.ts`, `contracts/src/index.ts`, `platform.test.ts`, `integration/drawings-workflow.test.ts`?**
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+- **Are the 4 inferred relationships involving `BagMonitor()` (e.g. with `dismiss()` and `keyboard()`) actually correct?**
+  _`BagMonitor()` has 4 INFERRED edges - model-reasoned connections that need verification._
+- **Should `react` be split into smaller, more focused modules?**
+  _Cohesion score 0.11384615384615385 - nodes in this community are weakly interconnected._

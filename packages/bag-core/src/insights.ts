@@ -6,12 +6,17 @@ import {
   ageHours,
   ageStops,
   bagAgeScaleDays,
+  bagWarningDays,
+  displayCompartment,
+  formatPercent,
   hasPermission,
+  pickPriority,
   wibWeekStarts,
   type EquipmentCode,
   type Identity,
   type PortalSummary,
   type PortalTone,
+  type Position,
 } from '@plant/contracts';
 import { getBagDb } from './database';
 
@@ -70,21 +75,58 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
     installed: 0,
     older900: 0,
     older1260: 0,
+    distribution: Array(7).fill(0) as number[],
   }));
+  const compartmentLoads = new Map<
+    string,
+    {
+      equipmentCode: EquipmentCode;
+      side: Position['side'];
+      compartment: number;
+      installed: number;
+      older1260: number;
+      warning: number;
+    }
+  >();
+  const woCompliance = { bags: 0, bagsWithWo: 0, batches: 0, batchesWithoutWo: 0 };
   let previousTotal = 0;
   if (catalog.length) {
     const list = scope(catalog.map((e) => e.code));
     const [current] = await getBagDb().execute(
-      sql`SELECT equipment_code AS equipmentCode,installed_at AS installedAt FROM (SELECT equipment_code,installed_at,ROW_NUMBER() OVER(PARTITION BY equipment_code,side,compartment,col,row_no ORDER BY installed_at DESC,id DESC) AS rn FROM installations i WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=i.batch_id)) r WHERE rn=1`,
+      sql`SELECT equipment_code AS equipmentCode,side,compartment,installed_at AS installedAt FROM (SELECT equipment_code,side,compartment,installed_at,ROW_NUMBER() OVER(PARTITION BY equipment_code,side,compartment,col,row_no ORDER BY installed_at DESC,id DESC) AS rn FROM installations i WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=i.batch_id)) r WHERE rn=1`,
     );
-    for (const p of current as unknown as { equipmentCode: EquipmentCode; installedAt: Date | string }[]) {
+    for (const p of current as unknown as {
+      equipmentCode: EquipmentCode;
+      side: Position['side'];
+      compartment: number | string;
+      installedAt: Date | string;
+    }[]) {
       const hours = ageHours(iso(p.installedAt), now)!;
-      distribution[ageBucket(hours)]++;
+      const bucket = ageBucket(hours);
+      distribution[bucket]++;
       const target = perEquipment.find((e) => e.code === p.equipmentCode)!;
       target.installed++;
+      target.distribution[bucket]++;
       // Preserve the legacy API field for older readers; current UI uses older1260.
       if (hours >= 900 * 24) target.older900++;
       if (hours >= bagAgeScaleDays * 24) target.older1260++;
+      const compartment = Number(p.compartment),
+        key = `${p.equipmentCode}|${p.side}|${compartment}`;
+      let load = compartmentLoads.get(key);
+      if (!load) {
+        load = {
+          equipmentCode: p.equipmentCode,
+          side: p.side,
+          compartment,
+          installed: 0,
+          older1260: 0,
+          warning: 0,
+        };
+        compartmentLoads.set(key, load);
+      }
+      load.installed++;
+      if (hours >= bagAgeScaleDays * 24) load.older1260++;
+      else if (hours >= bagWarningDays * 24) load.warning++;
     }
     const [history] = await getBagDb().execute(
       sql`SELECT YEAR(DATE_ADD(installed_at,INTERVAL 7 HOUR)) AS year,QUARTER(DATE_ADD(installed_at,INTERVAL 7 HOUR)) AS quarter,brand,SUM(position_count) AS total FROM replacement_batches b WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=b.id) AND installed_at>=${new Date(start)} AND installed_at<${new Date(end)} AND installed_at<=${new Date(now + 60000)} GROUP BY year,quarter,brand ORDER BY year,quarter`,
@@ -101,11 +143,40 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
         quarter.brands[h.brand || 'Belum tercatat'] = Number(h.total);
       } else previousTotal += Number(h.total);
     }
+    const [wo] = await getBagDb().execute(
+      sql`SELECT TRIM(COALESCE(wo,''))<>'' AS hasWo,COUNT(*) AS batches,COALESCE(SUM(position_count),0) AS bags FROM replacement_batches b WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=b.id) AND installed_at>=${new Date(Date.parse(`${year}-01-01T00:00:00+07:00`))} AND installed_at<${new Date(end)} AND installed_at<=${new Date(now + 60000)} GROUP BY hasWo`,
+    );
+    for (const row of wo as unknown as {
+      hasWo: number | string;
+      batches: number | string;
+      bags: number | string;
+    }[]) {
+      woCompliance.bags += Number(row.bags);
+      woCompliance.batches += Number(row.batches);
+      if (Number(row.hasWo)) woCompliance.bagsWithWo += Number(row.bags);
+      else woCompliance.batchesWithoutWo += Number(row.batches);
+    }
   }
   const total = perEquipment.reduce((sum, e) => sum + e.total, 0),
     installed = perEquipment.reduce((sum, e) => sum + e.installed, 0),
     older900 = perEquipment.reduce((sum, e) => sum + e.older900, 0),
     older1260 = perEquipment.reduce((sum, e) => sum + e.older1260, 0);
+  const order = (code: EquipmentCode) => catalog.findIndex((e) => e.code === code);
+  const compartments = [...compartmentLoads.values()]
+    .filter((c) => c.older1260 > 0 || c.warning > 0)
+    .sort((a, b) => {
+      const eqA = catalog[order(a.equipmentCode)],
+        eqB = catalog[order(b.equipmentCode)];
+      return (
+        b.older1260 - a.older1260 ||
+        b.warning - a.warning ||
+        order(a.equipmentCode) - order(b.equipmentCode) ||
+        eqA.sides.findIndex((s) => s.name === a.side) - eqB.sides.findIndex((s) => s.name === b.side) ||
+        a.compartment - b.compartment
+      );
+    })
+    .slice(0, 5)
+    .map((c) => ({ ...c, label: displayCompartment(c, catalog[order(c.equipmentCode)]) }));
   return {
     serverTime: new Date(now).toISOString(),
     year,
@@ -117,6 +188,16 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
     older1260,
     distribution,
     perEquipment,
+    compartments,
+    woCompliance,
+    priority: pickPriority(
+      perEquipment.map((e) => ({
+        code: e.code,
+        installed: e.installed,
+        older1260: e.older1260,
+        warning: e.distribution[5],
+      })),
+    ),
     series,
     periodTotal: series.reduce((s, d) => s + d.total, 0),
     previousTotal,
@@ -138,6 +219,7 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
     total: e.compartments * e.bagsPerCompartment,
     installed: 0,
     older1260: 0,
+    warning: 0,
   }));
   if (catalog.length) {
     const list = scope(catalog.map((e) => e.code));
@@ -150,13 +232,14 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
       const target = perEquipment.find((e) => e.code === p.equipmentCode)!;
       target.installed++;
       if (hours >= bagAgeScaleDays * 24) target.older1260++;
+      else if (hours >= bagWarningDays * 24) target.warning++;
     }
   }
   const total = perEquipment.reduce((sum, e) => sum + e.total, 0),
     installed = perEquipment.reduce((sum, e) => sum + e.installed, 0),
     older1260 = perEquipment.reduce((sum, e) => sum + e.older1260, 0);
   const readOnly = grant.role === 'viewer';
-  const primaryEquipment = (perEquipment.find((e) => e.older1260 > 0) ?? perEquipment[0])?.code;
+  const primaryEquipment = pickPriority(perEquipment).code ?? perEquipment[0]?.code;
   const recentRows = await activity(codes, '', 5);
 
   const weeks = wibWeekStarts(now, 12);
@@ -173,7 +256,7 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
     }
   }
 
-  const pct = total > 0 ? ((installed / total) * 100).toFixed(1).replace('.', ',') : '0,0';
+  const pct = formatPercent(total > 0 ? (installed / total) * 100 : 0);
 
   return {
     appId: 'bag-filter',
@@ -184,7 +267,7 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
       total,
       unit: 'posisi',
       caption:
-        total > 0 ? `${pct}% posisi mempunyai catatan pemasangan aktif.` : 'Belum ada posisi bag tercatat.',
+        total > 0 ? `${pct} posisi mempunyai catatan pemasangan aktif.` : 'Belum ada posisi bag tercatat.',
       href: '/bag-filter',
     },
     metrics: [

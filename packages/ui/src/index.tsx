@@ -15,28 +15,7 @@ export { BrandLogo, brandIcon } from './brand';
 export { Button } from './button';
 export { Select, Input, Textarea, DateTimeField } from './fields';
 export { Overlay, Toast } from './overlay';
-export function Heading({
-  eyebrow,
-  title,
-  description,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="heading">
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
-        <p className="muted">{description}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
+export { Heading } from './heading';
 
 export { Dashboard, AnimatedNumber } from './dashboard';
 export { QuarterlyChart, type ChartSeries, type ChartQuarter } from './quarterly-chart';
