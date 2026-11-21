@@ -92,7 +92,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   await create([c1, c2, c3], 1300 * day, 'WO-OLD');
   await create([w1, w2], 1100 * day, '');
   await create([fresh1, fresh2], 60000, 'WO-INT-1');
-  await create([fresh3], 60000, '   ');
+  await create([fresh3], 60000, ' - ');
   const wrong = await create([cancelled, others[0]], 60000, '');
   await cancelReplacement(actor, code, wrong.batchId, { reason: 'Fixture salah' }, randomUUID());
 
@@ -107,7 +107,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
     [3, 0, 0, 0, 0, 2, 3],
   );
 
-  // Batch tanpa WO (kosong atau spasi) dan batch dibatalkan dihitung sesuai aturan.
+  // WO tanpa huruf/angka (" - ") dihitung tanpa WO; batch dibatalkan tidak dihitung.
   assert.deepEqual(
     {
       bags: result.woCompliance.bags - baseline.woCompliance.bags,

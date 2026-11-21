@@ -143,8 +143,9 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
         quarter.brands[h.brand || 'Belum tercatat'] = Number(h.total);
       } else previousTotal += Number(h.total);
     }
+    // Sama dengan hasWorkOrder: WO tanpa huruf/angka (mis. "-") dihitung tanpa WO.
     const [wo] = await getBagDb().execute(
-      sql`SELECT TRIM(COALESCE(wo,''))<>'' AS hasWo,COUNT(*) AS batches,COALESCE(SUM(position_count),0) AS bags FROM replacement_batches b WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=b.id) AND installed_at>=${new Date(Date.parse(`${year}-01-01T00:00:00+07:00`))} AND installed_at<${new Date(end)} AND installed_at<=${new Date(now + 60000)} GROUP BY hasWo`,
+      sql`SELECT COALESCE(wo,'') REGEXP '[[:alnum:]]' AS hasWo,COUNT(*) AS batches,COALESCE(SUM(position_count),0) AS bags FROM replacement_batches b WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=b.id) AND installed_at>=${new Date(Date.parse(`${year}-01-01T00:00:00+07:00`))} AND installed_at<${new Date(end)} AND installed_at<=${new Date(now + 60000)} GROUP BY hasWo`,
     );
     for (const row of wo as unknown as {
       hasWo: number | string;

@@ -166,29 +166,31 @@ export type BagPriority = {
   count: number;
   installed: number;
 };
+const loadShare = (count: number, installed: number) => (installed > 0 ? count / installed : 0);
 /**
- * Unit yang paling mendesak: bag ≥ 1.260 hari terbanyak, lalu 1.050–1.259 hari terbanyak.
- * Seri diputus dengan porsi terhadap bag terpasang, lalu urutan masukan (katalog).
+ * Urutan beban umur unit, dipakai bersama oleh "Prioritas tertinggi" dan "Beban umur kritis":
+ * porsi bag ≥ 1.260 hari terhadap bag terpasang, lalu jumlahnya, lalu porsi dan jumlah
+ * 1.050–1.259 hari. Seri tersisa mengikuti urutan masukan (katalog) karena sort stabil.
  */
+export function compareBagLoad(a: BagAgeLoad, b: BagAgeLoad) {
+  return (
+    loadShare(b.older1260, b.installed) - loadShare(a.older1260, a.installed) ||
+    b.older1260 - a.older1260 ||
+    loadShare(b.warning, b.installed) - loadShare(a.warning, a.installed) ||
+    b.warning - a.warning
+  );
+}
+/** Unit paling mendesak menurut {@link compareBagLoad}: tingkat kritis, lalu mendekati batas. */
 export function pickPriority(units: readonly BagAgeLoad[]): BagPriority {
-  for (const [level, key] of [
-    ['critical', 'older1260'],
-    ['warning', 'warning'],
-  ] as const) {
-    let best: BagAgeLoad | undefined;
-    for (const unit of units) {
-      if (unit[key] <= 0) continue;
-      if (
-        !best ||
-        unit[key] > best[key] ||
-        (unit[key] === best[key] && unit[key] / unit.installed > best[key] / best.installed)
-      )
-        best = unit;
-    }
-    if (best) return { level, code: best.code, count: best[key], installed: best.installed };
-  }
+  const [first] = [...units].sort(compareBagLoad);
+  if (first?.older1260)
+    return { level: 'critical', code: first.code, count: first.older1260, installed: first.installed };
+  if (first?.warning)
+    return { level: 'warning', code: first.code, count: first.warning, installed: first.installed };
   return { level: 'healthy', code: null, count: 0, installed: 0 };
 }
+/** WO dianggap terisi hanya jika memuat huruf atau angka; `-` atau `—` berarti tanpa WO. */
+export const hasWorkOrder = (wo: string | null | undefined) => /[\p{L}\p{N}]/u.test(wo ?? '');
 export const wibInput = (now = Date.now()) => new Date(now + 7 * 3_600_000).toISOString().slice(0, 16);
 export function wibToIso(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error('Tanggal WIB tidak valid.');

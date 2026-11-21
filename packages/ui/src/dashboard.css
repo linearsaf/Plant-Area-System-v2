@@ -1334,7 +1334,12 @@
     font-weight: 500;
   }
   .critical-compartments {
+    position: relative;
     align-items: flex-start;
+  }
+  .critical-compartments > div:first-child {
+    position: relative;
+    z-index: 1;
   }
   .critical-compartments ol {
     display: grid;
@@ -1363,11 +1368,43 @@
   .critical-compartments li b {
     font-weight: 500;
   }
+  /* Mosaic menjadi latar dekoratif agar daftar memakai lebar penuh di 1280–1366 px. */
   .critical-compartments .mosaic {
-    align-self: center;
+    position: absolute;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    opacity: 0.3;
+    pointer-events: none;
   }
   .progress-card > .fine {
     margin: var(--space-1) 0 0;
+  }
+  .age-load-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin-top: var(--space-2);
+    font-size: var(--type-caption);
+    color: var(--textSecondary);
+  }
+  .age-load-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .age-load-legend i {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-legendDot);
+  }
+  .progress-card .progress-list {
+    gap: var(--space-4);
+  }
+  .progress-card .progress-track {
+    margin-bottom: 0;
+  }
+  .progress-card .progress-list > a > div:first-child > * {
+    white-space: nowrap;
   }
   .age-load-track {
     display: flex;
@@ -1377,6 +1414,28 @@
     flex: none;
     transform: none;
     transition: width var(--duration-data) var(--ease-enter);
+  }
+  .priority-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, white 78%, transparent);
+    color: var(--gray-950);
+    font-weight: 500;
+  }
+  .priority-pill i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--age-1260);
+  }
+  .priority-widget.is-warning .priority-pill i {
+    background: var(--age-1050);
+  }
+  .priority-widget.is-healthy .priority-pill i {
+    background: var(--success-text);
   }
   .priority-widget > p:not(.eyebrow) {
     margin: var(--space-1) 0 var(--space-4);

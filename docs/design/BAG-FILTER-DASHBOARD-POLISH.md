@@ -39,6 +39,10 @@ Equipment (6 kartu): kode · posisi bag · kompartemen · ≥1.260: N · bar dis
 
 ## 3. Spesifikasi per widget
 
+### 3.0 Grafik pemasangan
+
+- Legenda dan rincian kuartal menampilkan `Pabrikan belum diisi` untuk batch tanpa pabrikan, agar tidak rancu dengan banner posisi "belum tercatat". Kunci API `Belum tercatat` di `series[].brands` tidak berubah.
+
 ### 3.1 KPI rail
 
 Urutan: **Total posisi**, lalu **Mendekati batas**, lalu **Umur ≥ 1.260 hari**.
@@ -59,15 +63,15 @@ Urutan: **Total posisi**, lalu **Mendekati batas**, lalu **Umur ≥ 1.260 hari**
 - Tampilan: `x,x%`, progress bar, `N dari M bag memakai WO`, dan `K batch tanpa WO`.
 - Nada netral, tanpa target (konstanta target dapat ditambahkan di `@plant/contracts` nanti).
 - Jika tahun terpilih tidak punya pemasangan: tampilkan `—` dan `Belum ada pemasangan pada {tahun}.`
-- "WO terisi" berarti `TRIM(wo) <> ''`.
+- "WO terisi" berarti WO memuat huruf atau angka (`hasWorkOrder`; SQL `REGEXP '[[:alnum:]]'`). Nilai seperti `-` dihitung tanpa WO dan tampil dengan pill `Tanpa WO`.
 
 ### 3.4 Kompartemen paling kritis (menggantikan "Satu batch, banyak posisi")
 
 - Lima kompartemen teratas lintas unit dalam cakupan. Kunci urutan: `older1260` turun, lalu `warning` (1.050–1.259) turun, lalu urutan katalog (unit, sisi, nomor kompartemen).
 - Kompartemen yang nilai keduanya 0 tidak ditampilkan. Jika daftar kosong, tampilkan keadaan sehat: `Tidak ada kompartemen ≥ 1.050 hari.`
-- Baris: `L62-BF1 · Comp. 12` (awalan `Comp.` sama dengan peta; label tampilan dari `displayCompartment`), lalu `N kritis · M mendekati`. Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
+- Baris: `L62-BF1 · Comp. 12` (awalan `Comp.` sama dengan peta; label tampilan dari `displayCompartment`), lalu `N/kapasitas kritis · M/kapasitas mendekati` (kapasitas = bag per kompartemen, mis. `136/136 kritis`). Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
 - Teks edukasi "Pilih hingga 500 bag…" dihapus dari dashboard.
-- Mosaic 4×4 dipertahankan sebagai dekorasi `aria-hidden`. Polanya statis memakai warna `ageStops` dan tidak mewakili data.
+- Mosaic 4×4 dipertahankan sebagai dekorasi `aria-hidden` dan diletakkan sebagai latar kartu (posisi absolut, opasitas rendah) agar daftar memakai lebar penuh pada 1280–1366 px. Polanya statis memakai warna `ageStops` dan tidak mewakili data.
 
 ### 3.5 Indeks Kesehatan Bag (menggantikan gauge "Posisi terpasang")
 
@@ -79,17 +83,16 @@ Urutan: **Total posisi**, lalu **Mendekati batas**, lalu **Umur ≥ 1.260 hari**
 ### 3.6 Beban umur kritis per equipment (menggantikan "Per equipment")
 
 - Per unit: bar dua segmen (kritis merah + mendekati batas oranye) sebagai porsi dari bag **terpasang** unit itu, dengan label `N bag · x,x%`. Persen di label adalah porsi kritis.
-- Urutan: % kritis turun, lalu % mendekati batas turun, lalu urutan katalog.
+- Urutan: `compareBagLoad`, sama dengan spotlight (3.7). Unit teratas daftar selalu sama dengan Prioritas tertinggi.
+- Tanpa baris keterangan kedua per unit. Legenda di bawah judul menjelaskan dua segmen bar (≥ 1.260 hari dan 1.050–1.259 hari).
 - Unit dengan `installed = 0` tetap tampil di akhir dengan teks `Belum ada bag terpasang`.
 - Baris adalah link ke peta unit dengan `?age=1260`.
 
 ### 3.7 Spotlight "Prioritas tertinggi"
 
-- Pemilihan bertingkat:
-  1. unit dengan `older1260` terbanyak, nada kritis;
-  2. jika semua 0: unit dengan `warning` terbanyak, nada mendekati batas;
-  3. jika semua 0: keadaan sehat `Semua unit di bawah 1.050 hari`.
-- Jika nilai seri, menang unit dengan persentase terhadap bag terpasang lebih tinggi, lalu urutan katalog.
+- Urutan bersama `compareBagLoad` (keputusan revisi 21 November 2026: berbasis persentase): porsi bag ≥ 1.260 hari terhadap bag terpasang, lalu jumlahnya, lalu porsi dan jumlah 1.050–1.259 hari, lalu urutan katalog.
+- Tingkat: unit teratas bernada kritis jika punya bag ≥ 1.260 hari; jika tidak ada, mendekati batas; jika keduanya 0, keadaan sehat `Semua unit di bawah 1.050 hari`.
+- Label `PRIORITAS TERTINGGI` berupa pill dengan titik merah (kritis), oranye (mendekati batas), atau hijau (sehat). Latar hijau limau tetap sebagai identitas kartu spotlight.
 - Isi: eyebrow `PRIORITAS TERTINGGI`, kode unit, angka besar (jumlah bag pada tingkat itu), label `bag ≥ 1.260 hari` atau `bag 1.050–1.259 hari`, `x,x% dari bag terpasang`, dan CTA `Buka peta →` ke `?age=1260`/`?age=1050`.
 - Tombol chevron siklus "Equipment berikutnya" dan state `selectedEquipment` dihapus. Efek tilt pointer tetap ada (sudah menghormati reduced motion).
 - Pada keadaan sehat, CTA mengarah ke menu header atau unit pertama. Tidak ada angka besar yang menyesatkan.
