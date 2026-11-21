@@ -220,11 +220,16 @@
       max-width: none;
     }
   }
+  /*
+   * The padding is room for edge cells to grow on hover (scale 1.08) and for the 7px focus ring;
+   * without it they overflow the scroller, which flashes both scrollbars and shifts the layout.
+   * The negative margin keeps the grid where it was.
+   */
   .bag-grid-scroll {
     overflow: auto;
-    max-width: 100%;
-    /* padding: 6px; */
-    /* overscroll-behavior: contain; */
+    padding: 8px;
+    margin: -8px;
+    max-width: calc(100% + 16px);
   }
   .bag-grid {
     grid-template-columns: 28px repeat(8, minmax(32px, 1fr));
