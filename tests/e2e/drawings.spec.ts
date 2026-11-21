@@ -374,8 +374,16 @@ for (const [width, theme] of [
     await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' });
     await login(page, people.viewer!, theme);
     await page.goto('/drawings/library');
+    // The drawing is often already in the unfiltered list. Clicking before the debounced search
+    // request finishes lets the navigation cut it off, and WebKit reports that as a page error.
+    const searched = page.waitForResponse(
+      (r) =>
+        r.url().includes('/drawings/api/drawings?') &&
+        new URL(r.url()).searchParams.get('q') === `DWG-${suffix}`,
+    );
     // By role: a streamed, still-hidden copy of the page can briefly share the placeholder.
     await page.getByRole('searchbox', { name: 'Cari', exact: true }).fill(`DWG-${suffix}`);
+    expect((await searched).ok()).toBe(true);
     await page
       .getByRole('link', { name: `DWG-${suffix}` })
       .first()
