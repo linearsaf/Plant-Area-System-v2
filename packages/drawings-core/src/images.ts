@@ -35,6 +35,31 @@ export function needsConversion(facts: ImageFacts, size: number): boolean {
   return Math.max(width, height) > IMAGE_MAX_SIDE || size > IMAGE_PASSTHROUGH_MAX_BYTES;
 }
 
+const IMAGE_CHUNKS = new Set(['VP8 ', 'VP8L', 'VP8X', 'ALPH', 'ICCP']);
+const VP8X_METADATA_FLAGS = 0x02 | 0x04 | 0x08; // animasi, XMP, EXIF
+
+/**
+ * Pemeriksaan byte RIFF/WebP untuk pass-through: panjang RIFF tepat sama dengan file, hanya chunk
+ * gambar (tanpa EXIF/XMP/chunk tak dikenal), dan flag metadata VP8X kosong. `sharp().metadata()`
+ * tidak melaporkan chunk metadata yang flag-nya tidak diset, jadi pemeriksaan ini wajib.
+ */
+export function isCleanWebp(bytes: Uint8Array): boolean {
+  const b = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (b.length < 20 || b.toString('latin1', 0, 4) !== 'RIFF' || b.toString('latin1', 8, 12) !== 'WEBP')
+    return false;
+  if (b.readUInt32LE(4) + 8 !== b.length) return false;
+  for (let offset = 12; offset < b.length;) {
+    if (offset + 8 > b.length) return false;
+    const fourcc = b.toString('latin1', offset, offset + 4),
+      size = b.readUInt32LE(offset + 4);
+    if (!IMAGE_CHUNKS.has(fourcc)) return false;
+    if (fourcc === 'VP8X' && (size < 1 || b[offset + 8] & VP8X_METADATA_FLAGS)) return false;
+    offset += 8 + size + (size % 2);
+    if (offset > b.length) return false;
+  }
+  return true;
+}
+
 /** Nama tampilan berekstensi `.webp`, maksimal 200 karakter dengan ekstensi utuh. */
 export function webpName(name: string): string {
   const base = name.replace(/\.[A-Za-z0-9]{1,8}$/, '');
@@ -67,7 +92,8 @@ export async function processImage(input: ProcessedFile): Promise<ProcessedImage
   if (!facts.width || !facts.height) throw invalidImage();
   if (facts.width * facts.height > IMAGE_MAX_INPUT_PIXELS)
     throw new AppError(422, 'Resolusi gambar terlalu besar.', 'FILE_INVALID');
-  const converted = needsConversion(facts, input.size);
+  // Hanya file ≤ 1,5 MB yang sampai ke pemeriksaan byte, jadi membacanya murah.
+  const converted = needsConversion(facts, input.size) || !isCleanWebp(await readFile(input.path));
   try {
     let full = input;
     if (converted) {

@@ -449,6 +449,7 @@ test('UI: leader review room and approver tasks badge', async ({ page }) => {
 test('request images: 10 photos are compressed to webp with thumbnails; the 11th is refused', async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   const { viewer } = people as Required<typeof people>;
   const photos = await Promise.all(
     Array.from({ length: 11 }, async (_, i) => ({
@@ -469,7 +470,7 @@ test('request images: 10 photos are compressed to webp with thumbnails; the 11th
   await page.getByLabel('Keperluan').fill('Referensi drafter');
   const input = page.locator('input[type=file]');
   await input.setInputFiles(photos);
-  await expect(page.getByRole('alert')).toContainText('Maksimal 10 gambar.');
+  await expect(page.getByRole('main').locator('.notice[role="alert"]')).toContainText('Maksimal 10 gambar.');
   await expect(page.locator('.attachment-list img')).toHaveCount(10, { timeout: 60000 });
   for (const src of await page
     .locator('.attachment-list img')

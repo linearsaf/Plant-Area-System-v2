@@ -1338,9 +1338,9 @@
     "semantic_hash": "19bb82e1eb67d04868796cba93693ec0"
   },
   "docs/API.md": {
-    "mtime": 1795245465.9193997,
-    "seen": 1795245500.8114405,
-    "ast_hash": "27d48cc3e6c2566878cbc26bfd1b4415",
+    "mtime": 1795246246.2292955,
+    "seen": 1795246304.9032326,
+    "ast_hash": "c239a02670786b477becc4d0a90d45f6",
     "semantic_hash": ""
   },
   "docs/AUDIT.md": {
@@ -1854,9 +1854,9 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/index.ts": {
-    "mtime": 1795245120.8749301,
-    "seen": 1795245500.8003411,
-    "ast_hash": "0b08118d169dd009b581e02449392303",
+    "mtime": 1795246194.303765,
+    "seen": 1795246304.8957865,
+    "ast_hash": "84eeff3cd694be5c66c5db931bbbb46c",
     "semantic_hash": ""
   },
   "packages/drawings-core/src/masters.ts": {
@@ -1938,9 +1938,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/drawings.spec.ts": {
-    "mtime": 1795245226.2824142,
-    "seen": 1795245500.8083947,
-    "ast_hash": "6280a4b4f6175e62fbf63ca36fcef72e",
+    "mtime": 1795246264.2517984,
+    "seen": 1795246304.9006896,
+    "ast_hash": "46bdb896be09eab230ac984d2c572f05",
     "semantic_hash": ""
   },
   "tests/integration/drawings-access.test.ts": {
@@ -1950,9 +1950,9 @@
     "semantic_hash": ""
   },
   "tests/integration/drawings-files.test.ts": {
-    "mtime": 1795244988.252558,
-    "seen": 1795245500.8093898,
-    "ast_hash": "1d51599d62a8bcfb2946221affa66b55",
+    "mtime": 1795246264.2517984,
+    "seen": 1795246304.9016495,
+    "ast_hash": "e1daf246fae4a74cfc405051653f2f9a",
     "semantic_hash": ""
   },
   "tests/integration/drawings-workflow.test.ts": {
@@ -2076,9 +2076,9 @@
     "semantic_hash": ""
   },
   "apps/drawings/app/compress-image.ts": {
-    "mtime": 1795245251.7381678,
-    "seen": 1795245500.7765899,
-    "ast_hash": "ac7753fa3b8c06b104d8677a1f7849a5",
+    "mtime": 1795246219.3649373,
+    "seen": 1795246304.88669,
+    "ast_hash": "35d7957696496bfa4de669c80dc8b9fb",
     "semantic_hash": ""
   },
   "apps/drawings/app/drawing-title.tsx": {
@@ -2100,21 +2100,21 @@
     "semantic_hash": ""
   },
   "packages/drawings-core/src/images.ts": {
-    "mtime": 1795244916.3034153,
-    "seen": 1795245500.8003387,
-    "ast_hash": "3ac3719e89d3c39b27289e799b53e38c",
+    "mtime": 1795246194.9052024,
+    "seen": 1795246304.8957846,
+    "ast_hash": "85ae961e5880570086cc82a443c5dea7",
     "semantic_hash": ""
   },
   "tests/unit/drawings-compress.test.ts": {
-    "mtime": 1795245225.5571055,
-    "seen": 1795245500.8100877,
-    "ast_hash": "a73b4af78b1edc8df127bf2efc9fd4a3",
+    "mtime": 1795246208.9877481,
+    "seen": 1795246304.9024093,
+    "ast_hash": "972855eddfea83058c7ec0c270a5cba2",
     "semantic_hash": ""
   },
   "tests/unit/drawings-images.test.ts": {
-    "mtime": 1795244988.2016912,
-    "seen": 1795245500.8100905,
-    "ast_hash": "d631366110a56f8cdfafb7cd5c8a10a5",
+    "mtime": 1795246179.9479809,
+    "seen": 1795246304.9024804,
+    "ast_hash": "63d219e1f4165ea5d519e54bd6c6ea05",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-21-drawings-image-compression.md": {

@@ -256,8 +256,10 @@ test('staged image cleanup removes full and thumbnail objects', async () => {
 test('database failure after storing removes both objects', async () => {
   const owner = { ...person('viewer'), name: 'x'.repeat(300) }; // owner_name varchar(100) → insert gagal
   const keys = await storedKeys();
+  // Error database (bukan AppError validasi/storage) berarti kedua objek sudah ditulis lalu dihapus.
   await assert.rejects(
     stageUpload(owner, 'image', 'gagal.png', 'image/png', await body(await photo(800, 600).png().toBuffer())),
+    (e) => !(e instanceof AppError),
   );
   assert.deepEqual(await storedKeys(), keys);
 });

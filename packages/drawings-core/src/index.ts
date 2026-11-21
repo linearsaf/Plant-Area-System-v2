@@ -16,6 +16,7 @@ export {
 } from './config';
 export {
   needsConversion,
+  isCleanWebp,
   webpName,
   processImage,
   createImageSlots,

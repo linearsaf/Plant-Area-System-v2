@@ -10,6 +10,7 @@ import {
   assertKey,
   createImageSlots,
   fileObjects,
+  isCleanWebp,
   needsConversion,
   processImage,
   thumbKey,
@@ -179,4 +180,83 @@ test('fileObjects lists the full object then the thumbnail when present', () => 
       { key: 'files/2026/a.thumb.webp', size: 3, sha256: 't'.repeat(64), mime: 'image/webp' },
     ],
   );
+});
+
+function riff(chunks: [string, Buffer][], trailing = Buffer.alloc(0)) {
+  const body = Buffer.concat(
+    chunks.flatMap(([fourcc, data]) => {
+      const head = Buffer.alloc(8);
+      head.write(fourcc, 0, 'latin1');
+      head.writeUInt32LE(data.length, 4);
+      return [head, data, Buffer.alloc(data.length % 2)];
+    }),
+  );
+  const header = Buffer.alloc(12);
+  header.write('RIFF', 0, 'latin1');
+  header.writeUInt32LE(4 + body.length, 4);
+  header.write('WEBP', 8, 'latin1');
+  return Buffer.concat([header, body, trailing]);
+}
+async function vp8() {
+  const webp = await canvas(64, 48).webp().toBuffer();
+  return webp.subarray(20, 20 + webp.readUInt32LE(16)); // payload chunk VP8 dari file sederhana
+}
+
+test('isCleanWebp accepts plain sharp/canvas webp output', async () => {
+  assert.equal(isCleanWebp(await canvas(64, 48).webp().toBuffer()), true);
+  assert.equal(isCleanWebp(await canvas(64, 48, 4).webp().toBuffer()), true);
+});
+
+test('isCleanWebp rejects metadata that sharp does not report', async () => {
+  const flagged = await canvas(64, 48)
+    .webp()
+    .withExif({ IFD0: { Copyright: 'GPS' } })
+    .toBuffer();
+  const unflagged = Buffer.from(flagged);
+  unflagged[20] = 0; // bit EXIF/XMP pada VP8X dihapus; chunk EXIF tetap ada
+  assert.equal((await sharp(unflagged).metadata()).exif, undefined);
+  assert.equal(isCleanWebp(flagged), false);
+  assert.equal(isCleanWebp(unflagged), false);
+  const payload = await vp8();
+  assert.equal(isCleanWebp(riff([['VP8 ', payload]])), true);
+  assert.equal(
+    isCleanWebp(
+      riff([
+        ['VP8 ', payload],
+        ['EXIF', Buffer.from('GPS 1,2')],
+      ]),
+    ),
+    false,
+  );
+  assert.equal(
+    isCleanWebp(
+      riff([
+        ['VP8 ', payload],
+        ['XMP ', Buffer.from('<x/>')],
+      ]),
+    ),
+    false,
+  );
+  assert.equal(
+    isCleanWebp(
+      riff([
+        ['VP8 ', payload],
+        ['GPS ', Buffer.from('lat')],
+      ]),
+    ),
+    false,
+  );
+  assert.equal(isCleanWebp(riff([['VP8 ', payload]], Buffer.from('PK zip'))), false);
+  assert.equal(isCleanWebp(Buffer.from('RIFF')), false);
+});
+
+test('webp with hidden metadata chunks is converted, not passed through', async () => {
+  const flagged = await canvas(800, 600)
+    .webp()
+    .withExif({ IFD0: { Copyright: 'GPS' } })
+    .toBuffer();
+  flagged[20] = 0;
+  const out = await processImage(await fixture(flagged));
+  assert.equal(out.converted, true);
+  assert.equal(isCleanWebp(await readFile(out.full.path)), true);
 });
