@@ -1333,9 +1333,7 @@
   .unrecorded-banner b {
     font-weight: 500;
   }
-  .critical-compartments {
-    align-items: flex-start;
-  }
+  /* Daftar di kiri, mosaic dekoratif bawaan tip-card di kanan (dalam alur, tidak menjadi latar). */
   .critical-compartments ol {
     display: grid;
     gap: var(--space-1);
@@ -1344,11 +1342,11 @@
     list-style: none;
   }
   .critical-compartments li a {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-1);
+    display: grid;
+    gap: var(--space-half);
+    align-items: start;
+    margin: 0 calc(-1 * var(--space-2));
+    padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-input);
     font-size: var(--type-footnote);
     line-height: var(--leading-footnote);
@@ -1356,18 +1354,57 @@
   .critical-compartments li a:hover {
     background: var(--surfaceMuted);
   }
+  .compartment-name {
+    white-space: nowrap;
+  }
+  /* Jumlah dan tanggal pemasangan tertua: sebaris bila muat, tanggal turun utuh bila kartu sempit. */
+  .compartment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+  }
+  .compartment-meta > * {
+    white-space: nowrap;
+  }
+  .compartment-meta > span {
+    color: var(--textSecondary);
+  }
   .critical-compartments li small {
-    flex-shrink: 0;
     font-size: var(--type-caption);
+    line-height: var(--leading-caption);
   }
   .critical-compartments li b {
     font-weight: 500;
   }
-  .critical-compartments .mosaic {
-    align-self: center;
-  }
   .progress-card > .fine {
     margin: var(--space-1) 0 0;
+  }
+  .age-load-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin-top: var(--space-2);
+    font-size: var(--type-caption);
+    color: var(--textSecondary);
+  }
+  .age-load-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .age-load-legend i {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-legendDot);
+  }
+  .progress-card .progress-list {
+    gap: var(--space-4);
+  }
+  .progress-card .progress-track {
+    margin-bottom: 0;
+  }
+  .progress-card .progress-list > a > div:first-child > * {
+    white-space: nowrap;
   }
   .age-load-track {
     display: flex;
@@ -1377,6 +1414,28 @@
     flex: none;
     transform: none;
     transition: width var(--duration-data) var(--ease-enter);
+  }
+  .priority-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    /* padding: 2px var(--space-2); */
+    border-radius: var(--radius-pill);
+    /* background: color-mix(in srgb, white 78%, transparent); */
+    color: var(--gray-950);
+    font-weight: 500;
+  }
+  .priority-pill i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--age-1260);
+  }
+  .priority-widget.is-warning .priority-pill i {
+    background: var(--age-1050);
+  }
+  .priority-widget.is-healthy .priority-pill i {
+    background: var(--success-text);
   }
   .priority-widget > p:not(.eyebrow) {
     margin: var(--space-1) 0 var(--space-4);

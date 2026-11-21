@@ -86,6 +86,7 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
       installed: number;
       older1260: number;
       warning: number;
+      oldestInstalledAt: string;
     }
   >();
   const woCompliance = { bags: 0, bagsWithWo: 0, batches: 0, batchesWithoutWo: 0 };
@@ -101,7 +102,8 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
       compartment: number | string;
       installedAt: Date | string;
     }[]) {
-      const hours = ageHours(iso(p.installedAt), now)!;
+      const installedAt = iso(p.installedAt),
+        hours = ageHours(installedAt, now)!;
       const bucket = ageBucket(hours);
       distribution[bucket]++;
       const target = perEquipment.find((e) => e.code === p.equipmentCode)!;
@@ -121,9 +123,11 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
           installed: 0,
           older1260: 0,
           warning: 0,
+          oldestInstalledAt: installedAt,
         };
         compartmentLoads.set(key, load);
       }
+      if (installedAt < load.oldestInstalledAt) load.oldestInstalledAt = installedAt;
       load.installed++;
       if (hours >= bagAgeScaleDays * 24) load.older1260++;
       else if (hours >= bagWarningDays * 24) load.warning++;
@@ -143,8 +147,9 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
         quarter.brands[h.brand || 'Belum tercatat'] = Number(h.total);
       } else previousTotal += Number(h.total);
     }
+    // Sama dengan hasWorkOrder: WO tanpa huruf/angka (mis. "-") dihitung tanpa WO.
     const [wo] = await getBagDb().execute(
-      sql`SELECT TRIM(COALESCE(wo,''))<>'' AS hasWo,COUNT(*) AS batches,COALESCE(SUM(position_count),0) AS bags FROM replacement_batches b WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=b.id) AND installed_at>=${new Date(Date.parse(`${year}-01-01T00:00:00+07:00`))} AND installed_at<${new Date(end)} AND installed_at<=${new Date(now + 60000)} GROUP BY hasWo`,
+      sql`SELECT COALESCE(wo,'') REGEXP '[[:alnum:]]' AS hasWo,COUNT(*) AS batches,COALESCE(SUM(position_count),0) AS bags FROM replacement_batches b WHERE equipment_code IN (${list}) AND NOT EXISTS (SELECT 1 FROM batch_cancellations c WHERE c.batch_id=b.id) AND installed_at>=${new Date(Date.parse(`${year}-01-01T00:00:00+07:00`))} AND installed_at<${new Date(end)} AND installed_at<=${new Date(now + 60000)} GROUP BY hasWo`,
     );
     for (const row of wo as unknown as {
       hasWo: number | string;
@@ -175,7 +180,7 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
         a.compartment - b.compartment
       );
     })
-    .slice(0, 5)
+    .slice(0, 3)
     .map((c) => ({ ...c, label: displayCompartment(c, catalog[order(c.equipmentCode)]) }));
   return {
     serverTime: new Date(now).toISOString(),

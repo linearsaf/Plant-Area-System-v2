@@ -917,6 +917,7 @@ const summaryFixture = (healthy = false) => {
             installed: 136,
             older1260: 136,
             warning: 0,
+            oldestInstalledAt: '2022-05-08T17:30:00Z',
           },
           {
             equipmentCode: '421-BF1',
@@ -926,17 +927,18 @@ const summaryFixture = (healthy = false) => {
             installed: 136,
             older1260: 0,
             warning: 12,
+            oldestInstalledAt: '2023-03-01T00:00:00Z',
           },
         ],
     woCompliance: { bags: 4019, bagsWithWo: 1000, batches: 40, batchesWithoutWo: 30 },
     priority: healthy
       ? { level: 'healthy', code: null, count: 0, installed: 0 }
-      : { level: 'critical', code: '562-BF1', count: 1200, installed: 3213 },
+      : { level: 'critical', code: 'L62-BF1', count: 900, installed: 1629 },
     series: [1, 2, 3, 4].map((quarter) => ({
       quarter,
       label: `Q${quarter}`,
       total: quarter === 1 ? 4019 : 0,
-      brands: quarter === 1 ? { Filtras: 4019 } : {},
+      brands: quarter === 1 ? { Filtras: 4000, 'Belum tercatat': 19 } : {},
     })),
     periodTotal: 4019,
     previousTotal: 3091,
@@ -959,6 +961,16 @@ const summaryFixture = (healthy = false) => {
         brand: null,
         actorName: 'Fixture operator',
         positionCount: 35,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: randomUUID(),
+        equipmentCode: '421-BF1',
+        wo: '-',
+        reason: 'Fixture',
+        brand: 'Cipta Medya',
+        actorName: 'Fixture operator',
+        positionCount: 100,
         createdAt: new Date().toISOString(),
       },
     ],
@@ -986,8 +998,16 @@ test('summary shows operational metrics, priority, WO status and a keyboard map 
   const critical = page.locator('.critical-compartments li a');
   await expect(critical.first()).toHaveAttribute('href', /562-bf1\?compartment=3&age=1260/);
   await expect(critical.nth(1)).toHaveAttribute('href', /421-bf1\?compartment=2B&age=1050/);
+  await expect(page.locator('.chart-legend')).toContainText('Pabrikan belum diisi');
+  await expect(page.locator('.chart-legend')).not.toContainText('Belum tercatat');
+  await expect(critical.first().locator('.compartment-name')).toHaveText('562-BF1 · Comp. 3');
+  await expect(critical.first().locator('.compartment-meta')).toContainText('Terpasang 9 Mei 2022');
+  await expect(critical.first()).toContainText('136/136 kritis');
+  await expect(critical.nth(1)).toContainText('12/136 mendekati');
+  // Prioritas memakai urutan yang sama dengan Beban umur kritis (porsi kritis tertinggi).
   const priority = page.locator('.priority-widget');
-  await expect(priority).toContainText('562-BF1');
+  await expect(priority).toContainText('L62-BF1');
+  await expect(priority.locator('.priority-pill')).toHaveText('PRIORITAS TERTINGGI');
   await expect(priority.getByRole('link', { name: 'Buka peta' })).toHaveAttribute('href', /age=1260/);
   await expect(page.getByRole('button', { name: 'Equipment berikutnya' })).toHaveCount(0);
   const rows = page.locator('.activity-row');
@@ -996,6 +1016,7 @@ test('summary shows operational metrics, priority, WO status and a keyboard map 
   await expect(rows.nth(1)).toContainText('WO-2026-0001');
   await expect(rows.nth(1).locator('.badge')).toHaveCount(0);
   await expect(rows.nth(1)).toContainText('Pabrikan belum diisi');
+  await expect(rows.nth(2).locator('.badge')).toHaveText('Tanpa WO');
   await expect(page.locator('.equipment-card')).toHaveCount(6);
   await expect(page.locator('.equipment-card .distribution-bar-mini')).toHaveCount(6);
   expect(await page.locator('.dashboard-grid').innerText()).not.toMatch(/\d\.\d%/);

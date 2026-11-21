@@ -5,10 +5,13 @@ import {
   bagBrands,
   bagAgeScaleDays,
   bagWarningDays,
+  compareBagLoad,
   equipment,
   equipmentSideSummary,
   formatDate,
+  formatDateWib,
   formatPercent,
+  hasWorkOrder,
   type BagPriority,
   type EquipmentCode,
   type Position,
@@ -42,6 +45,7 @@ type Data = {
     installed: number;
     older1260: number;
     warning: number;
+    oldestInstalledAt: string;
   }[];
   woCompliance: { bags: number; bagsWithWo: number; batches: number; batchesWithoutWo: number };
   priority: BagPriority;
@@ -75,14 +79,10 @@ const mapHref = (code: string, params: Record<string, string | number> = {}) => 
   return `/bag-filter/equipment/${code.toLowerCase()}${query ? `?${query}` : ''}`;
 };
 const share = (part: number, whole: number) => (whole ? (part / whole) * 100 : 0);
-/** Unit dengan nilai terbesar; seri tetap pada urutan katalog. */
-const mostOf = (units: UnitLoad[], value: (u: UnitLoad) => number) =>
-  units.reduce<UnitLoad | undefined>(
-    (best, u) => (value(u) > (best ? value(best) : 0) ? u : best),
-    undefined,
-  );
-// Pola dekoratif statis; tidak mewakili data.
-const mosaicStops = [0, 1, 0, 2, 1, 0, 3, 1, 0, 4, 1, 5, 2, 1, 6, 0];
+/** Grafik memakai kunci API `Belum tercatat` untuk batch tanpa pabrikan. */
+const brandLabel = (name: string) => (name === 'Belum tercatat' ? 'Pabrikan belum diisi' : name);
+const compartmentCapacity = (code: EquipmentCode) =>
+  equipment.find((e) => e.code === code)?.bagsPerCompartment ?? 0;
 export function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(value),
     previous = useRef(value);
@@ -310,9 +310,20 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
   const max = Math.max(4, Math.ceil(Math.max(...data.series.map((s) => s.total)) / 4) * 4),
     slot = data.series[Math.max(0, active)];
   const brandNames = [...bagBrands, 'Belum tercatat'];
+  // Satu urutan (compareBagLoad) untuk Prioritas tertinggi, Beban umur kritis, dan link KPI.
+  const loads = data.perEquipment
+    .map((u) => ({
+      ...u,
+      warning: u.distribution[warningBucket],
+      critical: share(u.older1260, u.installed),
+      warned: share(u.distribution[warningBucket], u.installed),
+    }))
+    .sort(compareBagLoad);
   const warningCount = data.distribution[warningBucket],
-    warningUnit = mostOf(data.perEquipment, (u) => u.distribution[warningBucket]),
-    criticalUnit = mostOf(data.perEquipment, (u) => u.older1260);
+    criticalUnit = loads.find((u) => u.older1260 > 0),
+    warningUnit = [...loads]
+      .sort((a, b) => b.warned - a.warned || b.warning - a.warning)
+      .find((u) => u.warning > 0);
   const healthy = data.installed - data.older1260,
     health = share(healthy, data.installed);
   const wo = data.woCompliance,
@@ -321,21 +332,6 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
     .map((u) => ({ code: u.code, missing: u.total - u.installed }))
     .filter((u) => u.missing > 0)
     .sort((a, b) => b.missing - a.missing);
-  const loads = data.perEquipment
-    .map((u, order) => ({
-      ...u,
-      order,
-      warning: u.distribution[warningBucket],
-      critical: share(u.older1260, u.installed),
-      warned: share(u.distribution[warningBucket], u.installed),
-    }))
-    .sort(
-      (a, b) =>
-        Number(!a.installed) - Number(!b.installed) ||
-        b.critical - a.critical ||
-        b.warned - a.warned ||
-        a.order - b.order,
-    );
   const priority = data.priority;
   const fallbackCode = data.perEquipment[0]?.code;
   return (
@@ -393,7 +389,7 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                 {brandNames.map((name, i) => (
                   <span key={name}>
                     <i style={{ background: brandColors[i] }} />
-                    {name}
+                    {brandLabel(name)}
                   </span>
                 ))}
               </div>
@@ -456,7 +452,7 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                 {slot &&
                   Object.entries(slot.brands).map(([brand, count]) => (
                     <small key={brand}>
-                      {brand} <b>{n(count)}</b>
+                      {brandLabel(brand)} <b>{n(count)}</b>
                     </small>
                   ))}
               </div>
@@ -580,13 +576,24 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                             age: c.older1260 ? bagAgeScaleDays : bagWarningDays,
                           })}
                         >
-                          <span>
+                          <span className="compartment-name">
                             <span className="code-text">{c.equipmentCode}</span> · Comp. {c.label}
                           </span>
-                          <small>
-                            {c.older1260 ? <b className="negative-text">{n(c.older1260)} kritis</b> : null}
-                            {c.older1260 && c.warning ? ' · ' : ''}
-                            {c.warning ? <b className="warning-text">{n(c.warning)} mendekati</b> : null}
+                          <small className="compartment-meta">
+                            {c.older1260 ? (
+                              <b className="negative-text">
+                                {n(c.older1260)}/{n(compartmentCapacity(c.equipmentCode))} kritis
+                              </b>
+                            ) : null}
+                            {c.warning ? (
+                              <b className="warning-text">
+                                {n(c.warning)}/{n(compartmentCapacity(c.equipmentCode))} mendekati
+                              </b>
+                            ) : null}
+                            <span>
+                              Terpasang{' '}
+                              <time dateTime={c.oldestInstalledAt}>{formatDateWib(c.oldestInstalledAt)}</time>
+                            </span>
                           </small>
                         </a>
                       </li>
@@ -597,12 +604,8 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                 )}
               </div>
               <div className="mosaic" aria-hidden="true">
-                {mosaicStops.map((stop, i) => (
-                  <i
-                    key={i}
-                    className={i % 4 ? 'hatched' : ''}
-                    style={{ background: ageStops[stop].color }}
-                  />
+                {Array.from({ length: 16 }, (_, i) => (
+                  <i key={i} className={i % 4 ? 'hatched' : ''} />
                 ))}
               </div>
             </section>
@@ -699,7 +702,16 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
             </section>
             <section className="panel progress-card">
               <h2>Beban umur kritis</h2>
-              <p className="fine">Porsi bag terpasang per equipment</p>
+              <p className="fine">Bag kritis dan porsinya dari bag terpasang</p>
+              <div className="age-load-legend" aria-hidden="true">
+                <span>
+                  <i style={{ background: ageStops[ageStops.length - 1].color }} />≥ {n(bagAgeScaleDays)} hari
+                </span>
+                <span>
+                  <i style={{ background: ageStops[warningBucket].color }} />
+                  {warningLabel}
+                </span>
+              </div>
               <div className="progress-list">
                 {loads.map((e) => (
                   <a href={mapHref(e.code, { age: bagAgeScaleDays })} key={e.code}>
@@ -708,7 +720,7 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                       <span>
                         {e.installed ? (
                           <>
-                            {n(e.older1260)} bag <small>· {formatPercent(e.critical)}</small>
+                            {n(e.older1260)} <small>· {formatPercent(e.critical)}</small>
                           </>
                         ) : (
                           <small>Belum ada bag terpasang</small>
@@ -718,16 +730,13 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                     <div
                       className="progress-track age-load-track"
                       role="img"
-                      aria-label={`${e.code}: ${formatPercent(e.critical)} ${criticalLabel}, ${formatPercent(e.warned)} mendekati batas`}
+                      aria-label={`${e.code}: ${n(e.older1260)} ${criticalLabel} (${formatPercent(e.critical)}), ${n(e.warning)} bag mendekati batas (${formatPercent(e.warned)})`}
                     >
                       <i
                         style={{ width: `${e.critical}%`, background: ageStops[ageStops.length - 1].color }}
                       />
                       <i style={{ width: `${e.warned}%`, background: ageStops[warningBucket].color }} />
                     </div>
-                    <small>
-                      {e.warning ? `${n(e.warning)} bag mendekati batas` : 'Tidak ada yang mendekati batas'}
-                    </small>
                   </a>
                 ))}
               </div>
@@ -744,7 +753,12 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
             }}
             onPointerLeave={(e) => (e.currentTarget.style.transform = '')}
           >
-            <p className="eyebrow">PRIORITAS TERTINGGI</p>
+            <p className="eyebrow">
+              <span className="priority-pill">
+                <i aria-hidden="true" />
+                PRIORITAS TERTINGGI
+              </span>
+            </p>
             <div className="feature-contours" aria-hidden="true" />
             {priority.code ? (
               <>
@@ -800,7 +814,7 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                           <span className="code-text">{item.equipmentCode}</span> · {n(item.positionCount)}{' '}
                           bag
                         </strong>
-                        {item.wo.trim() ? (
+                        {hasWorkOrder(item.wo) ? (
                           <span className="code-text activity-wo">{item.wo}</span>
                         ) : (
                           <span className="badge orange">Tanpa WO</span>

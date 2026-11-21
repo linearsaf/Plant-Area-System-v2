@@ -92,7 +92,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   await create([c1, c2, c3], 1300 * day, 'WO-OLD');
   await create([w1, w2], 1100 * day, '');
   await create([fresh1, fresh2], 60000, 'WO-INT-1');
-  await create([fresh3], 60000, '   ');
+  await create([fresh3], 60000, ' - ');
   const wrong = await create([cancelled, others[0]], 60000, '');
   await cancelReplacement(actor, code, wrong.batchId, { reason: 'Fixture salah' }, randomUUID());
 
@@ -107,7 +107,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
     [3, 0, 0, 0, 0, 2, 3],
   );
 
-  // Batch tanpa WO (kosong atau spasi) dan batch dibatalkan dihitung sesuai aturan.
+  // WO tanpa huruf/angka (" - ") dihitung tanpa WO; batch dibatalkan tidak dihitung.
   assert.deepEqual(
     {
       bags: result.woCompliance.bags - baseline.woCompliance.bags,
@@ -120,10 +120,11 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   const previousYear = await dashboard([code], year - 1, now);
   assert.ok(previousYear.woCompliance.bags <= previousYear.periodTotal);
 
-  assert.ok(result.compartments.length <= 5);
+  assert.ok(result.compartments.length <= 3);
   for (const [i, c] of result.compartments.entries()) {
     assert.ok(c.older1260 > 0 || c.warning > 0);
     assert.equal(c.label, displayCompartment(c, eq422));
+    assert.ok(Number.isFinite(Date.parse(c.oldestInstalledAt)));
     const next = result.compartments[i + 1];
     if (next)
       assert.ok(
@@ -132,10 +133,13 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   }
   const fixture = result.compartments.find((c) => c.side === c1.side && c.compartment === c1.compartment);
   const last = result.compartments.at(-1);
-  if (fixture) assert.deepEqual([fixture.installed, fixture.older1260, fixture.warning], [8, 3, 2]);
-  else
+  if (fixture) {
+    assert.deepEqual([fixture.installed, fixture.older1260, fixture.warning], [8, 3, 2]);
+    // Bag tertua yang masih terpasang adalah batch 1.300 hari.
+    assert.ok(Math.abs(Date.parse(fixture.oldestInstalledAt) - (now - 1300 * day)) < 1000);
+  } else
     assert.ok(
-      result.compartments.length === 5 &&
+      result.compartments.length === 3 &&
         last &&
         (last.older1260 > 3 || (last.older1260 === 3 && last.warning >= 2)),
     );
