@@ -1,12 +1,13 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdtemp, rm, writeFile, access } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { CreateBucketCommand } from '@aws-sdk/client-s3';
 import { PDFDocument } from '@cantoo/pdf-lib';
+import sharp from 'sharp';
 import {
   S3Storage,
   cleanupStagedFiles,
@@ -176,4 +177,87 @@ test('s3 driver against the S3-compatible test service: put, range get, head, no
   assert.equal(Buffer.from(await full.arrayBuffer()).length, bytes.length);
   await storage.delete(key);
   assert.equal(await storage.head(key), null);
+});
+
+const photo = (width: number, height: number) =>
+  sharp({ create: { width, height, channels: 3, background: '#4a7' } });
+async function storedKeys() {
+  const root = join(dir, 'store', 'files');
+  const years = await readdir(root).catch(() => [] as string[]);
+  return (
+    await Promise.all(years.map(async (y) => (await readdir(join(root, y))).map((f) => `${y}/${f}`)))
+  ).flat();
+}
+
+test('staged JPEG is stored as webp with a thumbnail and audited as converted', async () => {
+  const owner = person('viewer');
+  const bytes = await photo(4000, 3000).jpeg().withMetadata({ orientation: 6 }).toBuffer();
+  const input = await body(bytes);
+  const staged = await stageUpload(owner, 'image', 'foto lapangan.jpg', 'image/jpeg', input);
+  assert.equal(staged.mime, 'image/webp');
+  assert.equal(staged.name, 'foto lapangan.webp');
+  await assert.rejects(access(input.path));
+  await assert.rejects(access(input.path + '.webp'));
+  await assert.rejects(access(input.path + '.thumb.webp'));
+  const [row] = await getDrawingsDb()
+    .select()
+    .from(drawingsSchema.files)
+    .where(eq(drawingsSchema.files.id, staged.fileId));
+  assert.match(row.storageKey, /^files\/\d{4}\/[0-9a-f-]{36}\.webp$/);
+  assert.equal(row.thumbStorageKey, row.storageKey.replace(/\.webp$/, '.thumb.webp'));
+  assert.equal(row.size, staged.size);
+  assert.equal(row.sha256, staged.sha256);
+  assert.ok(row.thumbSize! > 0 && row.thumbSize! < row.size);
+  const full = await sharp(join(dir, 'store', row.storageKey)).metadata();
+  assert.deepEqual([full.format, full.width, full.height, full.exif], ['webp', 1920, 2560, undefined]);
+  const thumb = await sharp(join(dir, 'store', row.thumbStorageKey!)).metadata();
+  assert.equal(Math.max(thumb.width!, thumb.height!), 480);
+  const [event] = await getDrawingsDb()
+    .select()
+    .from(drawingsSchema.audit)
+    .where(eq(drawingsSchema.audit.targetId, staged.fileId));
+  const details = JSON.parse(event.details);
+  assert.equal(details.converted, true);
+  assert.equal(details.uploadedSize, bytes.length);
+});
+
+test('clean webp is stored unchanged', async () => {
+  const owner = person('viewer');
+  const bytes = await photo(1200, 900).webp({ quality: 80 }).toBuffer();
+  const input = await body(bytes);
+  const staged = await stageUpload(owner, 'image', 'sudut-2.webp', 'image/webp', input);
+  assert.equal(staged.sha256, input.sha256);
+  assert.equal(staged.size, bytes.length);
+  const [event] = await getDrawingsDb()
+    .select()
+    .from(drawingsSchema.audit)
+    .where(eq(drawingsSchema.audit.targetId, staged.fileId));
+  assert.equal(JSON.parse(event.details).converted, false);
+});
+
+test('staged image cleanup removes full and thumbnail objects', async () => {
+  const owner = person('viewer');
+  const staged = await stageUpload(
+    owner,
+    'image',
+    'lama.png',
+    'image/png',
+    await body(await photo(800, 600).png().toBuffer()),
+  );
+  const [before] = await getDrawingsDb()
+    .select()
+    .from(drawingsSchema.files)
+    .where(eq(drawingsSchema.files.id, staged.fileId));
+  await cleanupStagedFiles(Date.now() + 25 * 3_600_000, 1000);
+  await assert.rejects(access(join(dir, 'store', before.storageKey)));
+  await assert.rejects(access(join(dir, 'store', before.thumbStorageKey!)));
+});
+
+test('database failure after storing removes both objects', async () => {
+  const owner = { ...person('viewer'), name: 'x'.repeat(300) }; // owner_name varchar(100) → insert gagal
+  const keys = await storedKeys();
+  await assert.rejects(
+    stageUpload(owner, 'image', 'gagal.png', 'image/png', await body(await photo(800, 600).png().toBuffer())),
+  );
+  assert.deepEqual(await storedKeys(), keys);
 });

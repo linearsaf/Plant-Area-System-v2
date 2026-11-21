@@ -268,6 +268,10 @@ export const files = mysqlTable(
     size: bigint('size', { mode: 'number' }).notNull(),
     sha256: char('sha256', { length: 64 }).notNull(),
     pageCount: int('page_count'),
+    // Thumbnail WebP ≤ 480 px untuk gambar; null untuk PDF dan gambar sebelum 2026-11.
+    thumbStorageKey: varchar('thumb_storage_key', { length: 200 }).unique(),
+    thumbSize: bigint('thumb_size', { mode: 'number' }),
+    thumbSha256: char('thumb_sha256', { length: 64 }),
     status: varchar('status', { length: 12 }).notNull(),
     ownerId: varchar('owner_id', { length: 36 }).notNull(),
     ownerName: varchar('owner_name', { length: 100 }).notNull(),

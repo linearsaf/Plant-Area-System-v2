@@ -7,7 +7,8 @@ import { getDrawingsDb } from './database';
 import { files, audit } from './schema';
 import { IMAGE_MAX_BYTES, STAGED_TTL_MS, maxPdfBytes } from './config';
 import { detectImage, validatePdf } from './pdf';
-import { storageKey, withStorage, type ByteRange, type Storage } from './storage';
+import { processImage, webpName, withImageSlot, type ProcessedFile } from './images';
+import { storageKey, thumbKey, withStorage, type ByteRange, type Storage } from './storage';
 
 export type UploadKind = 'pdf' | 'image';
 export type StagedFile = {
@@ -22,6 +23,23 @@ export type StagedFile = {
 };
 export type FileRow = typeof files.$inferSelect;
 type Body = { path: string; size: number; sha256: string; head: Buffer };
+type StoredFile = Pick<
+  FileRow,
+  'storageKey' | 'size' | 'sha256' | 'mime' | 'thumbStorageKey' | 'thumbSize' | 'thumbSha256'
+>;
+
+/** Objek storage milik satu baris file: file penuh, lalu thumbnail bila ada. */
+export function fileObjects(row: StoredFile) {
+  const objects = [{ key: row.storageKey, size: row.size, sha256: row.sha256, mime: row.mime }];
+  if (row.thumbStorageKey && row.thumbSize !== null && row.thumbSha256)
+    objects.push({
+      key: row.thumbStorageKey,
+      size: row.thumbSize,
+      sha256: row.thumbSha256,
+      mime: 'image/webp',
+    });
+  return objects;
+}
 
 export function uploadLimit(kind: UploadKind) {
   return kind === 'pdf' ? maxPdfBytes() : IMAGE_MAX_BYTES;
@@ -92,36 +110,58 @@ export async function stageUpload(
 ): Promise<StagedFile> {
   try {
     let mime: string,
-      extension: 'pdf' | 'jpg' | 'png' | 'webp',
+      stored: ProcessedFile = body,
+      thumb: ProcessedFile | null = null,
+      converted: boolean | undefined,
       pageCount: number | null = null;
     if (kind === 'pdf') {
       if (body.head.subarray(0, 5).toString('latin1') !== '%PDF-')
         throw new AppError(422, 'File bukan PDF.', 'FILE_INVALID');
       ({ pageCount } = await validatePdf(body.path));
       mime = 'application/pdf';
-      extension = 'pdf';
     } else {
       const image = detectImage(body.head);
       if (!image || image.mime !== declaredType)
         throw new AppError(422, 'Gambar harus JPEG, PNG atau WebP yang valid.', 'FILE_INVALID');
-      ({ mime, extension } = image);
+      const processed = await withImageSlot(() => processImage(body));
+      ({ full: stored, thumb, converted } = processed);
+      mime = 'image/webp';
+      name = webpName(name);
     }
     const id = randomUUID(),
       now = new Date(),
-      key = storageKey(id, extension, now);
-    await withStorage((s) =>
-      s.put(key, body.path, { size: body.size, contentType: mime, sha256: body.sha256 }),
-    );
+      row = {
+        storageKey: storageKey(id, kind === 'pdf' ? 'pdf' : 'webp', now),
+        size: stored.size,
+        sha256: stored.sha256,
+        mime,
+        thumbStorageKey: thumb ? thumbKey(id, now) : null,
+        thumbSize: thumb?.size ?? null,
+        thumbSha256: thumb?.sha256 ?? null,
+      };
+    const objects = fileObjects(row);
+    const removeObjects = () =>
+      Promise.all(objects.map((o) => withStorage((s) => s.delete(o.key)).catch(() => undefined)));
+    try {
+      for (const [index, o] of objects.entries())
+        await withStorage((s) =>
+          s.put(o.key, index === 0 ? stored.path : thumb!.path, {
+            size: o.size,
+            contentType: o.mime,
+            sha256: o.sha256,
+          }),
+        );
+    } catch (e) {
+      await removeObjects();
+      throw e;
+    }
     try {
       await getDrawingsDb().transaction(async (tx) => {
         await tx.insert(files).values({
           id,
           kind,
-          storageKey: key,
+          ...row,
           originalName: name,
-          mime,
-          size: body.size,
-          sha256: body.sha256,
           pageCount,
           status: 'staged',
           ownerId: actor.id,
@@ -135,12 +175,19 @@ export async function stageUpload(
           action: 'file.staged',
           targetType: 'file',
           targetId: id,
-          details: JSON.stringify({ kind, name, size: body.size, sha256: body.sha256, pageCount }),
+          details: JSON.stringify({
+            kind,
+            name,
+            size: stored.size,
+            sha256: stored.sha256,
+            pageCount,
+            ...(kind === 'image' && { converted, uploadedSize: body.size }),
+          }),
           createdAt: now,
         });
       });
     } catch (e) {
-      await withStorage((s) => s.delete(key)).catch(() => undefined);
+      await removeObjects();
       throw e;
     }
     if (Date.now() - lastCleanup > 3_600_000) {
@@ -151,14 +198,16 @@ export async function stageUpload(
       fileId: id,
       kind,
       name,
-      size: body.size,
-      sha256: body.sha256,
+      size: stored.size,
+      sha256: stored.sha256,
       pageCount,
       mime,
       status: 'staged',
     };
   } finally {
-    await rm(body.path, { force: true });
+    await Promise.all(
+      [body.path, body.path + '.webp', body.path + '.thumb.webp'].map((path) => rm(path, { force: true })),
+    );
   }
 }
 
@@ -178,7 +227,7 @@ export async function stagedFileForOwner(actor: Identity, id: string) {
 export async function cleanupStagedFiles(now = Date.now(), limit = 50) {
   const db = getDrawingsDb();
   const stale = await db
-    .select({ id: files.id, storageKey: files.storageKey })
+    .select()
     .from(files)
     .where(and(eq(files.status, 'staged'), lt(files.createdAt, new Date(now - STAGED_TTL_MS))))
     .limit(limit);
@@ -189,7 +238,7 @@ export async function cleanupStagedFiles(now = Date.now(), limit = 50) {
       .set({ status: 'orphaned', orphanedAt: new Date(now) })
       .where(and(eq(files.id, row.id), eq(files.status, 'staged')));
     if (!result.affectedRows) continue;
-    await withStorage((s) => s.delete(row.storageKey));
+    for (const o of fileObjects(row)) await withStorage((s) => s.delete(o.key));
     removed++;
   }
   return removed;

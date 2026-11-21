@@ -56,6 +56,7 @@ export {
   stageUpload,
   stagedFileForOwner,
   cleanupStagedFiles,
+  fileObjects,
   serveFile,
   parseRange,
   contentDisposition,

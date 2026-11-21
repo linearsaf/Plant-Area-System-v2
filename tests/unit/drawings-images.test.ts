@@ -9,6 +9,7 @@ import { AppError } from '@plant/contracts';
 import {
   assertKey,
   createImageSlots,
+  fileObjects,
   needsConversion,
   processImage,
   thumbKey,
@@ -159,4 +160,23 @@ test('image slots run at most N at once and time out waiting callers', async () 
   release();
   await first;
   assert.equal(await run(async () => 2), 2);
+});
+
+test('fileObjects lists the full object then the thumbnail when present', () => {
+  const full = { storageKey: 'files/2026/a.webp', size: 10, sha256: 'f'.repeat(64), mime: 'image/webp' };
+  assert.deepEqual(fileObjects({ ...full, thumbStorageKey: null, thumbSize: null, thumbSha256: null }), [
+    { key: 'files/2026/a.webp', size: 10, sha256: 'f'.repeat(64), mime: 'image/webp' },
+  ]);
+  assert.deepEqual(
+    fileObjects({
+      ...full,
+      thumbStorageKey: 'files/2026/a.thumb.webp',
+      thumbSize: 3,
+      thumbSha256: 't'.repeat(64),
+    }),
+    [
+      { key: 'files/2026/a.webp', size: 10, sha256: 'f'.repeat(64), mime: 'image/webp' },
+      { key: 'files/2026/a.thumb.webp', size: 3, sha256: 't'.repeat(64), mime: 'image/webp' },
+    ],
+  );
 });
