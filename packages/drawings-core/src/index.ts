@@ -3,12 +3,25 @@ import { AppError, canDraw, type Identity } from '@plant/contracts';
 import { getDrawingsDb } from './database';
 export { getDrawingsDb, closeDrawingsDb } from './database';
 export * as drawingsSchema from './schema';
-export { maxPdfBytes, storageConfig, IMAGE_MAX_BYTES, STAGED_TTL_MS, type StorageConfig } from './config';
+export {
+  maxPdfBytes,
+  storageConfig,
+  IMAGE_MAX_BYTES,
+  IMAGE_MAX_SIDE,
+  THUMB_MAX_SIDE,
+  IMAGE_PASSTHROUGH_MAX_BYTES,
+  IMAGE_MAX_INPUT_PIXELS,
+  STAGED_TTL_MS,
+  type StorageConfig,
+} from './config';
+export { needsConversion, webpName, type ImageFacts } from './images';
 export {
   createStorage,
   getStorage,
   withStorage,
   storageKey,
+  thumbKey,
+  assertKey,
   FsStorage,
   S3Storage,
   StorageUnavailable,

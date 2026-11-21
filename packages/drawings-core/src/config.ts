@@ -14,6 +14,13 @@ export type StorageConfig =
 export { IMAGE_MAX_PER_ITEM } from '@plant/contracts';
 /** Batas body gambar mentah; browser biasanya sudah mengecilkannya jauh di bawah ini. */
 export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
+/** Sisi terpanjang gambar tersimpan dan thumbnail-nya. */
+export const IMAGE_MAX_SIDE = 2560;
+export const THUMB_MAX_SIDE = 480;
+/** WebP dari browser di atas ukuran ini di-encode ulang walau sudah bersih. */
+export const IMAGE_PASSTHROUGH_MAX_BYTES = 1.5 * 1024 * 1024;
+/** Batas resolusi input (lebar × tinggi), cukup untuk kamera HP 108 MP. */
+export const IMAGE_MAX_INPUT_PIXELS = 120_000_000;
 export const STAGED_TTL_MS = 24 * 3_600_000;
 
 export function maxPdfBytes(env: NodeJS.ProcessEnv = process.env) {
