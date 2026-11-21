@@ -144,6 +144,51 @@ export const formatDate = (value: string) =>
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+const percentFormatters = new Map<number, Intl.NumberFormat>();
+/** Persen gaya id-ID dengan koma desimal, mis. `94,0%`. `value` sudah dalam skala 0–100. */
+export function formatPercent(value: number, digits = 1) {
+  let formatter = percentFormatters.get(digits);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat('id-ID', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+    percentFormatters.set(digits, formatter);
+  }
+  return `${formatter.format(Number.isFinite(value) ? value : 0)}%`;
+}
+/** Bag 1.050–1.259 hari: satu interval sebelum batas skala umur. */
+export const bagWarningDays = bagAgeScaleDays - bagAgeIntervalDays;
+export type BagAgeLoad = { code: EquipmentCode; installed: number; older1260: number; warning: number };
+export type BagPriority = {
+  level: 'critical' | 'warning' | 'healthy';
+  code: EquipmentCode | null;
+  count: number;
+  installed: number;
+};
+/**
+ * Unit yang paling mendesak: bag ≥ 1.260 hari terbanyak, lalu 1.050–1.259 hari terbanyak.
+ * Seri diputus dengan porsi terhadap bag terpasang, lalu urutan masukan (katalog).
+ */
+export function pickPriority(units: readonly BagAgeLoad[]): BagPriority {
+  for (const [level, key] of [
+    ['critical', 'older1260'],
+    ['warning', 'warning'],
+  ] as const) {
+    let best: BagAgeLoad | undefined;
+    for (const unit of units) {
+      if (unit[key] <= 0) continue;
+      if (
+        !best ||
+        unit[key] > best[key] ||
+        (unit[key] === best[key] && unit[key] / unit.installed > best[key] / best.installed)
+      )
+        best = unit;
+    }
+    if (best) return { level, code: best.code, count: best[key], installed: best.installed };
+  }
+  return { level: 'healthy', code: null, count: 0, installed: 0 };
+}
 export const wibInput = (now = Date.now()) => new Date(now + 7 * 3_600_000).toISOString().slice(0, 16);
 export function wibToIso(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error('Tanggal WIB tidak valid.');

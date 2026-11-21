@@ -6,7 +6,10 @@ import {
   ageHours,
   ageStops,
   bagAgeScaleDays,
+  bagWarningDays,
+  formatPercent,
   hasPermission,
+  pickPriority,
   wibWeekStarts,
   type EquipmentCode,
   type Identity,
@@ -138,6 +141,7 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
     total: e.compartments * e.bagsPerCompartment,
     installed: 0,
     older1260: 0,
+    warning: 0,
   }));
   if (catalog.length) {
     const list = scope(catalog.map((e) => e.code));
@@ -150,13 +154,14 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
       const target = perEquipment.find((e) => e.code === p.equipmentCode)!;
       target.installed++;
       if (hours >= bagAgeScaleDays * 24) target.older1260++;
+      else if (hours >= bagWarningDays * 24) target.warning++;
     }
   }
   const total = perEquipment.reduce((sum, e) => sum + e.total, 0),
     installed = perEquipment.reduce((sum, e) => sum + e.installed, 0),
     older1260 = perEquipment.reduce((sum, e) => sum + e.older1260, 0);
   const readOnly = grant.role === 'viewer';
-  const primaryEquipment = (perEquipment.find((e) => e.older1260 > 0) ?? perEquipment[0])?.code;
+  const primaryEquipment = pickPriority(perEquipment).code ?? perEquipment[0]?.code;
   const recentRows = await activity(codes, '', 5);
 
   const weeks = wibWeekStarts(now, 12);
@@ -173,7 +178,7 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
     }
   }
 
-  const pct = total > 0 ? ((installed / total) * 100).toFixed(1).replace('.', ',') : '0,0';
+  const pct = formatPercent(total > 0 ? (installed / total) * 100 : 0);
 
   return {
     appId: 'bag-filter',
@@ -184,7 +189,7 @@ export async function portalSummary(actor: Identity, now = Date.now()): Promise<
       total,
       unit: 'posisi',
       caption:
-        total > 0 ? `${pct}% posisi mempunyai catatan pemasangan aktif.` : 'Belum ada posisi bag tercatat.',
+        total > 0 ? `${pct} posisi mempunyai catatan pemasangan aktif.` : 'Belum ada posisi bag tercatat.',
       href: '/bag-filter',
     },
     metrics: [
