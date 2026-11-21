@@ -223,7 +223,7 @@
   .bag-grid-scroll {
     overflow: auto;
     max-width: 100%;
-    padding: 6px;
+    /* padding: 6px; */
     /* overscroll-behavior: contain; */
   }
   .bag-grid {
@@ -1040,6 +1040,37 @@
       grid-template-columns: minmax(0, 1fr);
       overflow: visible;
       padding-bottom: 0;
+    }
+  }
+
+  /*
+   * Forced Colors Mode (Windows High Contrast) repaints button backgrounds and drops box-shadow.
+   * The cell colour is the bag-age data itself, so the cells keep their own colours; every state
+   * that was only a shadow also gets a system-colour outline.
+   */
+  @media (forced-colors: active) {
+    .bag-cell,
+    .overview-cell {
+      forced-color-adjust: none;
+    }
+    .bag-cell[aria-pressed='true'],
+    .bag-cell[aria-pressed='true']:hover,
+    .overview-cell[aria-pressed='true'],
+    .overview-cell[aria-pressed='true']:hover {
+      outline: 2px solid Highlight;
+      outline-offset: 1px;
+    }
+    .bag-cell:focus-visible,
+    .bag-cell[aria-pressed='true']:focus-visible {
+      outline-color: CanvasText;
+    }
+    .age-buckets button[aria-pressed='true'],
+    .overview-title[aria-current='true'] {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+    .bulk-modes button[aria-pressed='true'] {
+      border-bottom: 2px solid Highlight;
     }
   }
 }

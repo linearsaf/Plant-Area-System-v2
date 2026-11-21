@@ -351,6 +351,9 @@
     padding: 0 var(--space-3);
   }
   .r22-search-field:focus-within {
+    /* Shown only in Forced Colors Mode, which removes the halo. */
+    outline: 2px solid transparent;
+    outline-offset: 2px;
     border-color: var(--focusBorder);
     box-shadow: 0 0 0 3px var(--focusHalo);
     background: var(--surface);

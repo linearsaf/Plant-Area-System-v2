@@ -327,7 +327,9 @@
   :is(input, textarea, select, .select-trigger):focus,
   :is(input, textarea):focus-visible,
   .select-trigger[aria-expanded='true'] {
-    outline: 0;
+    /* Invisible normally; Forced Colors Mode drops the halo below but paints this outline. */
+    outline: 2px solid transparent;
+    outline-offset: 2px;
     border-color: var(--focusBorder);
     box-shadow: 0 0 0 4px var(--focusHalo);
     background: var(--surface);
@@ -356,6 +358,10 @@
     min-height: 80px;
     max-height: 200px;
   }
+  /* Grows with its text between the min and max height; Textarea() measures only without support. */
+  .textarea-wrap textarea {
+    field-sizing: content;
+  }
   .input-wrap,
   .textarea-wrap,
   .select-control {
@@ -381,7 +387,8 @@
     opacity: 0;
   }
   .input-wrap:focus-within .input-clear,
-  .input-wrap:hover .input-clear {
+  .input-wrap:hover .input-clear,
+  .input-clear.input-reveal {
     opacity: 1;
   }
   /* The shared clear button replaces the browser's own search cancel control. */
