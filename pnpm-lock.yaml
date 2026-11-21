@@ -218,6 +218,9 @@ importers:
       prettier:
         specifier: 3.9.10
         version: 3.9.10
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@22.19.19)
       tsx:
         specifier: 4.23.15
         version: 4.23.15
@@ -410,6 +413,9 @@ importers:
       mysql2:
         specifier: 3.24.6
         version: 3.24.6(@types/node@22.19.19)
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@22.19.19)
       zod:
         specifier: 4.5.4
         version: 4.5.4
@@ -2268,8 +2274,7 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.35.5':
     optionalDependencies:
@@ -2564,8 +2569,7 @@ snapshots:
 
   defu@6.1.7: {}
 
-  detect-libc@2.1.2:
-    optional: true
+  detect-libc@2.1.2: {}
 
   drizzle-kit@0.31.11:
     dependencies:
@@ -2775,8 +2779,7 @@ snapshots:
 
   scheduler@0.28.0: {}
 
-  semver@7.8.5:
-    optional: true
+  semver@7.8.5: {}
 
   set-cookie-parser@3.1.4: {}
 
@@ -2812,7 +2815,6 @@ snapshots:
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
       '@types/node': 22.19.19
-    optional: true
 
   source-map-js@1.2.2: {}
 

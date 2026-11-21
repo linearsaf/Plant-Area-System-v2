@@ -14,7 +14,16 @@ export {
   STAGED_TTL_MS,
   type StorageConfig,
 } from './config';
-export { needsConversion, webpName, type ImageFacts } from './images';
+export {
+  needsConversion,
+  webpName,
+  processImage,
+  createImageSlots,
+  withImageSlot,
+  type ImageFacts,
+  type ProcessedFile,
+  type ProcessedImage,
+} from './images';
 export {
   createStorage,
   getStorage,
