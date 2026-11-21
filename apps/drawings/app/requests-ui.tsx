@@ -182,7 +182,7 @@ export function RequestList({ scopes }: { scopes: RequestScope[] }) {
   );
 }
 
-/** Form Drawing Request: HAC/SAC, Description, Keperluan, maksimal 3 gambar referensi. */
+/** Form Drawing Request: HAC/SAC, Description, Keperluan, maksimal 10 gambar referensi. */
 export function RequestForm() {
   const [values, setValues] = useState({ hac: '', description: '', purpose: '' }),
     [images, setImages] = useState<string[]>([]),
@@ -396,7 +396,11 @@ export function RequestView({ request }: { request: RequestDetail }) {
                 <li key={f.id}>
                   <a href={`/drawings/api/attachments/${f.id}`} target="_blank" rel="noopener">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/drawings/api/attachments/${f.id}`} alt={f.name} loading="lazy" />
+                    <img
+                      src={`/drawings/api/attachments/${f.id}?variant=thumb`}
+                      alt={f.name}
+                      loading="lazy"
+                    />
                   </a>
                 </li>
               ))}

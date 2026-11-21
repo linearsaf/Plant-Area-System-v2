@@ -134,7 +134,7 @@ async function upsertStep(
     assignedAt: at,
   });
 }
-/** Menautkan gambar staged milik actor sebagai lampiran keputusan (maks. 3, JPEG/PNG/WebP). */
+/** Menautkan gambar staged milik actor sebagai lampiran keputusan (maks. 10, JPEG/PNG/WebP). */
 async function attachImages(tx: Tx, actor: Identity, ids: string[], actionId: string, at: Date) {
   if (!ids.length) return;
   if (new Set(ids).size !== ids.length) throw new AppError(400, 'Lampiran duplikat.', 'VALIDATION');

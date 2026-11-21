@@ -4,6 +4,9 @@ import { z } from 'zod';
 import type { Identity } from './index';
 import { canDraw, drawingsPermission, drawingsRole } from './drawings';
 
+/** Maksimal gambar per Drawing Request atau per keputusan reject. */
+export const IMAGE_MAX_PER_ITEM = 10;
+
 export const revisionStatuses = [
   'draft',
   'waiting_check',

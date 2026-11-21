@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import {
+  approvalDecisionSchema,
   canSeeRequest,
+  checkDecisionSchema,
   drafterDecisionSchema,
   requestCreateSchema,
   requestNumber,
@@ -52,7 +55,7 @@ test('request scopes follow role', () => {
   assert.deepEqual(requestScopes(as('admin')), ['mine', 'all']);
 });
 
-test('request schemas: HAC normalized, description/purpose required, max 3 images, reasons required', () => {
+test('request schemas: HAC normalized, description/purpose required, max 10 images, reasons required', () => {
   const ok = requestCreateSchema.parse({ hac: ' tq.561-bf1 ', description: 'Pompa', purpose: 'Overhaul' });
   assert.equal(ok.hac, '561-BF1');
   assert.deepEqual(ok.imageIds, []);
@@ -61,7 +64,7 @@ test('request schemas: HAC normalized, description/purpose required, max 3 image
     { hac: '', description: 'x', purpose: 'y' },
     { hac: 'H', description: '', purpose: 'y' },
     { hac: 'H', description: 'x', purpose: '' },
-    { hac: 'H', description: 'x', purpose: 'y', imageIds: [id, id, id, id] },
+    { hac: 'H', description: 'x', purpose: 'y', imageIds: Array.from({ length: 11 }, () => randomUUID()) },
     { hac: 'H', description: 'x', purpose: 'y', areaId: id },
   ])
     assert.equal(requestCreateSchema.safeParse(bad).success, false, JSON.stringify(bad));
@@ -73,4 +76,20 @@ test('request schemas: HAC normalized, description/purpose required, max 3 image
   );
   assert.equal(drafterDecisionSchema.safeParse({ expectedVersion: 1, decision: 'reject' }).success, false);
   assert.equal(drafterDecisionSchema.safeParse({ expectedVersion: 1, decision: 'accept' }).success, true);
+});
+
+test('request and decision schemas accept 10 images and reject 11', () => {
+  const ids = Array.from({ length: 11 }, () => randomUUID());
+  const base = { hac: 'H', description: 'x', purpose: 'y' };
+  assert.equal(requestCreateSchema.safeParse({ ...base, imageIds: ids.slice(0, 10) }).success, true);
+  const bad = requestCreateSchema.safeParse({ ...base, imageIds: ids });
+  assert.equal(bad.success, false);
+  assert.match(bad.error!.issues[0].message, /Maksimal 10 gambar referensi/);
+  const reject = { expectedVersion: 1, decision: 'reject', note: 'Perbaiki' };
+  for (const schema of [checkDecisionSchema, approvalDecisionSchema]) {
+    assert.equal(schema.safeParse({ ...reject, attachmentIds: ids.slice(0, 10) }).success, true);
+    const over = schema.safeParse({ ...reject, attachmentIds: ids });
+    assert.equal(over.success, false);
+    assert.match(over.error!.issues[0].message, /Maksimal 10 gambar/);
+  }
 });

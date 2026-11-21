@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import type { Identity } from './index';
 import { drawingsPermission, drawingsRole } from './drawings';
-import { normalizeHac } from './drawings-model';
+import { IMAGE_MAX_PER_ITEM, normalizeHac } from './drawings-model';
 
 export const requestStatuses = [
   'pending_review',
@@ -75,7 +75,10 @@ export const requestCreateSchema = z
       .trim()
       .min(1, 'Keperluan wajib diisi.')
       .max(1000, 'Keperluan maksimal 1000 karakter.'),
-    imageIds: z.array(id).max(3, 'Maksimal 3 gambar referensi.').default([]),
+    imageIds: z
+      .array(id)
+      .max(IMAGE_MAX_PER_ITEM, `Maksimal ${IMAGE_MAX_PER_ITEM} gambar referensi.`)
+      .default([]),
   })
   .strict();
 export const requestReviewSchema = z

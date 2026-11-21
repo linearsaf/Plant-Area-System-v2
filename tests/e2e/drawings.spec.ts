@@ -4,6 +4,7 @@
 import { test, expect, request as requests, type APIRequestContext, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { PDFDocument, StandardFonts, degrees } from '@cantoo/pdf-lib';
+import sharp from 'sharp';
 import { createUser, setAppGrant, changePassword, updateUserAccess, closeAuthDb } from '@plant/auth-core';
 import type { DrawingsRole, Identity } from '@plant/contracts';
 
@@ -46,11 +47,17 @@ const post = (api: APIRequestContext, path: string, data: unknown, key = randomU
 const json = async (api: APIRequestContext, path: string) => (await api.get('/drawings/api/' + path)).json();
 const version = async (api: APIRequestContext, id: string) =>
   (await json(api, `drawings/${id}`)).version as number;
-async function upload(api: APIRequestContext, kind: 'pdf' | 'image', data: Buffer, name: string) {
+async function upload(
+  api: APIRequestContext,
+  kind: 'pdf' | 'image',
+  data: Buffer,
+  name: string,
+  type = kind === 'pdf' ? 'application/pdf' : 'image/png',
+) {
   const r = await api.post('/drawings/api/uploads?kind=' + kind, {
     headers: {
       origin,
-      'Content-Type': kind === 'pdf' ? 'application/pdf' : 'image/png',
+      'Content-Type': type,
       'X-File-Name': name,
     },
     data,
@@ -445,4 +452,80 @@ test('UI: leader review room and approver tasks badge', async ({ page }) => {
   await page.waitForURL(new RegExp(`/drawings/library/${d.id}$`));
   await expect(page.locator('.drawing-status[data-status=check_rejected]').first()).toBeVisible();
   expect(violations).toEqual([]);
+});
+
+test('request images: 10 photos are compressed to webp with thumbnails; the 11th is refused', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const { viewer } = people as Required<typeof people>;
+  const photos = await Promise.all(
+    Array.from({ length: 11 }, async (_, i) => ({
+      name: `sudut-${i + 1}.jpg`,
+      mimeType: 'image/jpeg',
+      buffer: await sharp({
+        create: { width: 3000, height: 2000, channels: 3, background: { r: 20 * i, g: 120, b: 90 } },
+      })
+        .jpeg({ quality: 92 })
+        .toBuffer(),
+    })),
+  );
+  const violations = watchCsp(page);
+  await login(page, viewer);
+  await page.goto('/drawings/requests/new');
+  await page.getByLabel('HAC/SAC').fill('L61-BF1');
+  await page.getByLabel('Description').fill('Foto dari 11 sudut');
+  await page.getByLabel('Keperluan').fill('Referensi drafter');
+  const input = page.locator('input[type=file]');
+  await input.setInputFiles(photos);
+  await expect(page.getByRole('main').locator('.notice[role="alert"]')).toContainText('Maksimal 10 gambar.');
+  await expect(page.locator('.attachment-list img')).toHaveCount(10, { timeout: 60000 });
+  for (const src of await page
+    .locator('.attachment-list img')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('src'))))
+    expect(src).toMatch(/\?variant=thumb$/);
+  await page.getByRole('button', { name: 'Kirim request' }).click();
+  await page.waitForURL(/\/drawings\/requests\/[0-9a-f-]{36}$/);
+  const thumbs = page.locator('.attachment-list img');
+  await expect(thumbs).toHaveCount(10);
+  const src = (await thumbs.first().getAttribute('src'))!;
+  expect(src).toMatch(/^\/drawings\/api\/attachments\/[0-9a-f-]{36}\?variant=thumb$/);
+  const full = await viewer.api.get(src.replace('?variant=thumb', ''));
+  expect(full.headers()['content-type']).toBe('image/webp');
+  expect(full.headers()['cache-control']).toBe('private, no-cache, no-transform');
+  const meta = await sharp(Buffer.from(await full.body())).metadata();
+  expect(Math.max(meta.width!, meta.height!)).toBeLessThanOrEqual(2560);
+  expect(violations).toEqual([]);
+});
+
+test('If-None-Match does not bypass permission on request images', async () => {
+  const { viewer, drafter } = people as Required<typeof people>;
+  const image = await upload(
+    viewer.api,
+    'image',
+    await sharp({ create: { width: 800, height: 600, channels: 3, background: '#4a7' } })
+      .webp()
+      .toBuffer(),
+    'izin.webp',
+    'image/webp',
+  );
+  const created = await post(viewer.api, 'requests', {
+    hac: 'L61-BF1',
+    description: 'Izin gambar',
+    purpose: 'Uji cache',
+    imageIds: [image],
+  });
+  expect(created.status()).toBe(201);
+  const ok = await viewer.api.get(`/drawings/api/attachments/${image}?variant=thumb`);
+  expect(ok.status()).toBe(200);
+  const etag = ok.headers()['etag'];
+  const again = await viewer.api.get(`/drawings/api/attachments/${image}?variant=thumb`, {
+    headers: { 'If-None-Match': etag },
+  });
+  expect(again.status()).toBe(304);
+  // Drafter belum ditugaskan ke request ini: ETag yang benar tetap 404.
+  const denied = await drafter.api.get(`/drawings/api/attachments/${image}?variant=thumb`, {
+    headers: { 'If-None-Match': etag },
+  });
+  expect(denied.status()).toBe(404);
 });

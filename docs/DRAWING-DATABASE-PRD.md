@@ -125,7 +125,7 @@ Transisi lain ditolak 409 `INVALID_TRANSITION`. Tabel transisi diimplementasikan
 - Kandidat L1 adalah pengguna aktif dengan role `approver` atau `admin`; kandidat L2 `head` atau `admin`. Kandidat yang terkena maker-checker tidak ditawarkan.
 - Draft Leader atau Admin dapat mengganti approver selama revisi menunggu approval. L1 tidak dapat diganti setelah L1 diputus; L2 tidak dapat diganti setelah L2 diputus dan tidak dapat dikosongkan ketika revisi sedang menunggu Final Approval.
 - Bila assignee dinonaktifkan atau kehilangan role, langkah tersebut diberi tanda **Approver tidak aktif** bagi Draft Leader/Admin dan masuk daftar tugas mereka untuk diganti.
-- Semua reject wajib menyertakan catatan (1–1000 karakter) dan boleh melampirkan maksimal 3 gambar. Reject selalu mengembalikan revisi ke owner.
+- Semua reject wajib menyertakan catatan (1–1000 karakter) dan boleh melampirkan maksimal 10 gambar. Reject selalu mengembalikan revisi ke owner.
 
 ### 4.3 Reject, perbaikan dan siklus
 
@@ -157,7 +157,7 @@ Draft Leader atau Admin mengisi nomor, nama, HAC/SAC, discipline, nomor revisi, 
 | `in_progress`                | Diterima; draft drawing sudah dibuat dan sedang dikerjakan     |
 | `closed`                     | Selesai: drawing terbit, dibatalkan pemohon, atau drawing void |
 
-1. Viewer, Approver, Head atau Admin mengisi HAC/SAC, Description, Keperluan, dan maksimal 3 gambar referensi. Nomor `DRQ-YYYY-NNNNNN` dibuat server (tahun WIB, sekuens per tahun).
+1. Viewer, Approver, Head atau Admin mengisi HAC/SAC, Description, Keperluan, dan maksimal 10 gambar referensi. Nomor `DRQ-YYYY-NNNNNN` dibuat server (tahun WIB, sekuens per tahun).
 2. Draft Leader (atau Admin) menolak dengan alasan wajib, atau menyetujui dan menugaskan ke satu Drafter aktif.
 3. Drafter yang ditugaskan menerima, atau menolak dengan alasan wajib. Penolakan mengembalikan request ke Draft Leader untuk ditugaskan ulang atau ditolak.
 4. Saat diterima, sistem membuat drawing `draft` milik Drafter tersebut dengan HAC/SAC dan deskripsi dari request. Nomor drawing, nama, discipline dan file masih kosong dan wajib dilengkapi sebelum Submit. Request menjadi `in_progress`.
@@ -213,7 +213,9 @@ Body JSON platform dibatasi 128 KB, sehingga file tidak dikirim bersama data.
 1. `POST /drawings/api/uploads?kind=pdf|image` dengan body biner, `Content-Type` sesuai file, `Content-Length`, dan `X-File-Name` (percent-encoded). Server mengalirkan body ke file sementara sambil menghitung ukuran dan SHA-256, memvalidasi, menyimpan ke storage, lalu mengembalikan `{ fileId, name, size, sha256, pageCount }` dengan status `staged`.
 2. Mutasi JSON (buat/edit drawing, request, keputusan reject) merujuk `fileId`. Server memastikan file masih `staged`, milik actor, dan jenisnya sesuai, lalu menandainya `attached`.
 
-Validasi PDF: tipe dan magic bytes `%PDF-`, ukuran maksimal `DRAWINGS_MAX_PDF_MB` (default 25), dapat di-parse, minimal 1 halaman, tidak terenkripsi atau berpassword, dan lolos **uji stamp** (stamp dicoba di memori lalu dibuang) supaya kegagalan stamp tidak baru muncul saat Final Approval. Gambar: JPEG, PNG atau WebP berdasarkan magic bytes, maksimal 5 MB, maksimal 3 per request atau keputusan. SVG ditolak.
+Validasi PDF: tipe dan magic bytes `%PDF-`, ukuran maksimal `DRAWINGS_MAX_PDF_MB` (default 25), dapat di-parse, minimal 1 halaman, tidak terenkripsi atau berpassword, dan lolos **uji stamp** (stamp dicoba di memori lalu dibuang) supaya kegagalan stamp tidak baru muncul saat Final Approval. Gambar: JPEG, PNG atau WebP berdasarkan magic bytes, maksimal 25 MB per file mentah dan 120 MP, maksimal 10 per request atau keputusan. SVG ditolak.
+
+Kompresi gambar (desain [2026-11-21](superpowers/specs/2026-11-21-drawings-image-compression-design.md)): browser mengecilkan foto ke WebP (kualitas 0,82; JPEG 0,85 bila browser tidak bisa meng-encode WebP) dengan sisi terpanjang ≤ 2560 px sebelum upload. Server menyimpan WebP apa adanya hanya bila statis, tanpa EXIF/XMP/IPTC/orientasi, ≤ 2560 px dan ≤ 1,5 MB; selainnya dikonversi dengan `sharp` (orientasi diterapkan, metadata termasuk GPS dibuang, WebP kualitas 80). Setiap gambar mendapat thumbnail WebP ≤ 480 px. Maksimal 2 konversi berjalan bersamaan per proses; antrean lebih dari 30 detik → 503 `IMAGE_BUSY`. Gambar sebelum perubahan ini tetap JPEG/PNG tanpa thumbnail.
 
 File `staged` yang tidak dipakai dalam 24 jam dan file draft yang diganti sebelum pernah di-submit dibersihkan. File yang pernah di-submit disimpan permanen.
 
@@ -224,7 +226,7 @@ Satu antarmuka (`put`, `get` dengan rentang byte, `head`, `delete`) dengan dua d
 - **`s3`** — target produksi. `@aws-sdk/client-s3` dengan `endpoint`, `region`, `forcePathStyle`, dan `requestChecksumCalculation`/`responseChecksumValidation` bernilai `WHEN_REQUIRED` agar kompatibel dengan penyedia non-AWS. Bucket privat, tanpa ACL publik, tanpa presigned URL ke browser.
 - **`fs`** — development, CI, dan sementara sampai bucket siap. Volume Docker `drawings-files` di `/data/drawings`, di luar folder `public`.
 
-Key dibuat server (`files/<tahun>/<fileId>.pdf`), tidak pernah ditimpa, dan tidak memuat input pengguna. Database menyimpan key, nama asli, MIME, ukuran, SHA-256 dan jumlah halaman.
+Key dibuat server (`files/<tahun>/<fileId>.pdf`, gambar `files/<tahun>/<fileId>.webp` dan thumbnail `files/<tahun>/<fileId>.thumb.webp`), tidak pernah ditimpa, dan tidak memuat input pengguna. Database menyimpan key, nama asli, MIME, ukuran, SHA-256 dan jumlah halaman, serta key, ukuran dan SHA-256 thumbnail.
 
 Konsekuensi yang harus disiapkan:
 
@@ -239,7 +241,7 @@ Konsekuensi yang harus disiapkan:
 - Mendukung `Range: bytes=a-b` → 206 dengan `Content-Range`; rentang tidak valid 416. Header: `Accept-Ranges: bytes`, `Content-Length`, `ETag` dari SHA-256, `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, tanpa `Content-Encoding`.
 - `disposition=inline|attachment` dan `intent=view|print|download`. Nama unduhan `<DrawingNumber>_Rev-<n>.pdf`.
 - Download dan print hanya untuk revisi Completed. Setiap klik dicatat pada audit (`file.downloaded`, `file.printed`). Permintaan rentang dari viewer (`intent=view`) tidak dicatat.
-- Gambar lampiran disajikan lewat `GET /drawings/api/attachments/:id` dengan pemeriksaan izin terhadap induknya.
+- Gambar lampiran disajikan lewat `GET /drawings/api/attachments/:id` (`?variant=thumb` untuk thumbnail) dengan pemeriksaan izin terhadap induknya. Respons gambar memakai `Cache-Control: private, no-cache, no-transform` dan ETag SHA-256: izin tetap diperiksa setiap permintaan, dan `If-None-Match` yang cocok dijawab 304 tanpa membaca storage. PDF tetap `no-store`.
 
 ### 6.4 Stamp approval (K6)
 
@@ -378,7 +380,7 @@ Halaman lain: detail `/drawings/library/[id]`, edit `/drawings/library/[id]/edit
 ## 10. Operasional
 
 - **Environment baru:** `DRAWINGS_DB_PASSWORD`, `DRAWINGS_DATABASE_URL`, `DRAWINGS_MIGRATION_DATABASE_URL`, `DRAWINGS_STORAGE_DRIVER`, `DRAWINGS_STORAGE_PATH`, `DRAWINGS_S3_ENDPOINT`, `DRAWINGS_S3_REGION`, `DRAWINGS_S3_BUCKET`, `DRAWINGS_S3_ACCESS_KEY_ID`, `DRAWINGS_S3_SECRET_ACCESS_KEY`, `DRAWINGS_S3_FORCE_PATH_STYLE`, `DRAWINGS_MAX_PDF_MB`.
-- **Anggaran VPS:** layanan `drawings` diberi `mem_limit: 768m` dan `--max-old-space-size=512`, lebih besar dari aplikasi lain (512m/320) karena memproses PDF. Uji dengan PDF 25 MB sebelum menetapkan angka akhir.
+- **Anggaran VPS:** layanan `drawings` diberi `mem_limit: 1536m`, `cpus: 1.5` dan `--max-old-space-size=512`, lebih besar dari aplikasi lain (512m/320) karena memproses PDF dan mengonversi gambar dengan `sharp` (memori libvips di luar heap V8). Uji 2026-11-21 di image produksi dengan batas tersebut: dua konversi bersamaan (JPEG 27 MB dan PNG 99 MP) mencapai puncak RSS 432 MB. Uji dengan PDF 25 MB sebelum menetapkan angka akhir.
 - **Backup:** `plant_drawings` ditambahkan ke `infra/mysql/backup.sh`, `scripts/database-backup.mjs` dan uji restore. File: versioning dan retensi bucket pada driver `s3`; arsip harian volume dengan retensi 14 hari pada driver `fs`. File bersifat append-only, sehingga restore database ke waktu T tetap konsisten dengan storage yang lebih baru.
 - **Health:** `/drawings/health/live` dan `/drawings/health/ready` (database + Auth). Kegagalan storage tidak menjatuhkan readiness; operasi file menjawab 503 `STORAGE_UNAVAILABLE`.
 - **Rilis:** runbook `docs/deployment/DRAWING-DATABASE-RELEASE.md` mencakup backup awal, provisioning database pada volume yang sudah ada, migrasi aditif, perubahan Nginx gateway dan host, penambahan `.env`, urutan `up`, smoke test, dan rollback. Produksi diperbarui lewat SHA yang lolos CI.
@@ -459,7 +461,7 @@ Nilai bawaan di bawah dipakai sampai ada keputusan lain.
 | --- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
 | Q1  | Penyedia object storage, region, kredensial dan kebijakan egress. Bolehkah go-live sementara dengan driver `fs`?   | Development dengan `fs`; produksi menunggu keputusan |
 | Q2  | Apakah HAC/SAC wajib berformat `XXX-XXX` seperti Consumables? Drawing umum/area mungkin tidak punya kode tersebut. | Format bebas ternormalisasi, 1–40 karakter           |
-| Q3  | Batas ukuran PDF dan anggaran memori VPS.                                                                          | 25 MB; 768 MB                                        |
+| Q3  | Batas ukuran PDF dan anggaran memori VPS.                                                                          | 25 MB; 768 MB, naik ke 1536 MB (2026-11-21, sharp)   |
 | Q4  | (Dihapus 15 Nov 2026: Area tidak dipakai.)                                                                         | –                                                    |
 | Q5  | Penyesuaian §12 yang bukan K7–K10 (alur request, owner, admin review).                                             | Diterapkan seperti tertulis                          |
 

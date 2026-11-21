@@ -1,10 +1,17 @@
 // Read-only reconciliation of drawing_files against object storage (PRD §6.2).
 // Usage: pnpm drawings:reconcile [--hash]
-//   Checks every attached/staged row: object exists and size matches; with --hash also SHA-256.
+//   Checks every attached/staged row (file and thumbnail): object exists and size matches; with --hash
+//   also SHA-256. Thumbnail objects are reported as `<id>:thumb`.
 //   Lists storage objects without a database row (unknown) and orphaned rows whose object remains.
 // Never writes to the database or storage. Exit code 1 when a referenced object is missing or differs.
 import { createHash } from 'node:crypto';
-import { closeDrawingsDb, createStorage, drawingsSchema, getDrawingsDb } from '@plant/drawings-core';
+import {
+  closeDrawingsDb,
+  createStorage,
+  drawingsSchema,
+  fileObjects,
+  getDrawingsDb,
+} from '@plant/drawings-core';
 
 const withHash = process.argv.includes('--hash');
 const storage = createStorage();
@@ -22,29 +29,35 @@ const report = {
 };
 try {
   const rows = await getDrawingsDb().select().from(drawingsSchema.files);
-  const byKey = new Map(rows.map((r) => [r.storageKey, r]));
+  const byKey = new Map(rows.flatMap((r) => fileObjects(r).map((o) => [o.key, r] as const)));
   for (const row of rows) {
     if (row.status === 'orphaned') continue;
     report.rows++;
-    const head = await storage.head(row.storageKey);
-    if (!head) {
-      report.missing.push(row.id);
-      continue;
-    }
-    if (head.size !== row.size) {
-      report.sizeMismatch.push(row.id);
-      continue;
-    }
-    if (withHash) {
-      const object = await storage.get(row.storageKey);
-      const hash = createHash('sha256');
-      for await (const chunk of object.body as unknown as AsyncIterable<Uint8Array>) hash.update(chunk);
-      if (hash.digest('hex') !== row.sha256) {
-        report.hashMismatch.push(row.id);
+    let ok = true;
+    for (const [index, expected] of fileObjects(row).entries()) {
+      const label = index === 0 ? row.id : `${row.id}:thumb`;
+      const head = await storage.head(expected.key);
+      if (!head) {
+        report.missing.push(label);
+        ok = false;
         continue;
       }
+      if (head.size !== expected.size) {
+        report.sizeMismatch.push(label);
+        ok = false;
+        continue;
+      }
+      if (withHash) {
+        const object = await storage.get(expected.key);
+        const hash = createHash('sha256');
+        for await (const chunk of object.body as unknown as AsyncIterable<Uint8Array>) hash.update(chunk);
+        if (hash.digest('hex') !== expected.sha256) {
+          report.hashMismatch.push(label);
+          ok = false;
+        }
+      }
     }
-    report.ok++;
+    if (ok) report.ok++;
   }
   for await (const object of storage.list()) {
     const row = byKey.get(object.key);

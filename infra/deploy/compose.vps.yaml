@@ -46,9 +46,11 @@ services:
     environment:
       NODE_OPTIONS: --max-old-space-size=320
   drawings:
-    # PDF processing (validation, stamp) needs more headroom; confirm with a 25 MB PDF in Fase 2/4.
-    mem_limit: 768m
-    cpus: 0.75
+    # PDF processing (validation, stamp) plus image conversion with sharp. libvips memory lives outside
+    # the V8 heap, so the heap stays at 512 MB and the container gets the extra headroom. At most two
+    # images are converted at once (packages/drawings-core/src/images.ts).
+    mem_limit: 1536m
+    cpus: 1.5
     logging: *bounded-logging
     environment:
       NODE_OPTIONS: --max-old-space-size=512

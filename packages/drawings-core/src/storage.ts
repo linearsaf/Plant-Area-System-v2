@@ -39,13 +39,17 @@ export class StorageUnavailable extends AppError {
   }
 }
 
-const KEY_PATTERN = /^files\/\d{4}\/[0-9a-f-]{36}\.(pdf|jpg|png|webp)$/;
+const KEY_PATTERN = /^files\/\d{4}\/[0-9a-f-]{36}\.(pdf|jpg|png|webp|thumb\.webp)$/;
 export function assertKey(key: string) {
   if (!KEY_PATTERN.test(key)) throw Error('Storage key tidak valid.');
   return key;
 }
 export function storageKey(id: string, extension: 'pdf' | 'jpg' | 'png' | 'webp', now = new Date()) {
   return assertKey(`files/${now.getUTCFullYear()}/${id}.${extension}`);
+}
+/** Key thumbnail WebP di samping file penuh. */
+export function thumbKey(id: string, now = new Date()) {
+  return assertKey(`files/${now.getUTCFullYear()}/${id}.thumb.webp`);
 }
 
 export class FsStorage implements Storage {

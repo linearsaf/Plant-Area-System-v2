@@ -7,7 +7,8 @@ import { getDrawingsDb } from './database';
 import { files, audit } from './schema';
 import { IMAGE_MAX_BYTES, STAGED_TTL_MS, maxPdfBytes } from './config';
 import { detectImage, validatePdf } from './pdf';
-import { storageKey, withStorage, type ByteRange, type Storage } from './storage';
+import { processImage, webpName, withImageSlot, type ProcessedFile } from './images';
+import { storageKey, thumbKey, withStorage, type ByteRange, type Storage } from './storage';
 
 export type UploadKind = 'pdf' | 'image';
 export type StagedFile = {
@@ -22,6 +23,23 @@ export type StagedFile = {
 };
 export type FileRow = typeof files.$inferSelect;
 type Body = { path: string; size: number; sha256: string; head: Buffer };
+type StoredFile = Pick<
+  FileRow,
+  'storageKey' | 'size' | 'sha256' | 'mime' | 'thumbStorageKey' | 'thumbSize' | 'thumbSha256'
+>;
+
+/** Objek storage milik satu baris file: file penuh, lalu thumbnail bila ada. */
+export function fileObjects(row: StoredFile) {
+  const objects = [{ key: row.storageKey, size: row.size, sha256: row.sha256, mime: row.mime }];
+  if (row.thumbStorageKey && row.thumbSize !== null && row.thumbSha256)
+    objects.push({
+      key: row.thumbStorageKey,
+      size: row.thumbSize,
+      sha256: row.thumbSha256,
+      mime: 'image/webp',
+    });
+  return objects;
+}
 
 export function uploadLimit(kind: UploadKind) {
   return kind === 'pdf' ? maxPdfBytes() : IMAGE_MAX_BYTES;
@@ -92,36 +110,58 @@ export async function stageUpload(
 ): Promise<StagedFile> {
   try {
     let mime: string,
-      extension: 'pdf' | 'jpg' | 'png' | 'webp',
+      stored: ProcessedFile = body,
+      thumb: ProcessedFile | null = null,
+      converted: boolean | undefined,
       pageCount: number | null = null;
     if (kind === 'pdf') {
       if (body.head.subarray(0, 5).toString('latin1') !== '%PDF-')
         throw new AppError(422, 'File bukan PDF.', 'FILE_INVALID');
       ({ pageCount } = await validatePdf(body.path));
       mime = 'application/pdf';
-      extension = 'pdf';
     } else {
       const image = detectImage(body.head);
       if (!image || image.mime !== declaredType)
         throw new AppError(422, 'Gambar harus JPEG, PNG atau WebP yang valid.', 'FILE_INVALID');
-      ({ mime, extension } = image);
+      const processed = await withImageSlot(() => processImage(body));
+      ({ full: stored, thumb, converted } = processed);
+      mime = 'image/webp';
+      name = webpName(name);
     }
     const id = randomUUID(),
       now = new Date(),
-      key = storageKey(id, extension, now);
-    await withStorage((s) =>
-      s.put(key, body.path, { size: body.size, contentType: mime, sha256: body.sha256 }),
-    );
+      row = {
+        storageKey: storageKey(id, kind === 'pdf' ? 'pdf' : 'webp', now),
+        size: stored.size,
+        sha256: stored.sha256,
+        mime,
+        thumbStorageKey: thumb ? thumbKey(id, now) : null,
+        thumbSize: thumb?.size ?? null,
+        thumbSha256: thumb?.sha256 ?? null,
+      };
+    const objects = fileObjects(row);
+    const removeObjects = () =>
+      Promise.all(objects.map((o) => withStorage((s) => s.delete(o.key)).catch(() => undefined)));
+    try {
+      for (const [index, o] of objects.entries())
+        await withStorage((s) =>
+          s.put(o.key, index === 0 ? stored.path : thumb!.path, {
+            size: o.size,
+            contentType: o.mime,
+            sha256: o.sha256,
+          }),
+        );
+    } catch (e) {
+      await removeObjects();
+      throw e;
+    }
     try {
       await getDrawingsDb().transaction(async (tx) => {
         await tx.insert(files).values({
           id,
           kind,
-          storageKey: key,
+          ...row,
           originalName: name,
-          mime,
-          size: body.size,
-          sha256: body.sha256,
           pageCount,
           status: 'staged',
           ownerId: actor.id,
@@ -135,12 +175,19 @@ export async function stageUpload(
           action: 'file.staged',
           targetType: 'file',
           targetId: id,
-          details: JSON.stringify({ kind, name, size: body.size, sha256: body.sha256, pageCount }),
+          details: JSON.stringify({
+            kind,
+            name,
+            size: stored.size,
+            sha256: stored.sha256,
+            pageCount,
+            ...(kind === 'image' && { converted, uploadedSize: body.size }),
+          }),
           createdAt: now,
         });
       });
     } catch (e) {
-      await withStorage((s) => s.delete(key)).catch(() => undefined);
+      await removeObjects();
       throw e;
     }
     if (Date.now() - lastCleanup > 3_600_000) {
@@ -151,14 +198,16 @@ export async function stageUpload(
       fileId: id,
       kind,
       name,
-      size: body.size,
-      sha256: body.sha256,
+      size: stored.size,
+      sha256: stored.sha256,
       pageCount,
       mime,
       status: 'staged',
     };
   } finally {
-    await rm(body.path, { force: true });
+    await Promise.all(
+      [body.path, body.path + '.webp', body.path + '.thumb.webp'].map((path) => rm(path, { force: true })),
+    );
   }
 }
 
@@ -178,7 +227,7 @@ export async function stagedFileForOwner(actor: Identity, id: string) {
 export async function cleanupStagedFiles(now = Date.now(), limit = 50) {
   const db = getDrawingsDb();
   const stale = await db
-    .select({ id: files.id, storageKey: files.storageKey })
+    .select()
     .from(files)
     .where(and(eq(files.status, 'staged'), lt(files.createdAt, new Date(now - STAGED_TTL_MS))))
     .limit(limit);
@@ -189,7 +238,7 @@ export async function cleanupStagedFiles(now = Date.now(), limit = 50) {
       .set({ status: 'orphaned', orphanedAt: new Date(now) })
       .where(and(eq(files.id, row.id), eq(files.status, 'staged')));
     if (!result.affectedRows) continue;
-    await withStorage((s) => s.delete(row.storageKey));
+    for (const o of fileObjects(row)) await withStorage((s) => s.delete(o.key));
     removed++;
   }
   return removed;
@@ -225,6 +274,8 @@ export function contentDisposition(type: 'inline' | 'attachment', name: string) 
 /**
  * Mengalirkan file dari storage tanpa memuat seluruh isi ke memori; mendukung Range.
  * `no-transform` mencegah kompresi otomatis yang merusak range request.
+ * `cache: 'revalidate'` (gambar) mengizinkan browser menyimpan salinan pribadi yang selalu
+ * divalidasi ulang: ETag cocok → 304 tanpa membaca storage. Izin diperiksa pemanggil lebih dulu.
  */
 export async function serveFile(
   request: Request,
@@ -233,13 +284,24 @@ export async function serveFile(
     disposition = 'inline',
     name,
     storage,
-  }: { disposition?: 'inline' | 'attachment'; name: string; storage?: Storage },
+    cache = 'no-store',
+  }: {
+    disposition?: 'inline' | 'attachment';
+    name: string;
+    storage?: Storage;
+    cache?: 'no-store' | 'revalidate';
+  },
 ) {
+  const etag = `"${file.sha256}"`,
+    cacheControl =
+      cache === 'revalidate' ? 'private, no-cache, no-transform' : 'private, no-store, no-transform';
+  if (cache === 'revalidate' && matchesEtag(request.headers.get('if-none-match'), etag))
+    return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': cacheControl } });
   const range = parseRange(request.headers.get('range'), file.size);
   const common = {
     'Accept-Ranges': 'bytes',
-    ETag: `"${file.sha256}"`,
-    'Cache-Control': 'private, no-store, no-transform',
+    ETag: etag,
+    'Cache-Control': cacheControl,
     'X-Content-Type-Options': 'nosniff',
     'Content-Type': file.mime,
     'Content-Disposition': contentDisposition(disposition, name),
@@ -267,4 +329,23 @@ export async function serveFile(
       'Content-Range': `bytes ${range.start}-${range.end}/${file.size}`,
     },
   });
+}
+
+function matchesEtag(header: string | null, etag: string) {
+  return !!header && header.split(',').some((tag) => tag.trim().replace(/^W\//, '') === etag);
+}
+
+/** Gambar lampiran: thumbnail bila diminta dan tersedia (gambar lama tanpa thumbnail → file penuh). */
+export function serveImage(
+  request: Request,
+  file: StoredFile,
+  { name, variant, storage }: { name: string; variant: 'full' | 'thumb'; storage?: Storage },
+) {
+  const [full, thumb] = fileObjects(file);
+  const chosen = variant === 'thumb' && thumb ? thumb : full;
+  return serveFile(
+    request,
+    { storageKey: chosen.key, size: chosen.size, sha256: chosen.sha256, mime: chosen.mime },
+    { name, storage, disposition: 'inline', cache: 'revalidate' },
+  );
 }

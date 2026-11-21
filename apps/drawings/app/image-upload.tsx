@@ -1,13 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { IMAGE_MAX_PER_ITEM } from '@plant/contracts';
 import { Button } from '@plant/ui';
+import { compressImage } from './compress-image';
 import { FileDrop } from './file-drop';
 
 type Item = { fileId: string; name: string };
-const MAX = 3;
+const MAX = IMAGE_MAX_PER_ITEM;
+const MAX_BYTES = 25 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-/** Unggah maksimal 3 gambar JPEG/PNG/WebP (≤ 5 MB) sebagai lampiran; server memeriksa magic bytes. */
+/**
+ * Unggah maksimal 10 gambar JPEG/PNG/WebP (≤ 25 MB) sebagai lampiran. Gambar dikecilkan ke WebP di
+ * browser lebih dulu; server memeriksa magic bytes dan menyimpan WebP ≤ 2560 px beserta thumbnail.
+ */
 export function ImageUpload({
   onChange,
   label = 'Lampiran gambar (opsional)',
@@ -16,7 +22,7 @@ export function ImageUpload({
   label?: string;
 }) {
   const [items, setItems] = useState<Item[]>([]),
-    [busy, setBusy] = useState(false),
+    [busy, setBusy] = useState(''),
     [error, setError] = useState(''),
     [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -26,12 +32,15 @@ export function ImageUpload({
     setError('');
     const files = [...list].slice(0, MAX - items.length);
     if (list.length > files.length) setError(`Maksimal ${MAX} gambar.`);
-    setBusy(true);
     try {
-      for (const file of files) {
-        if (!TYPES.includes(file.type))
-          throw Error(`${file.name}: gunakan JPEG, PNG atau WebP. SVG tidak diterima.`);
-        if (file.size > 5 * 1024 * 1024) throw Error(`${file.name}: melebihi 5 MB.`);
+      for (const [index, original] of files.entries()) {
+        if (!TYPES.includes(original.type))
+          throw Error(`${original.name}: gunakan JPEG, PNG atau WebP. SVG tidak diterima.`);
+        if (original.size > MAX_BYTES) throw Error(`${original.name}: melebihi 25 MB.`);
+        const step = files.length > 1 ? ` ${index + 1}/${files.length}` : '';
+        setBusy(`Memproses gambar${step}…`);
+        const file = await compressImage(original);
+        setBusy(`Mengunggah gambar${step}…`);
         const r = await fetch('/drawings/api/uploads?kind=image', {
           method: 'POST',
           headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) },
@@ -44,7 +53,7 @@ export function ImageUpload({
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy(false);
+      setBusy('');
     }
   }
   return (
@@ -52,15 +61,14 @@ export function ImageUpload({
       <FileDrop
         label={label}
         hint={
-          busy
-            ? 'Mengunggah gambar…'
-            : items.length >= MAX
-              ? `Batas ${MAX} gambar tercapai. Hapus satu untuk mengganti.`
-              : `Pilih atau tarik gambar ke sini · maks. ${MAX}, JPEG/PNG/WebP ≤ 5 MB`
+          busy ||
+          (items.length >= MAX
+            ? `Batas ${MAX} gambar tercapai. Hapus satu untuk mengganti.`
+            : `Pilih atau tarik gambar ke sini · maks. ${MAX}, JPEG/PNG/WebP ≤ 25 MB`)
         }
         accept="image/jpeg,image/png,image/webp"
         multiple
-        disabled={!mounted || busy || items.length >= MAX}
+        disabled={!mounted || !!busy || items.length >= MAX}
         onFiles={(files) => void add(files)}
       />
       {error && (
@@ -73,7 +81,7 @@ export function ImageUpload({
           {items.map((i) => (
             <li key={i.fileId}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/drawings/api/uploads/${i.fileId}/file`} alt={i.name} />
+              <img src={`/drawings/api/uploads/${i.fileId}/file?variant=thumb`} alt={i.name} />
               <Button
                 type="button"
                 className="small ghost"

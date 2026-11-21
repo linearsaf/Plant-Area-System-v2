@@ -248,6 +248,6 @@ server {
     location @unavailable { default_type text/html; return 503 '<!doctype html><html lang="id"><meta charset="utf-8"><title>Layanan belum tersedia</title><h1>Layanan sementara tidak tersedia</h1><p>Coba lagi beberapa saat kemudian.</p></html>'; }
     location @api_unauthorized { default_type application/json; return 401 '{"error":"Silakan login atau ganti password sementara.","code":"UNAUTHENTICATED"}'; }
     location @api_forbidden { default_type application/json; return 403 '{"error":"Akses aplikasi belum diberikan.","code":"FORBIDDEN"}'; }
-    location @api_too_large { default_type application/json; return 413 '{"error":"File terlalu besar. Batas PDF 25 MB dan gambar 5 MB.","code":"FILE_INVALID"}'; }
+    location @api_too_large { default_type application/json; return 413 '{"error":"File terlalu besar. Batas PDF dan gambar 25 MB.","code":"FILE_INVALID"}'; }
     location @api_unavailable { default_type application/json; return 503 '{"error":"Layanan autentikasi tidak tersedia.","code":"AUTH_UNAVAILABLE"}'; }
 }
