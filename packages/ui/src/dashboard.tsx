@@ -81,8 +81,6 @@ const share = (part: number, whole: number) => (whole ? (part / whole) * 100 : 0
 const brandLabel = (name: string) => (name === 'Belum tercatat' ? 'Pabrikan belum diisi' : name);
 const compartmentCapacity = (code: EquipmentCode) =>
   equipment.find((e) => e.code === code)?.bagsPerCompartment ?? 0;
-// Pola dekoratif statis; tidak mewakili data.
-const mosaicStops = [0, 1, 0, 2, 1, 0, 3, 1, 0, 4, 1, 5, 2, 1, 6, 0];
 export function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(value),
     previous = useRef(value);
@@ -601,12 +599,8 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
                 )}
               </div>
               <div className="mosaic" aria-hidden="true">
-                {mosaicStops.map((stop, i) => (
-                  <i
-                    key={i}
-                    className={i % 4 ? 'hatched' : ''}
-                    style={{ background: ageStops[stop].color }}
-                  />
+                {Array.from({ length: 16 }, (_, i) => (
+                  <i key={i} className={i % 4 ? 'hatched' : ''} />
                 ))}
               </div>
             </section>

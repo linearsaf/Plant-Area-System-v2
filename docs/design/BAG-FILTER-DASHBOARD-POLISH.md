@@ -67,11 +67,11 @@ Urutan: **Total posisi**, lalu **Mendekati batas**, lalu **Umur ≥ 1.260 hari**
 
 ### 3.4 Kompartemen paling kritis (menggantikan "Satu batch, banyak posisi")
 
-- Lima kompartemen teratas lintas unit dalam cakupan. Kunci urutan: `older1260` turun, lalu `warning` (1.050–1.259) turun, lalu urutan katalog (unit, sisi, nomor kompartemen).
+- Tiga kompartemen teratas lintas unit dalam cakupan. Kunci urutan: `older1260` turun, lalu `warning` (1.050–1.259) turun, lalu urutan katalog (unit, sisi, nomor kompartemen).
 - Kompartemen yang nilai keduanya 0 tidak ditampilkan. Jika daftar kosong, tampilkan keadaan sehat: `Tidak ada kompartemen ≥ 1.050 hari.`
 - Baris: `L62-BF1 · Comp. 12` (awalan `Comp.` sama dengan peta; label tampilan dari `displayCompartment`), lalu `N/kapasitas kritis · M/kapasitas mendekati` (kapasitas = bag per kompartemen, mis. `136/136 kritis`). Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
 - Teks edukasi "Pilih hingga 500 bag…" dihapus dari dashboard.
-- Mosaic 4×4 dipertahankan sebagai dekorasi `aria-hidden` dan diletakkan sebagai latar kartu (posisi absolut, opasitas rendah) agar daftar memakai lebar penuh pada 1280–1366 px. Polanya statis memakai warna `ageStops` dan tidak mewakili data.
+- Mosaic 4×4 dipertahankan apa adanya dari kartu tip lama (warna dan posisi di kanan, dalam alur). Percobaan menjadikannya latar kartu dibatalkan karena visualnya memburuk. Agar muat di samping mosaic pada 1280–1366 px, jumlah kritis ditulis di bawah nama kompartemen, bukan rata kanan.
 
 ### 3.5 Indeks Kesehatan Bag (menggantikan gauge "Posisi terpasang")
 
@@ -133,7 +133,7 @@ perEquipment: {
   code; total; installed; older900; older1260;
   distribution: number[]; // baru: 7 bucket, sama dengan distribution global
 }[];
-compartments: {          // baru: maksimal 5, sudah diurutkan (aturan 3.4)
+compartments: {          // baru: maksimal 3, sudah diurutkan (aturan 3.4)
   equipmentCode: EquipmentCode;
   side: Position['side'];
   compartment: number;   // nomor lokal per sisi

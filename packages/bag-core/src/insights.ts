@@ -176,7 +176,7 @@ export async function dashboard(codes: EquipmentCode[], year: number, now = Date
         a.compartment - b.compartment
       );
     })
-    .slice(0, 5)
+    .slice(0, 3)
     .map((c) => ({ ...c, label: displayCompartment(c, catalog[order(c.equipmentCode)]) }));
   return {
     serverTime: new Date(now).toISOString(),

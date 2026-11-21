@@ -1333,14 +1333,7 @@
   .unrecorded-banner b {
     font-weight: 500;
   }
-  .critical-compartments {
-    position: relative;
-    align-items: flex-start;
-  }
-  .critical-compartments > div:first-child {
-    position: relative;
-    z-index: 1;
-  }
+  /* Daftar di kiri, mosaic dekoratif bawaan tip-card di kanan (dalam alur, tidak menjadi latar). */
   .critical-compartments ol {
     display: grid;
     gap: var(--space-1);
@@ -1349,11 +1342,11 @@
     list-style: none;
   }
   .critical-compartments li a {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-1);
+    display: grid;
+    gap: var(--space-half);
+    align-items: start;
+    margin: 0 calc(-1 * var(--space-2));
+    padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-input);
     font-size: var(--type-footnote);
     line-height: var(--leading-footnote);
@@ -1361,20 +1354,15 @@
   .critical-compartments li a:hover {
     background: var(--surfaceMuted);
   }
+  .critical-compartments li a > span {
+    white-space: nowrap;
+  }
   .critical-compartments li small {
-    flex-shrink: 0;
     font-size: var(--type-caption);
+    line-height: var(--leading-caption);
   }
   .critical-compartments li b {
     font-weight: 500;
-  }
-  /* Mosaic menjadi latar dekoratif agar daftar memakai lebar penuh di 1280–1366 px. */
-  .critical-compartments .mosaic {
-    position: absolute;
-    right: var(--space-4);
-    bottom: var(--space-4);
-    opacity: 0.3;
-    pointer-events: none;
   }
   .progress-card > .fine {
     margin: var(--space-1) 0 0;

@@ -120,7 +120,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   const previousYear = await dashboard([code], year - 1, now);
   assert.ok(previousYear.woCompliance.bags <= previousYear.periodTotal);
 
-  assert.ok(result.compartments.length <= 5);
+  assert.ok(result.compartments.length <= 3);
   for (const [i, c] of result.compartments.entries()) {
     assert.ok(c.older1260 > 0 || c.warning > 0);
     assert.equal(c.label, displayCompartment(c, eq422));
@@ -135,7 +135,7 @@ test('dashboard adds per-unit ages, critical compartments, WO compliance and pri
   if (fixture) assert.deepEqual([fixture.installed, fixture.older1260, fixture.warning], [8, 3, 2]);
   else
     assert.ok(
-      result.compartments.length === 5 &&
+      result.compartments.length === 3 &&
         last &&
         (last.older1260 > 3 || (last.older1260 === 3 && last.warning >= 2)),
     );
