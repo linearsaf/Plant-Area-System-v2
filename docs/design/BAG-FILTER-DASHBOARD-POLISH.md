@@ -1,6 +1,6 @@
 # Rencana polish Ringkasan Bag Filter
 
-Tanggal: 21 November 2026. Status: **rencana disetujui; belum diimplementasikan**. Branch: `feat/bag-dashboard-polish`.
+Tanggal: 21 November 2026. Status: **diimplementasikan; hasil pemeriksaan dicatat pada [VALIDATION.md](../VALIDATION.md)**. Branch: `feat/bag-dashboard-polish`.
 
 Ringkasan Bag Filter saat ini lebih banyak menjawab "seberapa lengkap data kita" daripada "bag mana yang harus diganti". Rencana ini mengganti empat widget kelengkapan data dengan metrik operasional. Info kelengkapan dipindah ke banner sementara. Hierarki rail kanan, aktivitas, dan kartu Equipment juga dirapikan. Grafik kuartal di hero dan kartu Distribusi umur **tidak diubah**.
 
@@ -65,7 +65,7 @@ Urutan: **Total posisi**, lalu **Mendekati batas**, lalu **Umur ≥ 1.260 hari**
 
 - Lima kompartemen teratas lintas unit dalam cakupan. Kunci urutan: `older1260` turun, lalu `warning` (1.050–1.259) turun, lalu urutan katalog (unit, sisi, nomor kompartemen).
 - Kompartemen yang nilai keduanya 0 tidak ditampilkan. Jika daftar kosong, tampilkan keadaan sehat: `Tidak ada kompartemen ≥ 1.050 hari.`
-- Baris: `L62-BF1 · Kompartemen 12` (label tampilan dari `displayCompartment`), lalu `N kritis · M mendekati`. Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
+- Baris: `L62-BF1 · Comp. 12` (awalan `Comp.` sama dengan peta; label tampilan dari `displayCompartment`), lalu `N kritis · M mendekati`. Link: `/bag-filter/equipment/{code}?compartment={label}&age=1260`, atau `age=1050` jika tidak ada bag kritis.
 - Teks edukasi "Pilih hingga 500 bag…" dihapus dari dashboard.
 - Mosaic 4×4 dipertahankan sebagai dekorasi `aria-hidden`. Polanya statis memakai warna `ageStops` dan tidak mewakili data.
 
@@ -162,8 +162,8 @@ priority: {              // baru: hasil pickPriority (aturan 3.7)
 [monitor.tsx](../../apps/bag-filter/app/equipment/[code]/monitor.tsx) saat ini hanya mengenali `?age=1260` (bucket 6) dan `?batch=`.
 
 - `?age=<hari>` menerima nilai yang tepat sama dengan salah satu `ageStops[i].days` dan memilih bucket `i`. Nilai lain diabaikan tanpa error. `?age=1260` tetap berperilaku sama.
-- `?compartment=<label>` diselesaikan dengan `compartmentFromLabel`. Label sudah unik per unit (`12`, `3A`, `16`), jadi satu parameter label menggantikan pasangan `side` + `compartment` yang dibahas sebelumnya dan URL-nya lebih terbaca. Kompartemen digulir ke tampilan dengan penanda sementara. Seleksi tidak berubah. Label tidak dikenal diabaikan.
-- Gulir memakai `scrollIntoView({ block: 'center' })` dan menghormati `prefers-reduced-motion` (tanpa smooth scroll).
+- `?compartment=<label>` diselesaikan dengan `compartmentFromLabel` dan membuka detail kompartemen itu (fungsi `showComp` yang sama dengan klik judul kompartemen). Label sudah unik per unit (`12`, `3A`, `16`), jadi satu parameter label menggantikan pasangan `side` + `compartment` yang dibahas sebelumnya dan URL-nya lebih terbaca. Seleksi tidak berubah. Label tidak dikenal diabaikan.
+- Gulir ke detail memakai perilaku `showComp` yang sudah ada: smooth, atau instan saat `prefers-reduced-motion`.
 
 ## 6. Urutan pengerjaan (satu PR, commit bertahap)
 

@@ -36,14 +36,8 @@ test('pickPriority prefers the unit with the most critical bags', () => {
 });
 
 test('pickPriority breaks critical ties by share, then by catalog order', () => {
-  assert.equal(
-    pickPriority([unit('561-BF1', 3000, 100, 0), unit('L61-BF1', 1000, 100, 0)]).code,
-    'L61-BF1',
-  );
-  assert.equal(
-    pickPriority([unit('421-BF1', 1000, 100, 0), unit('422-BF1', 1000, 100, 0)]).code,
-    '421-BF1',
-  );
+  assert.equal(pickPriority([unit('561-BF1', 3000, 100, 0), unit('L61-BF1', 1000, 100, 0)]).code, 'L61-BF1');
+  assert.equal(pickPriority([unit('421-BF1', 1000, 100, 0), unit('422-BF1', 1000, 100, 0)]).code, '421-BF1');
 });
 
 test('pickPriority falls back to warning bags, then to a healthy state', () => {
