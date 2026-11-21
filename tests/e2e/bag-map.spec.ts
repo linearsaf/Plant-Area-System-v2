@@ -5,6 +5,7 @@ import { authSchema, getAuthDb, closeAuthDb, createUser, setGrant, changePasswor
 import { getBagDb, closeBagDb, bagSchema } from '@plant/bag-core';
 import {
   equipmentCodes,
+  formatPercent,
   getEquipment,
   equipmentPositions,
   positionKey,
@@ -832,6 +833,17 @@ test('210-day age spectrum keeps seven categories, exact filters and matching da
     }
     await filter.click();
   }
+  // Deep link dari Ringkasan: kompartemen tujuan terbuka dan bucket 1.050–1.259 aktif.
+  const deepLabel = config.sides.find((s) => s.name === side)!.labels[compartment - 1];
+  await page.goto(`/bag-filter/equipment/l62-bf1?compartment=${encodeURIComponent(deepLabel)}&age=1050`);
+  await expect(
+    page.locator('.age-buckets').getByRole('button', { name: labels[5], exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  for (const [positionIndex, position] of positions.entries())
+    await expect(page.locator(`.bag-grid [data-position-key="${positionKey(position)}"]`)).toHaveCSS(
+      'opacity',
+      Math.floor(positionIndex / 2) === 5 ? '1' : '0.25',
+    );
   for (const theme of ['light', 'dark'])
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -858,5 +870,150 @@ test('210-day age spectrum keeps seven categories, exact filters and matching da
         exact: true,
       }),
     ).toBeVisible();
-  await expect(page.locator('.equipment-card').first()).toContainText('Skala 0–1.260+ hari');
+  const card = page.locator('.equipment-card').filter({ hasText: code });
+  await expect(card).toContainText('bag ≥ 1.260 hari');
+  await expect(card.locator('.distribution-bar-mini')).toBeVisible();
+  await expect(page.getByText('Skala 0–1.260+ hari')).toHaveCount(0);
+});
+
+const summaryFixture = (healthy = false) => {
+  const year = new Date(Date.now() + 7 * 3600000).getUTCFullYear();
+  const units = [
+    ['561-BF1', 3264, 2600, 300, 50],
+    ['562-BF1', 3264, 3213, 1200, 0],
+    ['421-BF1', 4080, 4080, 900, 40],
+    ['422-BF1', 4080, 4080, 794, 30],
+    ['L61-BF1', 2048, 2048, 0, 25],
+    ['L62-BF1', 2048, 1629, 900, 40],
+  ] as const;
+  return {
+    serverTime: new Date().toISOString(),
+    year,
+    currentYear: year,
+    total: 18784,
+    installed: healthy ? 18784 : 17650,
+    neverInstalled: healthy ? 0 : 1134,
+    older1260: healthy ? 0 : 4094,
+    older900: 0,
+    distribution: healthy ? [18784, 0, 0, 0, 0, 0, 0] : [1666, 3905, 926, 1388, 5486, 185, 4094],
+    perEquipment: units.map(([code, total, installed, older1260, warning]) => ({
+      code,
+      total,
+      installed: healthy ? total : installed,
+      older900: 0,
+      older1260: healthy ? 0 : older1260,
+      distribution: healthy
+        ? [total, 0, 0, 0, 0, 0, 0]
+        : [installed - older1260 - warning, 0, 0, 0, 0, warning, older1260],
+    })),
+    compartments: healthy
+      ? []
+      : [
+          {
+            equipmentCode: '562-BF1',
+            side: 'Utara',
+            compartment: 3,
+            label: '3',
+            installed: 136,
+            older1260: 136,
+            warning: 0,
+          },
+          {
+            equipmentCode: '421-BF1',
+            side: 'B',
+            compartment: 2,
+            label: '2B',
+            installed: 136,
+            older1260: 0,
+            warning: 12,
+          },
+        ],
+    woCompliance: { bags: 4019, bagsWithWo: 1000, batches: 40, batchesWithoutWo: 30 },
+    priority: healthy
+      ? { level: 'healthy', code: null, count: 0, installed: 0 }
+      : { level: 'critical', code: '562-BF1', count: 1200, installed: 3213 },
+    series: [1, 2, 3, 4].map((quarter) => ({
+      quarter,
+      label: `Q${quarter}`,
+      total: quarter === 1 ? 4019 : 0,
+      brands: quarter === 1 ? { Filtras: 4019 } : {},
+    })),
+    periodTotal: 4019,
+    previousTotal: 3091,
+    recent: [
+      {
+        id: randomUUID(),
+        equipmentCode: 'L62-BF1',
+        wo: '',
+        reason: 'Fixture',
+        brand: 'Filtras',
+        actorName: 'Fixture operator',
+        positionCount: 348,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: randomUUID(),
+        equipmentCode: '421-BF1',
+        wo: 'WO-2026-0001',
+        reason: 'Fixture',
+        brand: null,
+        actorName: 'Fixture operator',
+        positionCount: 35,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  };
+};
+
+test('summary shows operational metrics, priority, WO status and a keyboard map menu', async ({ page }) => {
+  await login(page);
+  let healthy = false;
+  await page.route('**/bag-filter/api/dashboard*', (route) =>
+    route.fulfill({ json: summaryFixture(healthy) }),
+  );
+  await page.goto('/bag-filter');
+  const banner = page.locator('.unrecorded-banner');
+  await expect(banner).toContainText('1.134 posisi');
+  await expect(banner.getByRole('link')).toHaveText([/561-BF1\s*664/, /L62-BF1\s*419/, /562-BF1\s*51/]);
+  await expect(page.locator('.kpi-rail')).toContainText('Mendekati batas');
+  await expect(page.locator('.kpi-rail a[href*="age=1050"]')).toContainText('185');
+  await expect(page.locator('.wo-card')).toContainText(formatPercent((1000 / 4019) * 100));
+  await expect(page.locator('.wo-card')).toContainText('30 batch tanpa WO');
+  await expect(page.locator('.gauge-card .display-md')).toHaveText(
+    formatPercent(((17650 - 4094) / 17650) * 100),
+  );
+  await expect(page.locator('.progress-card .progress-list > a').first()).toContainText('L62-BF1');
+  const critical = page.locator('.critical-compartments li a');
+  await expect(critical.first()).toHaveAttribute('href', /562-bf1\?compartment=3&age=1260/);
+  await expect(critical.nth(1)).toHaveAttribute('href', /421-bf1\?compartment=2B&age=1050/);
+  const priority = page.locator('.priority-widget');
+  await expect(priority).toContainText('562-BF1');
+  await expect(priority.getByRole('link', { name: 'Buka peta' })).toHaveAttribute('href', /age=1260/);
+  await expect(page.getByRole('button', { name: 'Equipment berikutnya' })).toHaveCount(0);
+  const rows = page.locator('.activity-row');
+  await expect(rows.first()).toContainText('L62-BF1 · 348 bag');
+  await expect(rows.first().locator('.badge')).toHaveText('Tanpa WO');
+  await expect(rows.nth(1)).toContainText('WO-2026-0001');
+  await expect(rows.nth(1).locator('.badge')).toHaveCount(0);
+  await expect(rows.nth(1)).toContainText('Pabrikan belum diisi');
+  await expect(page.locator('.equipment-card')).toHaveCount(6);
+  await expect(page.locator('.equipment-card .distribution-bar-mini')).toHaveCount(6);
+  expect(await page.locator('.dashboard-grid').innerText()).not.toMatch(/\d\.\d%/);
+
+  const trigger = page.getByRole('button', { name: 'Buka peta', exact: true });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('dialog', { name: 'Buka peta equipment' });
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.menu-item')).toHaveCount(6);
+  await expect(menu.locator('.menu-item').filter({ hasText: '562-BF1' })).toContainText('1.200 kritis');
+  await expect(menu.locator('.menu-item').filter({ hasText: 'L61-BF1' }).locator('.badge')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+
+  healthy = true;
+  await page.reload();
+  await expect(page.locator('.priority-widget')).toContainText('Semua unit sehat');
+  await expect(page.locator('.unrecorded-banner')).toHaveCount(0);
+  await expect(page.locator('.critical-compartments')).toContainText('Tidak ada kompartemen');
 });
