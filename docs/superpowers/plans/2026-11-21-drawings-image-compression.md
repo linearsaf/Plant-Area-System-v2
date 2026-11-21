@@ -39,6 +39,7 @@
 ### Task 1: Batas 10 gambar dan 25 MB
 
 **Files:**
+
 - Modify: `packages/contracts/src/drawings-requests.ts:78`
 - Modify: `packages/contracts/src/drawings-workflow.ts:74`
 - Modify: `packages/drawings-core/src/config.ts:14-15`
@@ -47,6 +48,7 @@
 - Test: `tests/unit/drawings-requests.test.ts`, `tests/unit/drawings-files.test.ts`
 
 **Interfaces:**
+
 - Produces: `IMAGE_MAX_PER_ITEM = 10` diekspor dari `@plant/contracts` (didefinisikan di `drawings-requests.ts`, dipakai `drawings-workflow.ts`); `drawings-core/config.ts` me-re-export dari contracts (hapus definisi lokal). `IMAGE_MAX_BYTES = 25 * 1024 * 1024`.
 
 - [ ] **Step 1: Tulis test gagal**
@@ -54,7 +56,11 @@
 ```ts
 test('request and decision schemas accept 10 images and reject 11', () => {
   const ids = Array.from({ length: 11 }, () => randomUUID());
-  assert.equal(requestCreateSchema.safeParse({ hac: 'H', description: 'x', purpose: 'y', imageIds: ids.slice(0, 10) }).success, true);
+  assert.equal(
+    requestCreateSchema.safeParse({ hac: 'H', description: 'x', purpose: 'y', imageIds: ids.slice(0, 10) })
+      .success,
+    true,
+  );
   const bad = requestCreateSchema.safeParse({ hac: 'H', description: 'x', purpose: 'y', imageIds: ids });
   assert.equal(bad.success, false);
   assert.match(bad.error!.issues[0].message, /Maksimal 10 gambar referensi/);
@@ -62,6 +68,7 @@ test('request and decision schemas accept 10 images and reject 11', () => {
 });
 test('image upload limit is 25 MB', () => assert.equal(uploadLimit('image'), 25 * 1024 * 1024));
 ```
+
 Perbarui test lama di `drawings-requests.test.ts:64` yang mengandalkan batas 3 (4 id duplikat) agar tetap menguji duplikat, bukan batas.
 
 - [ ] **Step 2: Jalankan, pastikan gagal** — `pnpm test` → FAIL pada dua test baru.
@@ -74,11 +81,13 @@ Perbarui test lama di `drawings-requests.test.ts:64` yang mengandalkan batas 3 (
 ### Task 2: Aturan murni gambar dan key thumbnail
 
 **Files:**
+
 - Create: `packages/drawings-core/src/images.ts` (bagian murni saja di task ini)
 - Modify: `packages/drawings-core/src/storage.ts:42-49`, `packages/drawings-core/src/config.ts`, `packages/drawings-core/src/index.ts`
 - Test: `tests/unit/drawings-images.test.ts` (baru)
 
 **Interfaces:**
+
 - Produces (dari `images.ts`, diekspor lewat `index.ts`):
   - `type ImageFacts = { format?: string; width?: number; height?: number; pages?: number; exif?: unknown; xmp?: unknown; iptc?: unknown; orientation?: number }`
   - `needsConversion(facts: ImageFacts, size: number): boolean`
@@ -93,10 +102,16 @@ const clean = { format: 'webp', width: 2560, height: 1440 };
 test('clean small webp passes through', () => assert.equal(needsConversion(clean, 1_000_000), false));
 test('needsConversion flags every disqualifier', () => {
   for (const facts of [
-    { ...clean, format: 'jpeg' }, { ...clean, pages: 2 }, { ...clean, exif: Buffer.from('x') },
-    { ...clean, xmp: Buffer.from('x') }, { ...clean, iptc: Buffer.from('x') }, { ...clean, orientation: 6 },
-    { ...clean, width: 2561 }, { ...clean, height: 2561 },
-  ]) assert.equal(needsConversion(facts, 1000), true, JSON.stringify(facts));
+    { ...clean, format: 'jpeg' },
+    { ...clean, pages: 2 },
+    { ...clean, exif: Buffer.from('x') },
+    { ...clean, xmp: Buffer.from('x') },
+    { ...clean, iptc: Buffer.from('x') },
+    { ...clean, orientation: 6 },
+    { ...clean, width: 2561 },
+    { ...clean, height: 2561 },
+  ])
+    assert.equal(needsConversion(facts, 1000), true, JSON.stringify(facts));
   assert.equal(needsConversion(clean, 1.5 * 1024 * 1024 + 1), true);
   assert.equal(needsConversion({ ...clean, pages: 1 }, 1000), false);
 });
@@ -105,14 +120,17 @@ test('webpName swaps or appends the extension within 200 chars', () => {
   assert.equal(webpName('scan'), 'scan.webp');
   assert.equal(webpName('a.b.png'), 'a.b.webp');
   const long = webpName('x'.repeat(199) + '.jpg');
-  assert.equal(long.length, 200); assert.ok(long.endsWith('.webp'));
+  assert.equal(long.length, 200);
+  assert.ok(long.endsWith('.webp'));
 });
 test('thumbKey sits beside the full key and passes key validation', () => {
-  const id = randomUUID(), now = new Date('2026-03-01T00:00:00Z');
+  const id = randomUUID(),
+    now = new Date('2026-03-01T00:00:00Z');
   assert.equal(thumbKey(id, now), `files/2026/${id}.thumb.webp`);
   assert.throws(() => assertKey(`files/2026/${id}.thumb.png`));
 });
 ```
+
 (`assertKey` perlu diekspor dari `index.ts` bila belum.)
 
 - [ ] **Step 2: Jalankan** — `pnpm test` → FAIL (simbol belum ada).
@@ -125,11 +143,13 @@ test('thumbKey sits beside the full key and passes key validation', () => {
 ### Task 3: Pemrosesan gambar dengan sharp
 
 **Files:**
+
 - Modify: `packages/drawings-core/src/images.ts`, `packages/drawings-core/src/index.ts`
 - Modify: `packages/drawings-core/package.json` (dependency `"sharp": "0.35.5"`), `package.json` root (devDependency `"sharp": "0.35.5"` untuk fixture test), `pnpm-lock.yaml` via `pnpm install`
 - Test: `tests/unit/drawings-images.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 2 (`needsConversion`, konstanta config).
 - Produces:
   - `type ProcessedFile = { path: string; size: number; sha256: string }`
@@ -142,33 +162,53 @@ test('thumbKey sits beside the full key and passes key validation', () => {
 
 ```ts
 test('clean webp passes through byte-identical with a thumbnail', async () => {
-  const input = await fixture(sharp({ create: { width: 1200, height: 800, channels: 3, background: '#4a7' } }).webp({ quality: 80 }));
+  const input = await fixture(
+    sharp({ create: { width: 1200, height: 800, channels: 3, background: '#4a7' } }).webp({ quality: 80 }),
+  );
   const out = await processImage(input);
   assert.equal(out.converted, false);
-  assert.equal(out.full.path, input.path); assert.equal(out.full.sha256, input.sha256);
+  assert.equal(out.full.path, input.path);
+  assert.equal(out.full.sha256, input.sha256);
   const t = await sharp(out.thumb.path).metadata();
-  assert.equal(t.format, 'webp'); assert.equal(Math.max(t.width!, t.height!), 480);
+  assert.equal(t.format, 'webp');
+  assert.equal(Math.max(t.width!, t.height!), 480);
 });
 test('converts rotated JPEG upright and strips EXIF', async () => {
   // 4000x3000 JPEG dengan withExif({ IFD0: { Orientation: '6' } }) / withMetadata({ orientation: 6 })
   const out = await processImage(input);
   const m = await sharp(out.full.path).metadata();
-  assert.equal(out.converted, true); assert.equal(m.format, 'webp');
+  assert.equal(out.converted, true);
+  assert.equal(m.format, 'webp');
   assert.deepEqual([m.width, m.height], [1920, 2560]); // tegak setelah autoOrient
-  assert.equal(m.exif, undefined); assert.equal(m.orientation, undefined);
+  assert.equal(m.exif, undefined);
+  assert.equal(m.orientation, undefined);
   assert.equal(out.full.sha256, sha(await readFile(out.full.path)));
 });
-test('webp with exif is converted', async () => { /* webp 800x600 + withExif(...) → converted true, exif undefined */ });
-test('oversized and animated webp are converted to a single 2560px frame', async () => { /* 3000x1000 webp → 2560x853; webp animasi 2 frame → pages undefined/1 */ });
-test('png with alpha becomes webp and keeps alpha', async () => { /* channels 4 → m.hasAlpha true */ });
-test('corrupt image is rejected as FILE_INVALID', async () => { /* header JPEG + byte acak → AppError 422 FILE_INVALID */ });
-test('images over 120 megapixels are rejected', async () => { /* PNG 11000x11000 hitam (kecil terkompresi) → 422 /Resolusi gambar terlalu besar/ */ });
+test('webp with exif is converted', async () => {
+  /* webp 800x600 + withExif(...) → converted true, exif undefined */
+});
+test('oversized and animated webp are converted to a single 2560px frame', async () => {
+  /* 3000x1000 webp → 2560x853; webp animasi 2 frame → pages undefined/1 */
+});
+test('png with alpha becomes webp and keeps alpha', async () => {
+  /* channels 4 → m.hasAlpha true */
+});
+test('corrupt image is rejected as FILE_INVALID', async () => {
+  /* header JPEG + byte acak → AppError 422 FILE_INVALID */
+});
+test('images over 120 megapixels are rejected', async () => {
+  /* PNG 11000x11000 hitam (kecil terkompresi) → 422 /Resolusi gambar terlalu besar/ */
+});
 test('image slots run at most N at once and time out waiting callers', async () => {
   const run = createImageSlots(1, 50);
   let release!: () => void;
   const first = run(() => new Promise<void>((r) => (release = r)));
-  await assert.rejects(run(async () => 1), (e) => e instanceof AppError && e.status === 503 && e.code === 'IMAGE_BUSY');
-  release(); await first;
+  await assert.rejects(
+    run(async () => 1),
+    (e) => e instanceof AppError && e.status === 503 && e.code === 'IMAGE_BUSY',
+  );
+  release();
+  await first;
   assert.equal(await run(async () => 2), 2);
 });
 ```
@@ -184,12 +224,14 @@ test('image slots run at most N at once and time out waiting callers', async () 
 ### Task 4: Simpan hasil konversi dan thumbnail
 
 **Files:**
+
 - Create: `packages/drawings-core/migrations/0006_image_thumbnails.sql` + snapshot/journal via `pnpm db:generate:drawings`
 - Modify: `packages/drawings-core/src/schema.ts:259-285`, `packages/drawings-core/src/files.ts:86-196`, `packages/drawings-core/src/index.ts`
 - Modify: `scripts/drawings-reconcile.ts`, `scripts/drawings-storage-copy.ts`
 - Test: `tests/integration/drawings-files.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 3 `processImage`, `withImageSlot`; Task 2 `thumbKey`, `webpName`.
 - Produces:
   - Kolom `files.thumbStorageKey` (`thumb_storage_key varchar(200)` unique, null), `files.thumbSize` (`thumb_size bigint` mode number, null), `files.thumbSha256` (`thumb_sha256 char(64)`, null).
@@ -201,14 +243,25 @@ test('image slots run at most N at once and time out waiting callers', async () 
 
 ```ts
 test('staged JPEG is stored as webp with a thumbnail and audited as converted', async () => {
-  const staged = await stageUpload(owner, 'image', 'foto lapangan.jpg', 'image/jpeg', await body(jpeg4000x3000));
-  assert.equal(staged.mime, 'image/webp'); assert.equal(staged.name, 'foto lapangan.webp');
+  const staged = await stageUpload(
+    owner,
+    'image',
+    'foto lapangan.jpg',
+    'image/jpeg',
+    await body(jpeg4000x3000),
+  );
+  assert.equal(staged.mime, 'image/webp');
+  assert.equal(staged.name, 'foto lapangan.webp');
   const [row] = await db.select().from(files).where(eq(files.id, staged.fileId));
-  assert.match(row.storageKey, /\.webp$/); assert.match(row.thumbStorageKey!, /\.thumb\.webp$/);
-  assert.equal(row.size, staged.size); assert.equal(row.sha256, staged.sha256);
+  assert.match(row.storageKey, /\.webp$/);
+  assert.match(row.thumbStorageKey!, /\.thumb\.webp$/);
+  assert.equal(row.size, staged.size);
+  assert.equal(row.sha256, staged.sha256);
   // kedua objek ada di storage dengan size sesuai catatan; audit details.converted === true, uploadedSize === input size
 });
-test('clean webp is stored unchanged', async () => { /* sha256 tersimpan === sha256 input; audit converted false */ });
+test('clean webp is stored unchanged', async () => {
+  /* sha256 tersimpan === sha256 input; audit converted false */
+});
 test('staged image cleanup removes full and thumbnail objects', async () => {
   // stage gambar, mundurkan createdAt 25 jam, cleanupStagedFiles() → status orphaned, storage.head(full) dan head(thumb) null
 });
@@ -216,6 +269,7 @@ test('database failure after storing removes both objects', async () => {
   // paksa insert gagal (mis. stub getDrawingsDb transaksi melempar / id bentrok) → tidak ada objek tersisa di root storage
 });
 ```
+
 Perbarui test SVG-ditolak (`drawings-files.test.ts:106`) bila pesannya berubah — seharusnya tidak.
 
 - [ ] **Step 2: Jalankan** — integration test sesuai README (`plant-v2-test`) → FAIL.
@@ -230,11 +284,13 @@ Perbarui test SVG-ditolak (`drawings-files.test.ts:106`) bila pesannya berubah �
 ### Task 5: Penyajian thumbnail dan cache gambar
 
 **Files:**
+
 - Modify: `packages/drawings-core/src/files.ts:229-270`, `packages/drawings-core/src/index.ts`
 - Modify: `apps/drawings/app/api/[...path]/route.ts:121-143`
 - Test: `tests/unit/drawings-files.test.ts`, `tests/integration/drawings-files.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 4 kolom thumb, `fileObjects`.
 - Produces:
   - `serveFile(request, file, { disposition?, name, storage?, cache?: 'no-store' | 'revalidate' })` — default `'no-store'` (perilaku sekarang). `'revalidate'` → `Cache-Control: private, no-cache, no-transform`; bila `If-None-Match` memuat `"<sha256>"` → `304` dengan `ETag` dan `Cache-Control`, tanpa membaca storage.
@@ -245,14 +301,31 @@ Perbarui test SVG-ditolak (`drawings-files.test.ts:106`) bila pesannya berubah �
 
 ```ts
 test('revalidate cache returns 304 on matching If-None-Match without touching storage', async () => {
-  const failing = { ...fsStorage, get: () => { throw Error('tidak boleh dibaca'); } } as Storage;
-  const res = await serveFile(new Request('https://x/', { headers: { 'if-none-match': `"${meta.sha256}"` } }), meta, { name: 'a.webp', cache: 'revalidate', storage: failing });
-  assert.equal(res.status, 304); assert.equal(res.headers.get('cache-control'), 'private, no-cache, no-transform');
+  const failing = {
+    ...fsStorage,
+    get: () => {
+      throw Error('tidak boleh dibaca');
+    },
+  } as Storage;
+  const res = await serveFile(
+    new Request('https://x/', { headers: { 'if-none-match': `"${meta.sha256}"` } }),
+    meta,
+    { name: 'a.webp', cache: 'revalidate', storage: failing },
+  );
+  assert.equal(res.status, 304);
+  assert.equal(res.headers.get('cache-control'), 'private, no-cache, no-transform');
 });
-test('pdf responses stay no-store', async () => { /* default → 'private, no-store, no-transform' */ });
-test('serveImage serves the thumbnail variant', async () => { /* Content-Type image/webp, Content-Length = thumbSize, ETag = thumbSha256 */ });
-test('variant=thumb falls back to full file for legacy images', async () => { /* row tanpa thumbStorageKey, mime image/png → 200, Content-Type image/png */ });
+test('pdf responses stay no-store', async () => {
+  /* default → 'private, no-store, no-transform' */
+});
+test('serveImage serves the thumbnail variant', async () => {
+  /* Content-Type image/webp, Content-Length = thumbSize, ETag = thumbSha256 */
+});
+test('variant=thumb falls back to full file for legacy images', async () => {
+  /* row tanpa thumbStorageKey, mime image/png → 200, Content-Type image/png */
+});
 ```
+
 Integration: `If-None-Match does not bypass permission` — gambar request milik user lain: `requestImage(stranger, id)` melempar 404 sebelum `serveImage` dipanggil (uji lewat jalur yang sama dengan route, atau E2E di Task 6).
 
 - [ ] **Step 2: Jalankan** — `pnpm test` → FAIL.
@@ -265,11 +338,13 @@ Integration: `If-None-Match does not bypass permission` — gambar request milik
 ### Task 6: Kompresi di browser dan thumbnail di UI
 
 **Files:**
+
 - Create: `apps/drawings/app/compress-image.ts`
 - Modify: `apps/drawings/app/image-upload.tsx`, `apps/drawings/app/requests-ui.tsx:397-399`, `apps/drawings/app/workflow-panel.tsx:176-178`
 - Test: `tests/unit/drawings-compress.test.ts` (baru), `tests/e2e/drawings.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `fitWithin(width: number, height: number, max: number): { width: number; height: number }` — skala proporsional, dibulatkan, tanpa memperbesar.
   - `compressImage(file: File): Promise<File>` — sesuai spec §1: `createImageBitmap(file, { imageOrientation: 'from-image' })` → `fitWithin(…, 2560)` → canvas → `toBlob('image/webp', 0.82)`; bila `blob.type !== 'image/webp'` → `toBlob('image/jpeg', 0.85)`; bila hasil lebih besar dari `file` dan dimensi asli sudah ≤ 2560 → kembalikan `file`; error apa pun → kembalikan `file`. Nama hasil: ekstensi diganti sesuai tipe (`.webp`/`.jpg`). `bitmap.close()` selalu dipanggil.
@@ -284,7 +359,9 @@ test('fitWithin keeps aspect ratio and never upscales', () => {
   assert.deepEqual(fitWithin(800, 600, 2560), { width: 800, height: 600 });
 });
 ```
+
 E2E (`drawings.spec.ts`, Chromium):
+
 - Unggah 10 gambar lewat form request di UI (fixture PNG/JPEG 3000×2000 dibuat dengan `sharp` di setup test): request tersimpan dengan 10 gambar; `Content-Type` setiap `/attachments/:id` = `image/webp`; `<img>` daftar memakai `?variant=thumb`.
 - Gambar ke-11 ditolak dengan pesan `Maksimal 10 gambar.`
 - `If-None-Match does not bypass permission`: viewer tanpa akses ke request → `GET /drawings/api/attachments/:id?variant=thumb` dengan header `If-None-Match: "<sha>"` → 404.
@@ -300,6 +377,7 @@ E2E (`drawings.spec.ts`, Chromium):
 ### Task 7: Anggaran container, build image, dokumentasi
 
 **Files:**
+
 - Modify: `infra/deploy/compose.vps.yaml:48-54`
 - Modify: `docs/DRAWING-DATABASE-PRD.md` (baris 128, 160, 216, 242, 381), `docs/API.md:167,170`
 - Modify (bila perlu): `apps/drawings/next.config.ts` (`outputFileTracingIncludes` untuk `sharp`/`@img`)

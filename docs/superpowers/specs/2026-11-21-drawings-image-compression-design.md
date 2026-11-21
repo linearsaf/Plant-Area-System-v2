@@ -45,11 +45,11 @@ Pengguna juga mengambil foto dari beberapa sudut, sehingga batas jumlah gambar d
 
 ## Pendekatan yang dipertimbangkan
 
-| Opsi | Ringkasan | Trade-off |
-|---|---|---|
-| A | Browser mengecilkan untuk transport; server selalu meng-encode ulang dengan `sharp`. | Hasil seragam dan server tidak memercayai klien; ada kompresi ganda dan CPU server lebih banyak. |
+| Opsi            | Ringkasan                                                                                                   | Trade-off                                                                                                          |
+| --------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| A               | Browser mengecilkan untuk transport; server selalu meng-encode ulang dengan `sharp`.                        | Hasil seragam dan server tidak memercayai klien; ada kompresi ganda dan CPU server lebih banyak.                   |
 | **B (dipilih)** | Browser membuat WebP final; server menyimpan apa adanya bila lolos pemeriksaan, dan mengonversi bila tidak. | CPU server hemat, tanpa kompresi ganda; ada dua jalur kode dan server harus memeriksa metadata WebP dengan teliti. |
-| C | Konversi hanya di server. | Paling sederhana, tetapi upload dari HP tetap lambat; dicoret karena pengguna meminta keduanya. |
+| C               | Konversi hanya di server.                                                                                   | Paling sederhana, tetapi upload dari HP tetap lambat; dicoret karena pengguna meminta keduanya.                    |
 
 Pengguna memilih **B**.
 
@@ -92,8 +92,9 @@ Modul baru `packages/drawings-core/src/images.ts` dengan `sharp` sebagai depende
    - tidak ada `exif`, `xmp`, `iptc`, dan tidak ada `orientation`
    - `max(width, height) ≤ 2560`
    - ukuran file ≤ 1,5 MB (`IMAGE_PASSTHROUGH_MAX_BYTES`)
-   
+
    Logika ini berupa fungsi murni `needsConversion(metadata, size)` agar mudah diuji unit.
+
 4. Bila tidak lolos, konversi ke file sementara:
    `sharp(path, { autoOrient: true, ... }).resize(2560, 2560, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 80, effort: 4, smartSubsample: true }).toFile(tmp)`.
    Metadata dibuang secara default oleh `sharp` (tanpa `keepMetadata()`). Gambar beranimasi hanya mengambil frame pertama.
@@ -108,11 +109,11 @@ Modul baru `packages/drawings-core/src/images.ts` dengan `sharp` sebagai depende
 
 Migrasi `packages/drawings-core/migrations/0006_image_thumbnails.sql`, menambah kolom nullable pada `drawing_files`:
 
-| Kolom | Tipe |
-|---|---|
+| Kolom               | Tipe                        |
+| ------------------- | --------------------------- |
 | `thumb_storage_key` | `varchar(200)` unique, null |
-| `thumb_size` | `bigint`, null |
-| `thumb_sha256` | `char(64)`, null |
+| `thumb_size`        | `bigint`, null              |
+| `thumb_sha256`      | `char(64)`, null            |
 
 Thumbnail disimpan sebagai kolom pada baris yang sama, bukan baris `drawing_files` terpisah, agar satu gambar tetap satu baris dan status `staged → attached → orphaned` tidak perlu disinkronkan antar-baris. Konsekuensinya, `cleanupStagedFiles`, `drawings-reconcile.ts` dan `drawings-storage-copy.ts` harus ikut menangani `thumb_storage_key`.
 
