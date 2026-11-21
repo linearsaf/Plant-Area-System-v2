@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@plant/contracts": "workspace:*",
-    "next": "16.4.2"
+    "next": "16.4.6"
   }
 }
