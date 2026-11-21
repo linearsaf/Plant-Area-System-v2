@@ -30,10 +30,10 @@
     "semantic_hash": "b79b3ce93e623c5376c7f5ebafb633e4"
   },
   "apps/auth/app/forms.tsx": {
-    "mtime": 1792733181.3798323,
-    "seen": 1794689225.0767796,
-    "ast_hash": "4892af9d35e9c1c66865f344d95a7e60",
-    "semantic_hash": "4892af9d35e9c1c66865f344d95a7e60"
+    "mtime": 1795291843.4108088,
+    "seen": 1795294776.6240146,
+    "ast_hash": "49ef8530b9cd1693a2e37beb389700bc",
+    "semantic_hash": ""
   },
   "apps/auth/app/health/live/route.ts": {
     "mtime": 1792669134.6824703,
@@ -162,9 +162,9 @@
     "semantic_hash": "9da508dcb36d3de9d3a87e70f120315d"
   },
   "apps/bag-filter/app/equipment/[code]/monitor.tsx": {
-    "mtime": 1795254329.5020883,
-    "seen": 1795254346.1198943,
-    "ast_hash": "fa14150296b86a9216ebf3945e69f406",
+    "mtime": 1795293448.0265534,
+    "seen": 1795294776.625722,
+    "ast_hash": "f68ee444690ae60ba6665b73e54d5a60",
     "semantic_hash": ""
   },
   "apps/bag-filter/app/equipment/[code]/overview-map.tsx": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "packages/ui/src/fields.tsx": {
-    "mtime": 1794747309.0752616,
-    "seen": 1794832140.6420507,
-    "ast_hash": "97ff16ab13e0a07fcda4db4152c5e7d7",
+    "mtime": 1795291843.3527353,
+    "seen": 1795294776.639864,
+    "ast_hash": "42ae50ad3a4603335bbcfa3cd9512762",
     "semantic_hash": ""
   },
   "packages/ui/src/gesture.ts": {
@@ -918,9 +918,9 @@
     "semantic_hash": "aba10c018b6c0184e737321c7fe71e30"
   },
   "packages/ui/src/icon.tsx": {
-    "mtime": 1795250264.7997563,
-    "seen": 1795254346.152438,
-    "ast_hash": "741d682d8152a79b4cacac498bd7625e",
+    "mtime": 1795291843.3024957,
+    "seen": 1795294776.639996,
+    "ast_hash": "f784ceb941da5223e0fe952970e3927c",
     "semantic_hash": ""
   },
   "packages/ui/src/index.tsx": {
@@ -996,9 +996,9 @@
     "semantic_hash": "e885a634f26bd2f19bb690fe9c3ff64f"
   },
   "packages/ui/src/workspace.tsx": {
-    "mtime": 1794747309.0773146,
-    "seen": 1794832140.6429071,
-    "ast_hash": "b86ad9e386374d60cb7da37676400f1f",
+    "mtime": 1795293157.0693958,
+    "seen": 1795294776.6408842,
+    "ast_hash": "d915ab131a477e5c481f350e77619afd",
     "semantic_hash": ""
   },
   "playwright.config.ts": {
@@ -1146,10 +1146,10 @@
     "semantic_hash": ""
   },
   "tests/e2e/bag-bulk-selection.spec.ts": {
-    "mtime": 1794060851.6380234,
-    "seen": 1794689225.0769923,
-    "ast_hash": "d65149c5c555c5fcc5da3a33bc440cad",
-    "semantic_hash": "d65149c5c555c5fcc5da3a33bc440cad"
+    "mtime": 1795294135.3349724,
+    "seen": 1795294776.643167,
+    "ast_hash": "8e6467658fb098afbb26b6356f0bb396",
+    "semantic_hash": ""
   },
   "tests/e2e/bag-cancellation.spec.ts": {
     "mtime": 1793793968.8061302,
@@ -1386,15 +1386,15 @@
     "semantic_hash": ""
   },
   "docs/UI-THEME.md": {
-    "mtime": 1794743059.2514374,
-    "seen": 1794832140.6470287,
-    "ast_hash": "5a5b8873755d9face3144c0330465981",
+    "mtime": 1795293139.8740754,
+    "seen": 1795294776.6471577,
+    "ast_hash": "0408ee14188680699b655f13b7b39a48",
     "semantic_hash": ""
   },
   "docs/VALIDATION.md": {
-    "mtime": 1795258840.6147962,
-    "seen": 1795258986.846633,
-    "ast_hash": "2c3ba5bea83ed768e12ebf5ad270e172",
+    "mtime": 1795293139.8735523,
+    "seen": 1795294776.647159,
+    "ast_hash": "50f5d6e73e74b8d28d241e76755bc3f5",
     "semantic_hash": ""
   },
   "docs/deployment/CLAUDE-CODE-MACBOOK.md": {
