@@ -182,7 +182,7 @@ export function RequestList({ scopes }: { scopes: RequestScope[] }) {
   );
 }
 
-/** Form Drawing Request: HAC/SAC, Description, Keperluan, maksimal 3 gambar referensi. */
+/** Form Drawing Request: HAC/SAC, Description, Keperluan, maksimal 10 gambar referensi. */
 export function RequestForm() {
   const [values, setValues] = useState({ hac: '', description: '', purpose: '' }),
     [images, setImages] = useState<string[]>([]),

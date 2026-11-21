@@ -24,6 +24,7 @@ import {
   stampWidth,
   storageConfig,
   storageKey,
+  uploadLimit,
   validatePdf,
 } from '@plant/drawings-core';
 import { AppError, type DrawingsRole, type Identity } from '@plant/contracts';
@@ -275,3 +276,5 @@ test('upload kinds follow the role matrix; SVG is never an accepted image type',
   );
   assert.equal(requireContentType('image', 'image/png'), 'image/png');
 });
+
+test('image upload limit is 25 MB', () => assert.equal(uploadLimit('image'), 25 * 1024 * 1024));

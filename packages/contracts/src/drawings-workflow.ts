@@ -2,7 +2,7 @@
 // server memeriksa ulang setiap aturan terhadap baris yang dikunci.
 import { z } from 'zod';
 import { AppError } from './index';
-import type { RevisionStatus } from './drawings-model';
+import { IMAGE_MAX_PER_ITEM, type RevisionStatus } from './drawings-model';
 
 export type WorkflowAction =
   | 'submit'
@@ -71,7 +71,7 @@ export const approverRoles = { 1: ['approver', 'admin'], 2: ['head', 'admin'] } 
 const id = z.string().regex(/^[0-9a-f-]{36}$/, 'ID tidak valid.');
 const version = z.number().int().min(1);
 const note = z.string().trim().max(1000, 'Catatan maksimal 1000 karakter.');
-const attachments = z.array(id).max(3, 'Maksimal 3 gambar.').default([]);
+const attachments = z.array(id).max(IMAGE_MAX_PER_ITEM, `Maksimal ${IMAGE_MAX_PER_ITEM} gambar.`).default([]);
 export const submitSchema = z.object({ expectedVersion: version }).strict();
 export const checkDecisionSchema = z
   .object({

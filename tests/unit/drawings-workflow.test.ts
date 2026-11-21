@@ -78,7 +78,7 @@ test('maker-checker set contains owner, revision creator and current submitter',
   assert.deepEqual([...makerIds({ ownerId: 'a' }, { createdById: 'a', submittedById: null })], ['a']);
 });
 
-test('decision schemas: reject needs a note, approve needs L1, attachments only on reject (max 3)', () => {
+test('decision schemas: reject needs a note, approve needs L1, attachments only on reject (max 10)', () => {
   const id = '11111111-2222-4333-8444-555555555555';
   assert.equal(checkDecisionSchema.safeParse({ expectedVersion: 1, decision: 'reject' }).success, false);
   assert.equal(
@@ -104,7 +104,7 @@ test('decision schemas: reject needs a note, approve needs L1, attachments only 
       expectedVersion: 1,
       decision: 'reject',
       note: 'x',
-      attachmentIds: [id, id, id, id],
+      attachmentIds: Array.from({ length: 11 }, () => id),
     }).success,
     false,
   );

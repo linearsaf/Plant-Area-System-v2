@@ -11,8 +11,9 @@ export type StorageConfig =
       forcePathStyle: boolean;
     };
 
-export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-export const IMAGE_MAX_PER_ITEM = 3;
+export { IMAGE_MAX_PER_ITEM } from '@plant/contracts';
+/** Batas body gambar mentah; browser biasanya sudah mengecilkannya jauh di bawah ini. */
+export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 export const STAGED_TTL_MS = 24 * 3_600_000;
 
 export function maxPdfBytes(env: NodeJS.ProcessEnv = process.env) {
