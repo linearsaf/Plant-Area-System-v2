@@ -396,7 +396,11 @@ export function RequestView({ request }: { request: RequestDetail }) {
                 <li key={f.id}>
                   <a href={`/drawings/api/attachments/${f.id}`} target="_blank" rel="noopener">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/drawings/api/attachments/${f.id}`} alt={f.name} loading="lazy" />
+                    <img
+                      src={`/drawings/api/attachments/${f.id}?variant=thumb`}
+                      alt={f.name}
+                      loading="lazy"
+                    />
                   </a>
                 </li>
               ))}
