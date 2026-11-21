@@ -80,6 +80,9 @@
     min-width: 8.5em;
   }
   .pdf-stage {
+    /* Always the 1fr row: once the wide toolbar floats (position: absolute) it leaves the grid, and
+       the stage would otherwise drop into the auto row and collapse to 0px in fullscreen. */
+    grid-row: 2;
     position: relative;
     height: var(--pdf-height);
     background: var(--surfaceSunken);
@@ -1130,10 +1133,6 @@
     /* Keep the last page's bottom edge clear of the floating bar. */
     .pdf-container .pdfViewer {
       padding-bottom: 88px;
-    }
-    /* The toolbar no longer takes a row, so fullscreen gives the whole screen to the sheet. */
-    .is-fullscreen .pdf-stage {
-      height: 100dvh;
     }
   }
   @container (max-width: 319px) {
