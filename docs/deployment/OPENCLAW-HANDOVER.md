@@ -1,5 +1,7 @@
 # Handover OpenClaw — deployment tq-cmms.com
 
+> **Mulai November 2026** mandat OpenClaw dijalankan **Antigravity CLI (`agy`)** di VPS melalui skill [`tq-cmms-ops`](../../.agents/skills/tq-cmms-ops/SKILL.md). Prompt dan checkpoint di bawah tetap berlaku; baca "OpenClaw" sebagai operator agy.
+
 **Tujuan:** clone repository Plant Area System v2 ke VPS pemilik dan selesaikan deployment hingga Portal, Auth, Bag Filter, dan Consumable Room dapat diakses melalui HTTPS publik `https://tq-cmms.com`, dengan website lama tetap berfungsi.
 
 **Kondisi terkonfirmasi pemilik, 24 Oktober 2026:** Ubuntu 24.04 x86_64; 5 vCPU; RAM 8,7 GB, snapshot terpakai 3,7 GB; disk 48,4 GB, snapshot kosong sekitar 22 GB; Nginx sudah berjalan langsung di host pada port 80/443; Docker belum ada; domain masih disiapkan. Ukur ulang saat eksekusi.

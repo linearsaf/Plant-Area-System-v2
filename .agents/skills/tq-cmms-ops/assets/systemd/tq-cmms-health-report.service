@@ -1,0 +1,13 @@
+# Ringkasan health oleh Antigravity CLI headless (mode plan, tanpa tool). Dipicu OnSuccess dari record.
+# Ganti DEPLOY_USER dan path agy saat memasang (setup-agy.md).
+[Unit]
+Description=tq-cmms health summary via agy (read-only)
+
+[Service]
+Type=oneshot
+User=DEPLOY_USER
+WorkingDirectory=/opt/tq-cmms
+Environment=TQ_AGY=/home/DEPLOY_USER/.local/bin/agy
+ExecStart=/bin/bash /opt/tq-cmms/.agents/skills/tq-cmms-ops/scripts/health-report.sh
+TimeoutStartSec=420
+Nice=10

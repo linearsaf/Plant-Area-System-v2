@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "deny": [
+      "command(regex:.*docker.* (down|rm) .*(-v|--volumes).*)",
+      "command(regex:.*docker.* volume (rm|prune).*)",
+      "command(regex:.*docker.* (system|image|container|network|volume) prune.*)",
+      "command(regex:.*git (reset --hard|clean|stash).*)",
+      "command(regex:.*(cat|less|more|head|tail|source|bat) [^|;&]*\\.env\\b.*)",
+      "command(regex:.*set -x.*)",
+      "command(regex:.*curl( .*)? (-[a-zA-Z]*k[a-zA-Z]*|--insecure)( .*)?)",
+      "command(regex:.*(test-operations|test-gateway-recovery|reset-test-data|prepare-test)\\.ts.*)",
+      "command(regex:.*pnpm (run )?test.*)",
+      "command(regex:.*drizzle-kit push.*)",
+      "command(regex:.*systemctl (restart|stop) nginx.*)",
+      "command(regex:.*\\bufw\\b.*)",
+      "read_file(/opt/tq-cmms/.env)",
+      "read_file(/opt/tq-cmms/infra/certs/tls.key)",
+      "read_file(/opt/tq-cmms/backups)",
+      "read_file(/srv/tq-cmms-private)",
+      "write_file(/opt/tq-cmms/.git/)",
+      "write_file(/etc/ssh)"
+    ],
+    "ask": [
+      "command(sudo)",
+      "command(regex:.*docker .*)",
+      "command(regex:.*git (checkout|switch|pull|merge|rebase|commit|push).*)",
+      "write_file(/opt/tq-cmms/.env)",
+      "write_file(/etc/nginx)",
+      "write_file(/etc/systemd)"
+    ],
+    "allow": [
+      "command(git status)",
+      "command(git log)",
+      "command(git rev-parse)",
+      "command(git diff)",
+      "command(git fetch)",
+      "command(git merge-base)",
+      "command(df)",
+      "command(free)",
+      "read_file(/opt/tq-cmms)",
+      "read_file(/var/lib/tq-cmms/health)",
+      "write_file(/opt/tq-cmms/.deploy/ops-log)"
+    ]
+  }
+}

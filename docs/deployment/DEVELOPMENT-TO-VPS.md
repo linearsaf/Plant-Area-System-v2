@@ -1,5 +1,7 @@
 # Pengembangan lokal sampai pembaruan VPS
 
+> **Mulai November 2026** pembaruan di VPS dijalankan **Antigravity CLI (`agy`)** dengan skill [`tq-cmms-ops`](../../.agents/skills/tq-cmms-ops/SKILL.md). Prompt update di §7 dikirim ke agy; sebutan "OpenClaw" di bawah berarti operator agy.
+
 Alur setelah go-live `tq-cmms.com`, berdasarkan konfirmasi pemilik pada 25 Oktober 2026:
 
 ```text
