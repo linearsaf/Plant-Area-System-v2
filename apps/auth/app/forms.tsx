@@ -30,7 +30,14 @@ export function LoginForm({ returnTo }: { returnTo: string }) {
     >
       <label>
         Email
-        <Input name="email" type="email" autoComplete="username" required maxLength={254} />
+        <Input
+          name="email"
+          type="email"
+          autoComplete="username"
+          spellCheck={false}
+          required
+          maxLength={254}
+        />
       </label>
       <label>
         Password

@@ -39,6 +39,9 @@ const paths = {
   cost: 'M12 3H5a2 2 0 0 0-2 2v7l9 9 9-9-9-9ZM8 8h.01',
   info: 'M12 11v6m0-10v1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   logout: 'M10 17v4H3V3h7v4m4 1 4 4-4 4m-6-4h13',
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+  eyeOff:
+    'M3 3l18 18M10.6 5.1Q11.3 5 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.8 8.4 2 12 2 12s4 7 10 7q2.9 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2',
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({ name, ...props }: { name: IconName } & SVGProps<SVGSVGElement>) {

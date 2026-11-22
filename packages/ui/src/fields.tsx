@@ -226,21 +226,45 @@ function highlight(label: string, query: string) {
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   const ref = useRef<HTMLInputElement>(null),
-    [value, setValue] = useState(String(props.defaultValue ?? ''));
+    [value, setValue] = useState(String(props.defaultValue ?? '')),
+    [revealed, setRevealed] = useState(false);
   const actual = String(props.value ?? value);
+  const password = props.type === 'password';
+  // Hide the password again on submit so the browser still offers to save it.
+  useEffect(() => {
+    const form = ref.current?.form;
+    if (!password || !form) return;
+    const hide = () => setRevealed(false);
+    form.addEventListener('submit', hide);
+    return () => form.removeEventListener('submit', hide);
+  }, [password]);
   if (['checkbox', 'radio', 'hidden', 'datetime-local', 'time'].includes(props.type || ''))
     return <input {...props} />;
   return (
     <span className="input-wrap">
       <input
         {...props}
+        type={password && revealed ? 'text' : props.type}
         ref={ref}
         onChange={(e) => {
           setValue(e.target.value);
           props.onChange?.(e);
         }}
       />
-      {actual && !props.disabled && !props.readOnly && props.type !== 'password' && (
+      {password && !props.disabled && (
+        <button
+          type="button"
+          className="input-clear input-reveal"
+          aria-label={revealed ? 'Sembunyikan password' : 'Tampilkan password'}
+          aria-pressed={revealed}
+          // Keep the caret in the field while toggling with a pointer.
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={() => setRevealed((v) => !v)}
+        >
+          <Icon name={revealed ? 'eyeOff' : 'eye'} />
+        </button>
+      )}
+      {actual && !props.disabled && !props.readOnly && !password && (
         <button
           type="button"
           className="input-clear"
@@ -260,15 +284,17 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
     </span>
   );
 }
+// CSS `field-sizing: content` (.textarea-wrap textarea) sizes the field; measure only without it.
+function fitTextarea(el: HTMLTextAreaElement) {
+  if (CSS.supports('field-sizing', 'content')) return;
+  el.style.height = 'auto';
+  el.style.height = `${Math.min(200, Math.max(80, el.scrollHeight))}px`;
+}
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const ref = useRef<HTMLTextAreaElement>(null),
     [count, setCount] = useState(String(props.value ?? props.defaultValue ?? '').length);
   useEffect(() => {
-    const el = ref.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${Math.min(200, Math.max(80, el.scrollHeight))}px`;
-    }
+    if (ref.current) fitTextarea(ref.current);
     setCount(String(props.value ?? ref.current?.value ?? '').length);
   }, [props.value]);
   return (
@@ -279,8 +305,7 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
         rows={3}
         onChange={(e) => {
           setCount(e.target.value.length);
-          e.target.style.height = 'auto';
-          e.target.style.height = `${Math.min(200, Math.max(80, e.target.scrollHeight))}px`;
+          fitTextarea(e.target);
           props.onChange?.(e);
         }}
       />

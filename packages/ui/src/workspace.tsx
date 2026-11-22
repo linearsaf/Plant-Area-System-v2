@@ -640,8 +640,8 @@ export function Workspace({
           <input
             ref={commandInput}
             autoFocus
-            aria-label="Cari halaman, equipment, atau batch"
-            placeholder="Cari halaman, equipment, atau batch…"
+            aria-label="Cari HAC, drawing, atau material"
+            placeholder="Cari HAC, drawing, atau material"
             maxLength={200}
             value={query}
             onChange={(e) => {

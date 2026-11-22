@@ -257,7 +257,7 @@ test('all zones, responsive shell, real-data dashboard, command palette and noti
   await select(page, 'Tahun grafik', String(api.currentYear));
   await page.keyboard.press('Control+k');
   await expect(page.getByRole('dialog', { name: 'Pencarian cepat' })).toBeVisible();
-  await page.getByLabel('Cari halaman, equipment, atau batch').fill('L61');
+  await page.getByLabel('Cari HAC, drawing, atau material').fill('L61');
   await expect(page.locator('.command-result').filter({ hasText: 'L61-BF1' }).first()).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Notifikasi aktivitas' }).click();
