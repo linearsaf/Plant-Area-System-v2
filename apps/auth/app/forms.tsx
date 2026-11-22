@@ -41,7 +41,14 @@ export function LoginForm({ returnTo }: { returnTo: string }) {
       </label>
       <label>
         Password
-        <Input name="password" type="password" autoComplete="current-password" required maxLength={128} />
+        <Input
+          name="password"
+          type="password"
+          aria-label="Password"
+          autoComplete="current-password"
+          required
+          maxLength={128}
+        />
       </label>
       {error && (
         <p className="notice error" role="alert">
@@ -90,6 +97,7 @@ export function PasswordForm({ temporary }: { temporary: boolean }) {
         <Input
           name="currentPassword"
           type="password"
+          aria-label={temporary ? 'Password sementara' : 'Password saat ini'}
           autoComplete="current-password"
           required
           maxLength={128}
@@ -100,6 +108,7 @@ export function PasswordForm({ temporary }: { temporary: boolean }) {
         <Input
           name="newPassword"
           type="password"
+          aria-label="Password baru"
           autoComplete="new-password"
           required
           minLength={12}
@@ -112,6 +121,7 @@ export function PasswordForm({ temporary }: { temporary: boolean }) {
         <Input
           name="confirmPassword"
           type="password"
+          aria-label="Ulangi password baru"
           autoComplete="new-password"
           required
           minLength={12}

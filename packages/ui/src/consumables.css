@@ -437,6 +437,10 @@
     padding: var(--space-4) 0;
     border-bottom: 1px solid var(--divider);
   }
+  /* The Hapus button sits in its own ARIA cell and still fills the column. */
+  .r22-cart-action > .busy-button {
+    width: 100%;
+  }
   .r22-cart-row small {
     display: block;
     color: var(--textSecondary);
@@ -555,17 +559,19 @@
     .r22-cart-table .r22-line-no {
       display: none;
     }
-    .r22-cart-table .r22-cart-row > div {
+    .r22-cart-table .r22-cart-material {
       grid-column: 1 / -1;
     }
     .r22-cart-table .r22-line-quantity {
       grid-column: 1;
     }
-    .r22-cart-table .r22-cart-row > span:not(.r22-line-no) {
+    .r22-cart-table .r22-cart-unit {
       grid-column: 2;
     }
-    .r22-cart-table .r22-cart-row > .busy-button {
+    .r22-cart-table .r22-cart-action {
       grid-column: 1 / -1;
+    }
+    .r22-cart-table .r22-cart-action > .busy-button {
       min-height: 44px;
     }
     .r22-receipt {
@@ -1523,17 +1529,19 @@
     .r22-line-no {
       display: none;
     }
-    .r22-cart-row > div {
+    .r22-cart-material {
       grid-column: 1 / -1;
     }
     .r22-line-quantity {
       grid-column: 1;
     }
-    .r22-cart-row > span:not(.r22-line-no) {
+    .r22-cart-unit {
       grid-column: 2;
     }
-    .r22-cart-row > .busy-button {
+    .r22-cart-action {
       grid-column: 1 / -1;
+    }
+    .r22-cart-action > .busy-button {
       min-height: 44px;
     }
   }

@@ -193,6 +193,22 @@
     color: var(--textSecondary);
     font-weight: var(--weight-medium);
   }
+  /* Icon-only view switch: square targets, names come from aria-label. */
+  .view-toggle button {
+    display: grid;
+    place-items: center;
+    min-width: 40px;
+    padding: 0;
+  }
+  .view-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+  @media (pointer: coarse) {
+    .view-toggle button {
+      min-width: 44px;
+    }
+  }
   .segmented button.is-active {
     background: var(--surface);
     color: var(--textPrimary);

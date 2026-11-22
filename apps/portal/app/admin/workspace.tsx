@@ -131,6 +131,7 @@ export function AdminWorkspace() {
               <Input
                 name="password"
                 type="password"
+                aria-label="Password sementara"
                 autoComplete="new-password"
                 required
                 minLength={12}
@@ -314,6 +315,7 @@ function UserRow({
             <Input
               name="password"
               type="password"
+              aria-label="Password sementara baru"
               autoComplete="new-password"
               required
               minLength={12}
