@@ -205,16 +205,20 @@ export function Library({
             aria-pressed={view === 'list'}
             className={view === 'list' ? 'is-active' : ''}
             onClick={() => chooseView('list')}
+            aria-label="Daftar"
+            title="Daftar"
           >
-            Daftar
+            <Icon name="list" />
           </button>
           <button
             type="button"
             aria-pressed={view === 'cards'}
             className={view === 'cards' ? 'is-active' : ''}
             onClick={() => chooseView('cards')}
+            aria-label="Kartu"
+            title="Kartu"
           >
-            Kartu
+            <Icon name="grid" />
           </button>
         </div>
       </div>
