@@ -1,10 +1,12 @@
 'use client';
 import { Fragment, useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from 'react';
 import { OverviewMap } from './overview-map';
+import { OverviewCompartment, type OverviewActions } from './overview-compartment';
+import { HistoryItem, type HistoryActions } from './history-item';
 import { activeAgeSummary } from './age-summary';
 import { BulkSelection } from './bulk-selection';
 import { CoordinateHistory, type TimelineItem } from './coordinate-history';
-import { BatchCancellationDialog, CancellationNotice, type BatchRecord } from './batch-cancellation';
+import { BatchCancellationDialog, type BatchRecord } from './batch-cancellation';
 import { compartmentOptions, groupSelection, initialSelection, selectionReducer } from './selection';
 import {
   ageHours,
@@ -69,6 +71,12 @@ async function read<T>(url: string, signal?: AbortSignal): Promise<T> {
   if (!r.ok) throw Error(d.error || 'Data belum dapat dimuat.');
   return d;
 }
+const overviewFilterRules = [...ageStops.map((_, i) => String(i)), 'empty']
+  .map(
+    (value) =>
+      `.overview-panel[data-age-filter="${value}"] .overview-cell:not([data-age-bucket="${value}"]){opacity:.25}`,
+  )
+  .join('');
 export default function BagMonitor({
   initial,
   writable,
@@ -429,6 +437,43 @@ export default function BagMonitor({
     }
   }
   const currentComp = displayCompartment({ side, compartment }, eq);
+  // The overview map renders thousands of cells: hand it stable callbacks that reach the current
+  // handlers through a ref, so hover, filter and detail changes do not re-render every compartment.
+  const overviewHandlers = useRef({ pointerHover, leaveHover, toggle, showComp });
+  overviewHandlers.current = { pointerHover, leaveHover, toggle, showComp };
+  const overviewActions = useMemo<OverviewActions>(
+    () => ({
+      hover: (p, e) => overviewHandlers.current.pointerHover(p, e),
+      leave: () => overviewHandlers.current.leaveHover(),
+      toggle: (p, e) => overviewHandlers.current.toggle(p, e),
+      show: (band, local) => overviewHandlers.current.showComp(band, local),
+    }),
+    [],
+  );
+  const historyHandlers = useRef({ focus, leaveHover });
+  historyHandlers.current = { focus, leaveHover };
+  const historyActions = useMemo<HistoryActions>(
+    () => ({
+      coordinate: (p) => {
+        historyHandlers.current.focus(p);
+        document.getElementById('position-history')?.scrollIntoView({ behavior: 'smooth' });
+      },
+      cancel: (batch, trigger) => {
+        cancelTrigger.current = trigger;
+        historyHandlers.current.leaveHover();
+        setCancelTarget(batch);
+      },
+    }),
+    [],
+  );
+  const pickedByCompartment = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const p of selected) {
+      const group = `${p.side}-${p.compartment}`;
+      groups.set(group, [...(groups.get(group) ?? []), positionKey(p)]);
+    }
+    return new Map([...groups].map(([group, keys]) => [group, keys.sort().join(',')]));
+  }, [selected]);
   const coordinateHistory = (
     <CoordinateHistory
       items={timeline.items}
@@ -553,7 +598,13 @@ export default function BagMonitor({
           </small>
         </article>
       </div>
-      <section className="panel overview-panel">
+      <section
+        className="panel overview-panel"
+        data-age-filter={bucket === null ? undefined : String(bucket)}
+      >
+        {/* The age filter only flips data-age-filter above; these fixed rules dim the other cells,
+            so changing it neither re-renders the map nor adds a stylesheet (which restyles the page). */}
+        <style>{overviewFilterRules}</style>
         <div className="section-head">
           <div>
             <p className="eyebrow">{eq.code} / SELURUH EQUIPMENT</p>
@@ -597,99 +648,20 @@ export default function BagMonitor({
         <OverviewMap equipmentCode={eq.code} perSide={eq.perSide} onScroll={leaveHover}>
           {eq.sides.map(({ name: band }, index) => (
             <div className="overview-band" aria-label={`Sisi ${band}`} key={band}>
-              {Array.from({ length: eq.perSide }, (_, i) => {
-                const local = i + 1,
-                  display = displayCompartment({ side: band, compartment: local }, eq);
-                return (
-                  <div
-                    className="overview-compartment"
-                    key={local}
-                    data-active={side === band && compartment === local}
-                  >
-                    {index === 1 && (
-                      <button
-                        className="overview-title"
-                        aria-current={side === band && compartment === local ? 'true' : undefined}
-                        aria-label={`Buka detail kompartemen ${display}`}
-                        onClick={() => showComp(band, local)}
-                      >
-                        <span className="overview-title-full">Comp. </span>
-                        {display}
-                      </button>
-                    )}
-                    {eq.centeredLabels && index === 1 && (
-                      <div className="overview-labels">
-                        <span />
-                        {letters.split('').map((letter) => (
-                          <span key={letter}>{letter}</span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="overview-matrix">
-                      {rowOrder(eq, band).map((row) => {
-                        return (
-                          <div
-                            className={`overview-line${rowDividerBefore(eq, band, row) ? ' overview-stiffener' : ''}`}
-                            key={row}
-                          >
-                            <span className="overview-row-number" data-even={row % 2 === 0 || undefined}>
-                              {row}
-                            </span>
-                            {Array.from({ length: 8 }, (_, c) => {
-                              const p = { side: band, compartment: local, column: c + 1, row },
-                                key = positionKey(p),
-                                age = ageHours(latest.get(key)?.installedAt || null, now),
-                                picked = selectedKeys.has(key);
-                              return (
-                                <button
-                                  key={c}
-                                  className={`overview-cell${age !== null && age >= bagAgeScaleDays * 24 ? ' is-old' : ''}`}
-                                  data-position-key={key}
-                                  tabIndex={-1}
-                                  style={{
-                                    background: bagColor(age),
-                                    opacity:
-                                      bucket === null ||
-                                      (bucket === 'empty'
-                                        ? age === null
-                                        : age !== null && ageBucket(age) === bucket)
-                                        ? 1
-                                        : 0.25,
-                                  }}
-                                  aria-label={`${display} ${letters[c]}${row}`}
-                                  onPointerEnter={(e) => pointerHover(p, e)}
-                                  onPointerLeave={leaveHover}
-                                  aria-pressed={picked}
-                                  onClick={(event) => toggle(p, event)}
-                                />
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {(!eq.centeredLabels || index === 0) && (
-                      <div className="overview-labels">
-                        <span />
-                        {letters.split('').map((letter) => (
-                          <span key={letter}>{letter}</span>
-                        ))}
-                      </div>
-                    )}
-                    {index === 0 && (
-                      <button
-                        className="overview-title"
-                        aria-current={side === band && compartment === local ? 'true' : undefined}
-                        aria-label={`Buka detail kompartemen ${display}`}
-                        onClick={() => showComp(band, local)}
-                      >
-                        <span className="overview-title-full">Comp. </span>
-                        {display}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+              {Array.from({ length: eq.perSide }, (_, i) => (
+                <OverviewCompartment
+                  key={i + 1}
+                  eq={eq}
+                  band={band}
+                  index={index}
+                  local={i + 1}
+                  active={side === band && compartment === i + 1}
+                  latest={latest}
+                  now={now}
+                  picked={pickedByCompartment.get(`${band}-${i + 1}`) ?? ''}
+                  actions={overviewActions}
+                />
+              ))}
             </div>
           ))}
         </OverviewMap>
@@ -1143,71 +1115,14 @@ export default function BagMonitor({
                   tabIndex={0}
                 >
                   {history.items.map((batch) => (
-                    <article className="history-item" key={batch.id} data-batch-id={batch.id}>
-                      <span className="history-count">{batch.positionCount}</span>
-                      <div>
-                        <strong>
-                          {batch.wo || 'Tanpa WO'} · {batch.positionCount} bag
-                        </strong>
-                        <small>
-                          {batch.reason} · dipasang {formatDate(batch.installedAt)} WIB
-                        </small>
-                        <small>Brand/Pabrikan: {batch.brand || 'Belum tercatat'}</small>
-                        <small>
-                          {batch.actorName} · dicatat {formatDate(batch.createdAt)} WIB
-                        </small>
-                        {batch.cancellation && <CancellationNotice cancellation={batch.cancellation} />}
-                        {cancellable && batch.status === 'active' && (
-                          <button
-                            type="button"
-                            className="ghost small cancel-record-action"
-                            disabled={busy}
-                            onClick={(event) => {
-                              cancelTrigger.current = event.currentTarget;
-                              leaveHover();
-                              setCancelTarget(batch);
-                            }}
-                          >
-                            Batalkan record
-                          </button>
-                        )}
-                        <div className="coordinate-links">
-                          {batch.positions.slice(0, 12).map((p) => (
-                            <button
-                              key={positionKey(p)}
-                              onClick={() => {
-                                focus(p);
-                                document
-                                  .getElementById('position-history')
-                                  ?.scrollIntoView({ behavior: 'smooth' });
-                              }}
-                            >
-                              {positionLabel(p, eq)}
-                            </button>
-                          ))}
-                          {batch.positions.length > 12 && (
-                            <details>
-                              <summary>{batch.positions.length - 12} koordinat lainnya</summary>
-                              <div className="coordinate-links">
-                                {batch.positions.slice(12).map((p) => (
-                                  <button
-                                    key={positionKey(p)}
-                                    onClick={() => {
-                                      focus(p);
-                                      document
-                                        .getElementById('position-history')
-                                        ?.scrollIntoView({ behavior: 'smooth' });
-                                    }}
-                                  >
-                                    {positionLabel(p, eq)}
-                                  </button>
-                                ))}
-                              </div>
-                            </details>
-                          )}
-                        </div>
-                      </div>
-                    </article>
+                    <HistoryItem
+                      key={batch.id}
+                      batch={batch}
+                      eq={eq}
+                      cancellable={cancellable}
+                      busy={busy}
+                      actions={historyActions}
+                    />
                   ))}
                 </div>
               )}
