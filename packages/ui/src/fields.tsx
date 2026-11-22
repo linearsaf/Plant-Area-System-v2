@@ -255,8 +255,10 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
         <button
           type="button"
           className="input-clear input-reveal"
-          aria-label={revealed ? 'Sembunyikan password' : 'Tampilkan password'}
+          // A toggle keeps one label; aria-pressed carries the state.
+          aria-label="Tampilkan password"
           aria-pressed={revealed}
+          title={revealed ? 'Sembunyikan password' : 'Tampilkan password'}
           // Keep the caret in the field while toggling with a pointer.
           onPointerDown={(e) => e.preventDefault()}
           onClick={() => setRevealed((v) => !v)}
@@ -268,7 +270,10 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
         <button
           type="button"
           className="input-clear"
-          aria-label="Kosongkan isian"
+          // Pointer-only shortcut (out of the tab order). Hidden from assistive technology so the
+          // surrounding <label> does not add "Kosongkan isian" to the field's accessible name.
+          aria-hidden="true"
+          title="Kosongkan isian"
           tabIndex={-1}
           onClick={() => {
             const el = ref.current!;
