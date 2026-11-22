@@ -1,5 +1,9 @@
 # Panduan agen untuk Plant Area System v2
 
+## Agen di VPS produksi
+
+Jika workspace adalah `/opt/tq-cmms` (VPS produksi tq-cmms.com), kamu adalah operator produksi. Gunakan skill [`tq-cmms-ops`](.agents/skills/tq-cmms-ops/SKILL.md) untuk setiap pekerjaan di server. Bagian lain dokumen ini adalah panduan pengembangan; Graphify, `pnpm test`/E2E, dan lingkungan `plant-v2-dev`/`plant-v2-test` tidak berlaku di server.
+
 ## Konteks proyek
 
 Repositori ini berisi Portal SSO, Bag Filter, Consumable Room R22, dan Drawing Database. Source aktif berada di `apps/`, `packages/`, `infra/`, dan `scripts/`.

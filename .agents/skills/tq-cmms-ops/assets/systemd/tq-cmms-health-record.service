@@ -1,0 +1,17 @@
+# Snapshot health read-only tq-cmms (root, karena docker butuh root; akun deployment tidak di grup docker).
+# Pasang: lihat .agents/skills/tq-cmms-ops/references/setup-agy.md
+[Unit]
+Description=tq-cmms health snapshot (read-only)
+After=docker.service
+Wants=docker.service
+OnSuccess=tq-cmms-health-report.service
+
+[Service]
+Type=oneshot
+Environment=TQ_DOCKER=docker
+ExecStart=/bin/bash /opt/tq-cmms/.agents/skills/tq-cmms-ops/scripts/health-record.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=120
+ProtectHome=read-only
+PrivateTmp=true

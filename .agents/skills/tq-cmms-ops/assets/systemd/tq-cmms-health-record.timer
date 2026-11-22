@@ -1,0 +1,10 @@
+[Unit]
+Description=tq-cmms health snapshot setiap 6 jam
+
+[Timer]
+OnCalendar=*-*-* 00/6:15:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -240,6 +240,7 @@ VPS ini memakai **Nginx host yang sudah ada**. Runbook memakai override khusus a
 | Instalasi di VPS                         | [Runbook VPS](docs/deployment/VPS-TQ-CMMS.md) dan [handover OpenClaw](docs/deployment/OPENCLAW-HANDOVER.md)                                             |
 | Membawa data aktual dari Docker lokal    | [Migrasi/backup restore](docs/deployment/DATABASE-LOCAL-TO-VPS.md) dan [prompt OpenClaw khusus database](docs/deployment/OPENCLAW-DATABASE-HANDOVER.md) |
 | Pengembangan PC/Mac sampai pembaruan VPS | [Alur development ke VPS](docs/deployment/DEVELOPMENT-TO-VPS.md)                                                                                        |
+| Operasional harian oleh agen di VPS      | Skill Antigravity CLI [`tq-cmms-ops`](.agents/skills/tq-cmms-ops/SKILL.md) dan [setup agy](.agents/skills/tq-cmms-ops/references/setup-agy.md)          |
 
 Restore mempertahankan ketiga database, akun, dan izin; jalur ini tidak memakai bootstrap atau impor master ulang.
 
