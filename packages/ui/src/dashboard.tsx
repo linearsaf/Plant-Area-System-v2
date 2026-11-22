@@ -274,10 +274,11 @@ export function Dashboard({ equipmentCodes }: { equipmentCodes: EquipmentCode[] 
       title="Bag Filter"
       description="Pantau umur bag dan telusuri penggantian di setiap koordinat."
     >
-      <div className="heading-actions">
-        {equipmentCodes.length > 0 && <MapMenu codes={equipmentCodes} loads={data?.perEquipment} />}
-        <span className="badge">Data aktual</span>
-      </div>
+      {equipmentCodes.length > 0 && (
+        <div className="heading-actions">
+          <MapMenu codes={equipmentCodes} loads={data?.perEquipment} />
+        </div>
+      )}
     </Heading>
   );
   if (error)
