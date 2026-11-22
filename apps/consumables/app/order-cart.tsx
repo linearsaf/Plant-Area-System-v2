@@ -357,17 +357,21 @@ export function OrderCart({ identity, type }: { identity: Identity; type: 'consu
             </div>
             <div className="r22-cart-table" role="table" aria-label="Keranjang order">
               <div className="r22-cart-head" role="row">
-                <span>No.</span>
-                <span>Material</span>
-                <span>Jumlah</span>
-                <span>Satuan</span>
-                <span>Aksi</span>
+                <span role="columnheader">No.</span>
+                <span role="columnheader">Material</span>
+                <span role="columnheader">Jumlah</span>
+                <span role="columnheader">Satuan</span>
+                <span role="columnheader">Aksi</span>
               </div>
               {!draft.lines.length ? (
-                <EmptyState
-                  title="Keranjang masih kosong"
-                  description="Cari material, tentukan jumlah, lalu tambahkan ke order."
-                />
+                <div className="r22-table-empty" role="row">
+                  <div role="cell">
+                    <EmptyState
+                      title="Keranjang masih kosong"
+                      description="Cari material, tentukan jumlah, lalu tambahkan ke order."
+                    />
+                  </div>
+                </div>
               ) : (
                 draft.lines.map((l, i) => {
                   const problem = conflicts.find((c) => c.materialId === l.material.id);
@@ -378,8 +382,10 @@ export function OrderCart({ identity, type }: { identity: Identity; type: 'consu
                       role="row"
                       key={l.material.id}
                     >
-                      <span className="r22-line-no">{i + 1}</span>
-                      <div>
+                      <span className="r22-line-no" role="cell">
+                        {i + 1}
+                      </span>
+                      <div className="r22-cart-material" role="cell">
                         <strong>{l.material.commonName || l.material.description}</strong>
                         <small>
                           <span className="code-text">{l.material.mmid}</span> · {l.material.description}
@@ -394,7 +400,7 @@ export function OrderCart({ identity, type }: { identity: Identity; type: 'consu
                           </p>
                         )}
                       </div>
-                      <label className="r22-line-quantity">
+                      <label className="r22-line-quantity" role="cell">
                         <span className="sr-only">Jumlah {l.material.mmid}</span>
                         <Input
                           disabled={busy}
@@ -411,16 +417,20 @@ export function OrderCart({ identity, type }: { identity: Identity; type: 'consu
                           }
                         />
                       </label>
-                      <span>{l.material.unit}</span>
-                      <Button
-                        type="button"
-                        className="secondary small"
-                        aria-label={`Hapus ${l.material.mmid}`}
-                        disabled={busy}
-                        onClick={() => feedback.remove(i)}
-                      >
-                        Hapus
-                      </Button>
+                      <span className="r22-cart-unit" role="cell">
+                        {l.material.unit}
+                      </span>
+                      <div className="r22-cart-action" role="cell">
+                        <Button
+                          type="button"
+                          className="secondary small"
+                          aria-label={`Hapus ${l.material.mmid}`}
+                          disabled={busy}
+                          onClick={() => feedback.remove(i)}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
                     </div>
                   );
                 })

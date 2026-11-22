@@ -346,10 +346,14 @@ export function Picklist({ identity }: { identity: Identity }) {
               <span role="columnheader">Aksi</span>
             </div>
             {!draft.lines.length && (
-              <EmptyState
-                title="Picklist masih kosong"
-                description="Cari master material untuk menambahkan baris penerimaan."
-              />
+              <div className="r22-table-empty" role="row">
+                <div role="cell">
+                  <EmptyState
+                    title="Picklist masih kosong"
+                    description="Cari master material untuk menambahkan baris penerimaan."
+                  />
+                </div>
+              </div>
             )}
             {draft.lines.map((l, i) => {
               const result = preview(l),
