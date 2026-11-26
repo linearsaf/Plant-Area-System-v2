@@ -215,6 +215,8 @@ Body JSON platform dibatasi 128 KB, sehingga file tidak dikirim bersama data.
 
 Validasi PDF: tipe dan magic bytes `%PDF-`, ukuran maksimal `DRAWINGS_MAX_PDF_MB` (default 25), dapat di-parse, minimal 1 halaman, tidak terenkripsi atau berpassword, dan lolos **uji stamp** (stamp dicoba di memori lalu dibuang) supaya kegagalan stamp tidak baru muncul saat Final Approval. Gambar: JPEG, PNG atau WebP berdasarkan magic bytes, maksimal 25 MB per file mentah dan 120 MP, maksimal 10 per request atau keputusan. SVG ditolak.
 
+Kompresi PDF hybrid (diaktifkan default lewat `DRAWINGS_PDF_COMPRESSION=on`, dapat dimatikan sementara dengan `off`): sebelum disimpan ke storage, PDF melewati (1) re-kompresi raster selektif memakai `@cantoo/pdf-lib` dan `sharp` untuk Image XObject RGB/Gray 8-bit berukuran besar/tak terkompresi (tanpa `SMask`, `Mask`, `ImageMask`, custom `Decode`, atau `Predictor > 1`; resolusi target ~220 DPI proporsional terhadap ukuran halaman dalam rentang 2560–7000 px, baseline JPEG kualitas 82, `4:4:4` untuk RGB) sehingga vektor, teks, font, layer OCG, dan gambar 1-bit monochrome tetap utuh; serta (2) optimasi struktural lossless dan linearisasi memakai `qpdf` (`--recompress-flate --compression-level=9 --object-streams=generate --linearize`). Hasil hanya dipakai bila lebih kecil minimal 2% dan ≥ 1 KB, `pageCount` tetap sama, dan tetap lolos uji stamp; bila tidak, file asli disimpan (_never-worse_). File `issued` hasil `stampPdf` juga memakai `useObjectStreams: true` dan optimasi `qpdf`.
+
 Kompresi gambar (desain [2026-11-21](superpowers/specs/2026-11-21-drawings-image-compression-design.md)): browser mengecilkan foto ke WebP (kualitas 0,82; JPEG 0,85 bila browser tidak bisa meng-encode WebP) dengan sisi terpanjang ≤ 2560 px sebelum upload. Server menyimpan WebP apa adanya hanya bila statis, tanpa EXIF/XMP/IPTC/orientasi, ≤ 2560 px dan ≤ 1,5 MB; selainnya dikonversi dengan `sharp` (orientasi diterapkan, metadata termasuk GPS dibuang, WebP kualitas 80). Setiap gambar mendapat thumbnail WebP ≤ 480 px. Maksimal 2 konversi berjalan bersamaan per proses; antrean lebih dari 30 detik → 503 `IMAGE_BUSY`. Gambar sebelum perubahan ini tetap JPEG/PNG tanpa thumbnail.
 
 File `staged` yang tidak dipakai dalam 24 jam dan file draft yang diganti sebelum pernah di-submit dibersihkan. File yang pernah di-submit disimpan permanen.
@@ -238,10 +240,10 @@ Konsekuensi yang harus disiapkan:
 
 `GET /drawings/api/revisions/:id/file` memeriksa izin, memilih file (issued untuk Completed/Obsolete, file kerja untuk status lain), lalu mengalirkannya dari storage tanpa memuat seluruh file ke memori.
 
-- Mendukung `Range: bytes=a-b` → 206 dengan `Content-Range`; rentang tidak valid 416. Header: `Accept-Ranges: bytes`, `Content-Length`, `ETag` dari SHA-256, `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, tanpa `Content-Encoding`.
+- Mendukung `Range: bytes=a-b` → 206 dengan `Content-Range`; rentang tidak valid 416. Header: `Accept-Ranges: bytes`, `Content-Length`, `ETag` dari SHA-256, `Cache-Control: private, no-cache, no-transform`, `X-Content-Type-Options: nosniff`, tanpa `Content-Encoding`.
 - `disposition=inline|attachment` dan `intent=view|print|download`. Nama unduhan `<DrawingNumber>_Rev-<n>.pdf`.
 - Download dan print hanya untuk revisi Completed. Setiap klik dicatat pada audit (`file.downloaded`, `file.printed`). Permintaan rentang dari viewer (`intent=view`) tidak dicatat.
-- Gambar lampiran disajikan lewat `GET /drawings/api/attachments/:id` (`?variant=thumb` untuk thumbnail) dengan pemeriksaan izin terhadap induknya. Respons gambar memakai `Cache-Control: private, no-cache, no-transform` dan ETag SHA-256: izin tetap diperiksa setiap permintaan, dan `If-None-Match` yang cocok dijawab 304 tanpa membaca storage. PDF tetap `no-store`.
+- Baik PDF maupun gambar lampiran memakai `Cache-Control: private, no-cache, no-transform` dan ETag SHA-256: izin tetap diperiksa setiap permintaan (dan audit download/print tetap dicatat), lalu permintaan penuh non-range dengan `If-None-Match` yang cocok dijawab `304` tanpa membaca storage. Gambar lampiran disajikan lewat `GET /drawings/api/attachments/:id` (`?variant=thumb` untuk thumbnail) dengan pemeriksaan izin terhadap induknya.
 
 ### 6.4 Stamp approval (K6)
 

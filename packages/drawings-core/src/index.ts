@@ -5,6 +5,7 @@ export { getDrawingsDb, closeDrawingsDb } from './database';
 export * as drawingsSchema from './schema';
 export {
   maxPdfBytes,
+  pdfCompressionEnabled,
   storageConfig,
   IMAGE_MAX_BYTES,
   IMAGE_MAX_SIDE,
@@ -12,8 +13,28 @@ export {
   IMAGE_PASSTHROUGH_MAX_BYTES,
   IMAGE_MAX_INPUT_PIXELS,
   STAGED_TTL_MS,
+  PDF_IMAGE_MIN_BYTES,
+  PDF_IMAGE_MIN_SIDE,
+  PDF_IMAGE_MAX_PIXELS,
+  PDF_IMAGE_MAX_RAW_BYTES,
+  PDF_IMAGE_TARGET_DPI,
+  PDF_IMAGE_MIN_MAX_SIDE,
+  PDF_IMAGE_MAX_MAX_SIDE,
+  PDF_COMPRESS_MIN_SAVING_BYTES,
+  PDF_COMPRESS_MIN_SAVING_RATIO,
+  PDF_QPDF_TIMEOUT_MS,
   type StorageConfig,
 } from './config';
+export {
+  maxRasterSideForPages,
+  shouldKeepCompressed,
+  inspectImageXObject,
+  recompressPdfImages,
+  optimizePdfWithQpdf,
+  processPdf,
+  type ImageXObjectCandidate,
+  type ProcessedPdf,
+} from './pdf-compress';
 export {
   needsConversion,
   isCleanWebp,

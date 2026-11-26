@@ -146,6 +146,8 @@ server {
         client_body_timeout 120s;
         include /etc/nginx/plant-drawings-headers.conf;
         include /etc/nginx/plant-proxy.conf;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
         # Stream the body to the app (proxy timeouts come from plant-proxy.conf).
         proxy_request_buffering off;
         proxy_pass http://drawings_upstream;

@@ -161,10 +161,48 @@ export async function stampPdf(source: Uint8Array, slots: StampSlot[]) {
       rotate: degrees(at.rotate),
     });
   }
-  return doc.save({ useObjectStreams: false });
+  return doc.save({ useObjectStreams: true });
 }
 
 const invalid = (message: string) => new AppError(422, message, 'FILE_INVALID');
+
+/** Mem-parse PDF dan memastikan tidak terenkripsi serta memiliki minimal 1 halaman. */
+export async function parsePdfDocument(bytes: Uint8Array): Promise<{ doc: PDFDocument; pageCount: number }> {
+  const head = Buffer.from(bytes.buffer, bytes.byteOffset, Math.min(bytes.byteLength, 1024));
+  if (head.indexOf('%PDF-') === -1) throw invalid('File bukan PDF.');
+  let doc: PDFDocument;
+  try {
+    doc = await PDFDocument.load(bytes, { updateMetadata: false });
+  } catch (e) {
+    if (e instanceof EncryptedPDFError)
+      throw invalid('PDF terenkripsi atau berpassword tidak dapat diterima.');
+    throw invalid('PDF rusak atau tidak dapat dibaca.');
+  }
+  if (doc.isEncrypted) throw invalid('PDF terenkripsi atau berpassword tidak dapat diterima.');
+  let pageCount: number;
+  try {
+    // pdf-lib parses leniently; a missing catalog/page tree only fails here.
+    pageCount = doc.getPageCount();
+    doc.getPage(0);
+  } catch {
+    throw invalid('PDF rusak atau tidak mempunyai halaman.');
+  }
+  if (pageCount < 1) throw invalid('PDF tidak mempunyai halaman.');
+  return { doc, pageCount };
+}
+
+/** Menguji pemberian stamp approval di memori tanpa mengubah input. */
+export async function assertStampable(bytes: Uint8Array): Promise<void> {
+  try {
+    await stampPdf(bytes, [
+      { title: 'Check', name: 'Uji stamp', role: 'Draft Leader', decidedAt: new Date() },
+      { title: 'Approval L1', name: 'Uji stamp', role: 'Approver L1', decidedAt: new Date() },
+      { title: 'Final Approval', name: 'Uji stamp', role: 'Head', decidedAt: new Date() },
+    ]);
+  } catch {
+    throw invalid('PDF tidak dapat diberi stamp approval. Simpan ulang PDF lalu unggah lagi.');
+  }
+}
 
 /**
  * Memvalidasi PDF: magic bytes, dapat di-parse, ≥ 1 halaman, tidak terenkripsi/berpassword,
@@ -173,34 +211,8 @@ const invalid = (message: string) => new AppError(422, message, 'FILE_INVALID');
 export async function validatePdf(path: string): Promise<{ pageCount: number }> {
   return serialPdfJob(async () => {
     const bytes = await readFile(path);
-    if (bytes.subarray(0, 1024).indexOf('%PDF-') === -1) throw invalid('File bukan PDF.');
-    let doc: PDFDocument;
-    try {
-      doc = await PDFDocument.load(bytes, { updateMetadata: false });
-    } catch (e) {
-      if (e instanceof EncryptedPDFError)
-        throw invalid('PDF terenkripsi atau berpassword tidak dapat diterima.');
-      throw invalid('PDF rusak atau tidak dapat dibaca.');
-    }
-    if (doc.isEncrypted) throw invalid('PDF terenkripsi atau berpassword tidak dapat diterima.');
-    let pageCount: number;
-    try {
-      // pdf-lib parses leniently; a missing catalog/page tree only fails here.
-      pageCount = doc.getPageCount();
-      doc.getPage(0);
-    } catch {
-      throw invalid('PDF rusak atau tidak mempunyai halaman.');
-    }
-    if (pageCount < 1) throw invalid('PDF tidak mempunyai halaman.');
-    try {
-      await stampPdf(bytes, [
-        { title: 'Check', name: 'Uji stamp', role: 'Draft Leader', decidedAt: new Date() },
-        { title: 'Approval L1', name: 'Uji stamp', role: 'Approver L1', decidedAt: new Date() },
-        { title: 'Final Approval', name: 'Uji stamp', role: 'Head', decidedAt: new Date() },
-      ]);
-    } catch {
-      throw invalid('PDF tidak dapat diberi stamp approval. Simpan ulang PDF lalu unggah lagi.');
-    }
+    const { pageCount } = await parsePdfDocument(bytes);
+    await assertStampable(bytes);
     return { pageCount };
   });
 }

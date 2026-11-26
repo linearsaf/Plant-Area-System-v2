@@ -159,6 +159,7 @@ services:
       DRAWINGS_S3_SECRET_ACCESS_KEY: ${DRAWINGS_S3_SECRET_ACCESS_KEY:-}
       DRAWINGS_S3_FORCE_PATH_STYLE: ${DRAWINGS_S3_FORCE_PATH_STYLE:-true}
       DRAWINGS_MAX_PDF_MB: ${DRAWINGS_MAX_PDF_MB:-25}
+      DRAWINGS_PDF_COMPRESSION: ${DRAWINGS_PDF_COMPRESSION:-on}
     volumes:
       # Driver fs: append-only file storage outside public/. Never removed by `down`.
       - drawings-files:/data/drawings
@@ -191,6 +192,7 @@ services:
       DRAWINGS_S3_ACCESS_KEY_ID: ${DRAWINGS_S3_ACCESS_KEY_ID:-}
       DRAWINGS_S3_SECRET_ACCESS_KEY: ${DRAWINGS_S3_SECRET_ACCESS_KEY:-}
       DRAWINGS_S3_FORCE_PATH_STYLE: ${DRAWINGS_S3_FORCE_PATH_STYLE:-true}
+      DRAWINGS_PDF_COMPRESSION: ${DRAWINGS_PDF_COMPRESSION:-on}
     volumes:
       - drawings-files:/data/drawings:ro
     networks: [private]

@@ -159,7 +159,17 @@ test('legacy Final Drawing is visible, printable and downloadable for Viewer', a
   expect(download.status()).toBe(200);
   expect(download.headers()['content-disposition']).toContain(`OLD-${suffix}_Rev-C.pdf`);
   expect(download.headers()['content-encoding']).toBeUndefined();
-  expect(download.headers()['cache-control']).toContain('no-store');
+  expect(download.headers()['cache-control']).toContain('private, no-cache, no-transform');
+  const etag = download.headers()['etag'];
+  expect(etag).toBeTruthy();
+  const cached = await viewer.get(`/drawings/api/revisions/${legacy.revisionId}/file`, {
+    headers: { 'If-None-Match': etag! },
+  });
+  expect(cached.status()).toBe(304);
+  const outsiderCached = await people.outsider!.api.get(`/drawings/api/revisions/${legacy.revisionId}/file`, {
+    headers: { 'If-None-Match': etag! },
+  });
+  expect(outsiderCached.status()).toBe(403);
   const ranged = await viewer.get(`/drawings/api/revisions/${legacy.revisionId}/file`, {
     headers: { Range: 'bytes=0-4' },
   });

@@ -45,12 +45,14 @@ import {
   type RevisionRow,
 } from './drawings';
 import { db, idempotent, lockDrawing, parse, writeAudit, type Tx } from './support';
-import { serialPdfJob, stampPdf, type StampSlot } from './pdf';
+import { parsePdfDocument, serialPdfJob, stampPdf, type StampSlot } from './pdf';
+import { pdfCompressionEnabled } from './config';
+import { optimizePdfWithQpdf } from './pdf-compress';
 import { storageKey, withStorage } from './storage';
 import { notify } from './notifications';
 import { closeRequestForDrawing, requestTasks } from './requests';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -424,21 +426,34 @@ async function prepareIssued(
   });
   if (createHash('sha256').update(source).digest('hex') !== working.sha256)
     throw new AppError(503, 'File kerja di storage tidak sesuai catatan.', 'STORAGE_UNAVAILABLE');
-  const issued = Buffer.from(await serialPdfJob(() => stampPdf(source, slots)));
   const fileId = randomUUID(),
     key = storageKey(fileId, 'pdf', at);
   const directory = await mkdtemp(join(tmpdir(), 'plant-issued-'));
   try {
     const path = join(directory, 'issued.pdf');
-    await writeFile(path, issued);
-    const sha256 = createHash('sha256').update(issued).digest('hex');
+    const optPath = join(directory, 'issued.qpdf.pdf');
+    const finalFile = await serialPdfJob(async () => {
+      const issued = Buffer.from(await stampPdf(source, slots));
+      await writeFile(path, issued);
+      if (pdfCompressionEnabled() && (await optimizePdfWithQpdf(path, optPath))) {
+        const optBytes = await readFile(optPath).catch(() => null);
+        if (optBytes && optBytes.length > 0 && optBytes.length <= issued.length) {
+          try {
+            const check = await parsePdfDocument(optBytes);
+            if (check.pageCount === working.pageCount) return { path: optPath, bytes: optBytes };
+          } catch {}
+        }
+      }
+      return { path, bytes: issued };
+    });
+    const sha256 = createHash('sha256').update(finalFile.bytes).digest('hex');
     await withStorage((s) =>
-      s.put(key, path, { size: issued.length, contentType: 'application/pdf', sha256 }),
+      s.put(key, finalFile.path, { size: finalFile.bytes.length, contentType: 'application/pdf', sha256 }),
     );
     return {
       fileId,
       key,
-      size: issued.length,
+      size: finalFile.bytes.length,
       sha256,
       pageCount: working.pageCount,
       at,
