@@ -332,7 +332,8 @@ test('all zones, responsive shell, real-data dashboard, command palette and noti
           expect(order).toEqual(['overview-title', 'overview-labels', 'overview-matrix']);
       }
       if (['/', '/bag-filter/equipment/l61-bf1', '/auth/change-password'].includes(path)) {
-        if (path === '/') await expect(page.locator('.application-summary')).toBeVisible();
+        if (path === '/')
+          await expect(page.getByRole('region', { name: 'Ringkasan Bag Filter', exact: true })).toBeVisible();
         await page.screenshot({
           path: 'test-results/refresh-' + theme + '-' + path.replaceAll('/', '_') + '-desktop.png',
           fullPage: true,
