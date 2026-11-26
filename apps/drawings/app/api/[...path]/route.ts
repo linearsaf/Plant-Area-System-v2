@@ -138,14 +138,18 @@ export async function GET(request: Request, context: Context) {
       // Range requests from the viewer are never audited; download/print clicks are.
       const ranged = request.headers.has('range');
       const { file, name } = await revisionFile(actor, segments[1], ranged ? 'view' : intent);
-      return await serveFile(request, file, { disposition, name });
+      return await serveFile(request, file, { disposition, name, cache: 'revalidate' });
     }
     // Pratinjau file staged milik pengunggah, sebelum dirujuk drawing. Hanya inline/view.
     if (segments.length === 3 && segments[0] === 'uploads' && segments[2] === 'file') {
       const file = await stagedFileForOwner(actor, segments[1]);
       if (file.kind === 'image')
         return await serveImage(request, file, { name: file.originalName, variant: imageVariant(params) });
-      return await serveFile(request, file, { disposition: 'inline', name: file.originalName });
+      return await serveFile(request, file, {
+        disposition: 'inline',
+        name: file.originalName,
+        cache: 'revalidate',
+      });
     }
     throw new AppError(404, 'Endpoint tidak ditemukan.');
   } catch (e) {

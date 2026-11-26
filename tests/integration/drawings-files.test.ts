@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { CreateBucketCommand } from '@aws-sdk/client-s3';
-import { PDFDocument } from '@cantoo/pdf-lib';
+import { PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib';
 import sharp from 'sharp';
 import {
   S3Storage,
@@ -262,4 +262,69 @@ test('database failure after storing removes both objects', async () => {
     (e) => !(e instanceof AppError),
   );
   assert.deepEqual(await storedKeys(), keys);
+});
+
+async function sampleRasterPdf(width = 1200, height = 900) {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595.28, 841.89]);
+  const raw = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 3;
+      const v = (x * 13 + y * 29 + ((x ^ y) & 31)) & 255;
+      raw[i] = v;
+      raw[i + 1] = (v * 3 + x) & 255;
+      raw[i + 2] = (v * 5 + y) & 255;
+    }
+  }
+  const ref = doc.context.register(
+    PDFRawStream.of(
+      doc.context.obj({
+        Type: 'XObject',
+        Subtype: 'Image',
+        Width: width,
+        Height: height,
+        ColorSpace: 'DeviceRGB',
+        BitsPerComponent: 8,
+        Length: raw.length,
+      }),
+      raw,
+    ),
+  );
+  page.node.set(PDFName.of('Resources'), doc.context.obj({ XObject: { Im1: ref } }));
+  return Buffer.from(await doc.save({ useObjectStreams: false }));
+}
+
+test('staged raster PDF is compressed, audited with uploadedSize, and cleans temp files', async () => {
+  const owner = person('drafter');
+  const bytes = await sampleRasterPdf();
+  const input = await body(bytes);
+  const staged = await stageUpload(owner, 'pdf', 'scan.pdf', 'application/pdf', input);
+  assert.ok(staged.size < bytes.length * 0.5);
+  assert.equal(staged.pageCount, 1);
+  await assert.rejects(access(input.path));
+  await assert.rejects(access(input.path + '.reimg.pdf'));
+  await assert.rejects(access(input.path + '.qpdf.pdf'));
+  const [event] = await getDrawingsDb()
+    .select()
+    .from(drawingsSchema.audit)
+    .where(eq(drawingsSchema.audit.targetId, staged.fileId));
+  const details = JSON.parse(event.details);
+  assert.equal(details.compressed, true);
+  assert.equal(details.uploadedSize, bytes.length);
+  assert.equal(details.size, staged.size);
+});
+
+test('stageUpload with compress=false stores exact original PDF bytes', async () => {
+  const owner = person('drafter');
+  const bytes = await sampleRasterPdf();
+  const input = await body(bytes);
+  const staged = await stageUpload(owner, 'pdf', 'raw.pdf', 'application/pdf', input, { compress: false });
+  assert.equal(staged.sha256, input.sha256);
+  assert.equal(staged.size, bytes.length);
+  const [event] = await getDrawingsDb()
+    .select()
+    .from(drawingsSchema.audit)
+    .where(eq(drawingsSchema.audit.targetId, staged.fileId));
+  assert.equal(JSON.parse(event.details).compressed, false);
 });

@@ -23,6 +23,26 @@ export const IMAGE_PASSTHROUGH_MAX_BYTES = 1.5 * 1024 * 1024;
 export const IMAGE_MAX_INPUT_PIXELS = 120_000_000;
 export const STAGED_TTL_MS = 24 * 3_600_000;
 
+/** Batas aman untuk re-kompresi raster selektif dan optimasi qpdf pada PDF. */
+export const PDF_IMAGE_MIN_BYTES = 32 * 1024;
+export const PDF_IMAGE_MIN_SIDE = 300;
+export const PDF_IMAGE_MAX_PIXELS = 60_000_000;
+export const PDF_IMAGE_MAX_RAW_BYTES = 96 * 1024 * 1024;
+export const PDF_IMAGE_TARGET_DPI = 220;
+export const PDF_IMAGE_MIN_MAX_SIDE = 2560;
+export const PDF_IMAGE_MAX_MAX_SIDE = 7000;
+export const PDF_COMPRESS_MIN_SAVING_BYTES = 1024;
+export const PDF_COMPRESS_MIN_SAVING_RATIO = 0.02;
+export const PDF_QPDF_TIMEOUT_MS = 20_000;
+
+/** Kill-switch operasional kompresi PDF (`DRAWINGS_PDF_COMPRESSION=on|off`, default `on`). */
+export function pdfCompressionEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env.DRAWINGS_PDF_COMPRESSION?.trim().toLowerCase();
+  if (!raw || raw === 'on') return true;
+  if (raw === 'off') return false;
+  throw Error('DRAWINGS_PDF_COMPRESSION harus on atau off.');
+}
+
 export function maxPdfBytes(env: NodeJS.ProcessEnv = process.env) {
   const raw = env.DRAWINGS_MAX_PDF_MB?.trim();
   const mb = raw ? Number(raw) : 25;

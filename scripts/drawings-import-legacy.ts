@@ -1,6 +1,6 @@
 // Bulk import of archive drawings as Legacy Ready (PRD §4.5), one drawing per manifest row.
 // Usage: pnpm drawings:import-legacy --dir <folder> --uploader-id <id> --uploader-name <name>
-//          [--uploader-role admin|leader] [--dry-run] [--offline] [--limit N] [--only a,b] [--report <file>]
+//          [--uploader-role admin|leader] [--dry-run] [--offline] [--no-compress] [--limit N] [--only a,b] [--report <file>]
 //   <folder> holds manifest.csv, conversion.csv and pdf/<number>.pdf (prepared outside the repository).
 //   The uploader must be an existing Admin or Draft Leader account; it becomes owner and Uploaded by,
 //   while Drawn by is taken from the manifest (the original author is not a system user).
@@ -48,7 +48,8 @@ async function sha256(path: string) {
 }
 
 const dryRun = flag('dry-run'),
-  offline = flag('offline');
+  offline = flag('offline'),
+  compress = !flag('no-compress');
 let connected = false,
   fatal = '';
 const started = Date.now();
@@ -172,12 +173,19 @@ try {
           const head = Buffer.alloc(16);
           await handle.read(head, 0, 16, 0);
           await handle.close();
-          const staged = await stageUpload(actor, 'pdf', `${row.number}.pdf`, 'application/pdf', {
-            path: copy,
-            size: row.size,
-            sha256: row.sha256,
-            head,
-          });
+          const staged = await stageUpload(
+            actor,
+            'pdf',
+            `${row.number}.pdf`,
+            'application/pdf',
+            {
+              path: copy,
+              size: row.size,
+              sha256: row.sha256,
+              head,
+            },
+            { compress },
+          );
           if (staged.pageCount !== row.pageCount)
             throw Error(`Jumlah halaman ${staged.pageCount} berbeda dari manifest ${row.pageCount}.`);
           const created = await createLegacyDrawing(
@@ -232,6 +240,7 @@ try {
         event: 'drawings.legacy_import',
         dryRun,
         offline,
+        compress,
         selected: source.length,
         imported: count('imported'),
         wouldImport: count('would_import'),

@@ -103,7 +103,7 @@ Untuk arsip drawing lama dalam jumlah besar (mis. dokumentasi Polysius). Dijalan
    docker compose -f compose.yaml -f infra/deploy/compose.drawings-s3.yaml --profile ops run --rm -v /srv/legacy-import:/import drawings-ops drawings:import-legacy --dir /import --uploader-id <id> --uploader-name "<nama>" --dry-run
    ```
 
-4. Impor bertahap di luar jam kerja, mulai dari sebagian kecil (`--limit 100`), lalu seluruhnya. Perintahnya sama tanpa `--dry-run`. Aman diulang: nomor yang sudah ada dilewati, sehingga impor yang terputus cukup dijalankan lagi. Bila penyimpanan tidak tersedia, impor berhenti sendiri.
+4. Impor bertahap di luar jam kerja, mulai dari sebagian kecil (`--limit 100`), lalu seluruhnya. Perintahnya sama tanpa `--dry-run`. Aman diulang: nomor yang sudah ada dilewati, sehingga impor yang terputus cukup dijalankan lagi. Bila penyimpanan tidak tersedia, impor berhenti sendiri. Secara default setiap PDF melewati kompresi hybrid; tambahkan `--no-compress` bila arsip hasil konversi sudah dioptimalkan di luar repositori.
 5. Periksa `import-report.csv` di folder impor: `failed` harus kosong. Jalankan `drawings:reconcile --hash`, lalu cek acak beberapa drawing di Library (badge **Legacy Ready**, jumlah halaman, viewer).
 
 Impor memerlukan migrasi `0005_drawing_hacs` (tabel HAC/SAC lain); jalankan layanan `migrate` dari rilis yang memuatnya sebelum impor. Nomor yang pernah diimpor lalu di-void dapat diimpor lagi.

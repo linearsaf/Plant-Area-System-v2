@@ -212,7 +212,7 @@ async function setup() {
       .replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'")
       .replace("connect-src 'self'", "connect-src 'self' wss://localhost:9443")
       .replace(/^.*add_header Strict-Transport-Security.*\r?\n/m, '');
-  template = developmentHeaders(template);
+  template = developmentHeaders(template).replace('proxy_read_timeout 30s;', 'proxy_read_timeout 120s;');
   await writeFile(`${directory}/default.conf.template`, template, { mode: 0o600 });
   await writeFile(
     `${directory}/drawings-headers.conf`,
@@ -225,12 +225,10 @@ async function setup() {
     child.once('error', reject);
     child.once('close', (code) => (code === 0 ? resolve() : reject(Error('Salin aset PDF.js gagal.'))));
   });
-  const proxy = (await readFile('infra/nginx/proxy.conf', 'utf8'))
-    .replace(
-      'proxy_set_header Connection "";',
-      'proxy_set_header Upgrade $http_upgrade;\nproxy_set_header Connection $dev_connection_upgrade;',
-    )
-    .replace('proxy_read_timeout 30s;', 'proxy_read_timeout 120s;');
+  const proxy = (await readFile('infra/nginx/proxy.conf', 'utf8')).replace(
+    'proxy_set_header Connection "";',
+    'proxy_set_header Upgrade $http_upgrade;\nproxy_set_header Connection $dev_connection_upgrade;',
+  );
   await writeFile(`${directory}/proxy.conf`, proxy, { mode: 0o600 });
   const common = [
     ...cores.map((core) => `      - ./packages/${core}/src:/workspace/packages/${core}/src:ro`),

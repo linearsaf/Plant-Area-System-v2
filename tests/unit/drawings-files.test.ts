@@ -332,19 +332,50 @@ test('revalidate cache returns 304 on matching If-None-Match without touching st
   assert.equal(other.headers.get('cache-control'), 'private, no-cache, no-transform');
 });
 
-test('pdf responses stay no-store even with If-None-Match', async () => {
+test('pdf responses stay no-store by default and revalidate supports 304 and ranged 206', async () => {
   const { storage, row, full } = await imageFixture();
-  const res = await serveFile(
+  const pdfRow = { ...row, mime: 'application/pdf' };
+  const noStoreRes = await serveFile(
     new Request('https://x/', { headers: { 'if-none-match': `"${row.sha256}"` } }),
-    row,
+    pdfRow,
     {
       name: 'a.pdf',
       storage,
     },
   );
-  assert.equal(res.status, 200);
-  assert.equal(res.headers.get('cache-control'), 'private, no-store, no-transform');
-  assert.equal(Buffer.from(await res.arrayBuffer()).equals(full), true);
+  assert.equal(noStoreRes.status, 200);
+  assert.equal(noStoreRes.headers.get('cache-control'), 'private, no-store, no-transform');
+  assert.equal(Buffer.from(await noStoreRes.arrayBuffer()).equals(full), true);
+
+  const failing = {
+    ...storage,
+    driver: 'fs',
+    get: () => Promise.reject(Error('tidak boleh dibaca')),
+  } as unknown as Storage;
+  const reval304 = await serveFile(
+    new Request('https://x/', { headers: { 'if-none-match': `"${row.sha256}"` } }),
+    pdfRow,
+    {
+      name: 'a.pdf',
+      cache: 'revalidate',
+      storage: failing,
+    },
+  );
+  assert.equal(reval304.status, 304);
+  assert.equal(reval304.headers.get('cache-control'), 'private, no-cache, no-transform');
+
+  const ranged206 = await serveFile(
+    new Request('https://x/', { headers: { 'if-none-match': `"${row.sha256}"`, range: 'bytes=0-3' } }),
+    pdfRow,
+    {
+      name: 'a.pdf',
+      cache: 'revalidate',
+      storage,
+    },
+  );
+  assert.equal(ranged206.status, 206);
+  assert.equal(ranged206.headers.get('cache-control'), 'private, no-cache, no-transform');
+  assert.equal(await ranged206.text(), 'RIFF');
 });
 
 test('serveImage serves the thumbnail variant', async () => {

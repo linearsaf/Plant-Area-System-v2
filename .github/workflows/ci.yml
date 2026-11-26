@@ -24,6 +24,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify generated brand assets
         run: node scripts/generate-brand.mjs --check
+      - name: Install qpdf for Drawing Database PDF optimization tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qpdf
       - run: pnpm typecheck && pnpm test
       # Picks the browser specs this change needs (scripts/e2e-selection.ts). main and manual runs
       # get the full suite; unmapped or shared paths fall back to it too.

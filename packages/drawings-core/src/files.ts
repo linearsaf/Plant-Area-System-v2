@@ -6,7 +6,8 @@ import { AppError, canDraw, type Identity } from '@plant/contracts';
 import { getDrawingsDb } from './database';
 import { files, audit } from './schema';
 import { IMAGE_MAX_BYTES, STAGED_TTL_MS, maxPdfBytes } from './config';
-import { detectImage, validatePdf } from './pdf';
+import { detectImage } from './pdf';
+import { processPdf } from './pdf-compress';
 import { processImage, webpName, withImageSlot, type ProcessedFile } from './images';
 import { storageKey, thumbKey, withStorage, type ByteRange, type Storage } from './storage';
 
@@ -107,17 +108,22 @@ export async function stageUpload(
   name: string,
   declaredType: string,
   body: Body,
+  options?: { compress?: boolean },
 ): Promise<StagedFile> {
   try {
     let mime: string,
       stored: ProcessedFile = body,
       thumb: ProcessedFile | null = null,
       converted: boolean | undefined,
+      compressed: boolean | undefined,
       pageCount: number | null = null;
     if (kind === 'pdf') {
       if (body.head.subarray(0, 5).toString('latin1') !== '%PDF-')
         throw new AppError(422, 'File bukan PDF.', 'FILE_INVALID');
-      ({ pageCount } = await validatePdf(body.path));
+      const processed = await processPdf(body, { compress: options?.compress });
+      stored = processed.file;
+      pageCount = processed.pageCount;
+      compressed = processed.compressed;
       mime = 'application/pdf';
     } else {
       const image = detectImage(body.head);
@@ -181,6 +187,7 @@ export async function stageUpload(
             size: stored.size,
             sha256: stored.sha256,
             pageCount,
+            ...(kind === 'pdf' && { compressed, uploadedSize: body.size }),
             ...(kind === 'image' && { converted, uploadedSize: body.size }),
           }),
           createdAt: now,
@@ -206,7 +213,13 @@ export async function stageUpload(
     };
   } finally {
     await Promise.all(
-      [body.path, body.path + '.webp', body.path + '.thumb.webp'].map((path) => rm(path, { force: true })),
+      [
+        body.path,
+        body.path + '.webp',
+        body.path + '.thumb.webp',
+        body.path + '.reimg.pdf',
+        body.path + '.qpdf.pdf',
+      ].map((path) => rm(path, { force: true })),
     );
   }
 }
@@ -274,8 +287,8 @@ export function contentDisposition(type: 'inline' | 'attachment', name: string) 
 /**
  * Mengalirkan file dari storage tanpa memuat seluruh isi ke memori; mendukung Range.
  * `no-transform` mencegah kompresi otomatis yang merusak range request.
- * `cache: 'revalidate'` (gambar) mengizinkan browser menyimpan salinan pribadi yang selalu
- * divalidasi ulang: ETag cocok → 304 tanpa membaca storage. Izin diperiksa pemanggil lebih dulu.
+ * `cache: 'revalidate'` (PDF & gambar) mengizinkan browser menyimpan salinan pribadi yang selalu
+ * divalidasi ulang: ETag cocok (non-range) → 304 tanpa membaca storage. Izin diperiksa pemanggil lebih dulu.
  */
 export async function serveFile(
   request: Request,
@@ -295,7 +308,11 @@ export async function serveFile(
   const etag = `"${file.sha256}"`,
     cacheControl =
       cache === 'revalidate' ? 'private, no-cache, no-transform' : 'private, no-store, no-transform';
-  if (cache === 'revalidate' && matchesEtag(request.headers.get('if-none-match'), etag))
+  if (
+    cache === 'revalidate' &&
+    !request.headers.has('range') &&
+    matchesEtag(request.headers.get('if-none-match'), etag)
+  )
     return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': cacheControl } });
   const range = parseRange(request.headers.get('range'), file.size);
   const common = {
