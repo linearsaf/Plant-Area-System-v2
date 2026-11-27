@@ -199,7 +199,10 @@ for (const width of [1440, 390])
       await expect(menu).not.toBeVisible();
       await expect(trigger).toHaveText(selected!);
       await trigger.click();
-      const target = route === '/bag-filter' ? menu.getByRole('option').first() : search,
+      const target =
+          route === '/bag-filter' || route === '/consumables/stock'
+            ? menu.getByRole('option').first()
+            : search,
         box = (await target.boundingBox())!;
       await page.mouse.move(box.x + 20, box.y + box.height / 2);
       await page.mouse.down();

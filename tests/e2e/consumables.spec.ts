@@ -154,6 +154,7 @@ test('single R22 stock: opening, persistent Consume/Return carts, print, correct
   await page.goto('/consumables/consume');
   await page.getByRole('combobox', { name: 'Area Kerja', exact: true }).click();
   await page.getByRole('option', { name: 'RMP', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByLabel('HAC/SAC / Lokasi fungsional').fill('tq.452-bu1');
   await page.getByRole('combobox', { name: /Cari material/ }).fill(mmid);
   const modal = page.getByRole('dialog', { name: 'Tambah jumlah material' });
@@ -176,6 +177,7 @@ test('single R22 stock: opening, persistent Consume/Return carts, print, correct
   await expect(page.locator('.r22-cart-table')).toContainText(mmid);
   await page.getByRole('button', { name: 'Tema', exact: true }).click();
   await page.getByRole('button', { name: 'Gelap', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByLabel('Nomor WO (opsional)')).toHaveValue('R22-BROWSER-WO');
   await page.screenshot({ path: '.test-runtime/r22-consume-1440.png', fullPage: true });
   // Inline cart validation blocks confirmation modal when edited quantity exceeds available stock.
@@ -305,6 +307,7 @@ test('20-line SAP picklist, retry and K3 auto enrollment use the single room', a
   await costCenter.click();
   await page.getByRole('textbox', { name: 'Cari opsi' }).fill('40420');
   await page.getByRole('option', { name: /40420 — TQ2-Clinker Production/ }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: /Terima Picklist/ }).click();
   await page.getByRole('button', { name: 'Terima ke Stok R22', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Penerimaan Picklist tersimpan');
@@ -454,6 +457,7 @@ test('Simpan order accepts a persisted non-UUID material alongside a new UUID ma
   }
   await page.getByRole('combobox', { name: 'Area Kerja', exact: true }).click();
   await page.getByRole('option', { name: 'RMP', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByLabel('HAC/SAC / Lokasi fungsional').fill('361-CV1');
   await page.getByLabel('Nomor WO (opsional)').fill('32141');
   await page.getByLabel('Keterangan / deskripsi pekerjaan (opsional)').fill('Ganti bearing');

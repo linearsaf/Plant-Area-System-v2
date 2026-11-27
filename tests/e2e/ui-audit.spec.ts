@@ -512,10 +512,13 @@ test('switching catalog and stock tabs never renders material data as inventory 
     }
     await page.goto('/consumables/manage');
     await expect(page.locator('.stock-table-row')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Master material', exact: true }).click();
+    await expect(page.locator('.stock-table')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.locator('.stock-table-row')).toHaveCount(2);
     gate = new Promise((resolve) => {
       release = resolve;
     });
-    await page.getByRole('button', { name: 'Master material', exact: true }).click();
+    await page.getByRole('button', { name: 'Stok, rak & saldo awal', exact: true }).click();
     await expect(page.locator('.stock-table-row')).toHaveCount(0);
     await expect(page.locator('.table-skeleton')).toBeVisible();
     release();
