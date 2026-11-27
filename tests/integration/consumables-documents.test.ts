@@ -617,8 +617,8 @@ test('Umum R22 shared pool (explicit & default Picklist blank rack) can be consu
   assert.equal(consumed.document.workArea, 'RMP');
   assert.equal(consumed.document.borrowCount, 0);
   assert.equal(consumed.loans?.length ?? 0, 0);
-  assert.equal(consumed.lines[0].borrowedFromArea, null);
-  assert.equal(consumed.lines[1].borrowedFromArea, null);
+  assert.equal(consumed.lines[0].borrowedFromArea, '');
+  assert.equal(consumed.lines[1].borrowedFromArea, '');
   assert.equal(consumed.lines[0].workArea, 'Umum R22');
   assert.equal(consumed.lines[1].workArea, 'Umum R22');
   assert.deepEqual((await reconcile(actor)).items, []);
