@@ -78,7 +78,7 @@ test.beforeAll(async () => {
     .set({ id: materialId })
     .where(eq(s.materials.id, generatedMaterialId));
   materials.push(materialId);
-  await save('/consumables/api/inventory', { materialId, rack: 'Rack B1' });
+  await save('/consumables/api/inventory', { materialId, rack: 'RMP' });
 });
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -92,6 +92,15 @@ test.afterAll(async () => {
         await tx.delete(s.audit).where(inArray(s.audit.actorId, ids));
       }
       if (materials.length) {
+        const materialLoans = await tx
+          .select({ id: s.loans.id })
+          .from(s.loans)
+          .where(inArray(s.loans.materialId, materials));
+        const loanIds = materialLoans.map((l) => l.id);
+        if (loanIds.length) {
+          await tx.delete(s.loanRepayments).where(inArray(s.loanRepayments.loanId, loanIds));
+          await tx.delete(s.loans).where(inArray(s.loans.id, loanIds));
+        }
         await tx.delete(s.movements).where(inArray(s.movements.materialId, materials));
         await tx.delete(s.inventory).where(inArray(s.inventory.materialId, materials));
         await tx.delete(s.materials).where(inArray(s.materials.id, materials));
@@ -315,7 +324,8 @@ test('20-line SAP picklist, retry and K3 auto enrollment use the single room', a
   expect(d.stock.quantity).toBe('12.000000');
   expect(d.stock.rack).toBe('');
   expect(d.stock.initialized).toBe(true);
-  expect(d.stocks).toBeUndefined();
+  expect(d.stocks).toHaveLength(1);
+  expect(d.stocks[0].rack).toBe('');
 });
 test('gateway, four roles, role-only grant, rejected location fields, revocation and disabled apps', async ({
   request,

@@ -596,7 +596,7 @@ test('Umum R22 shared pool (explicit & default Picklist blank rack) can be consu
   assert.equal(searchExplicit.items[0].quantity, '10.000000');
 
   const searchBlank = await searchMaterials(actor, new URLSearchParams({ q: mmidPicklist, workArea: 'RMP' }));
-  assert.equal(searchBlank.items[0].rack, '');
+  assert.equal(searchBlank.items[0].rack, 'Umum R22');
   assert.equal(searchBlank.items[0].quantity, '8.000000');
 
   // RMP consumes both shared items directly -> zero cross-area loans created.

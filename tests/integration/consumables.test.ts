@@ -221,9 +221,9 @@ test('audit failure rolls back balance, movement and idempotency; same key can r
   assert.equal(retry.replayed, false);
   assert.equal((await state(f)).quantity, '2.000000');
 });
-test('single stock registration is unique and server pagination retains more than 300 movements', async () => {
+test('single stock registration is unique per Area Kerja and server pagination retains more than 300 movements', async () => {
   const f = await fixture();
-  await assert.rejects(saveInventory(actor, { materialId: f.materialId }), conflict);
+  await assert.rejects(saveInventory(actor, { materialId: f.materialId, rack: 'A1' }), conflict);
   const p = await listInventory(actor, new URLSearchParams({ materialId: f.materialId }));
   assert.equal(p.items.length, 1);
   assert.equal(p.nextCursor, null);
