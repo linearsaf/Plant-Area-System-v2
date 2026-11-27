@@ -3,6 +3,8 @@ import { pageIdentity } from '@plant/server';
 import { Shell, Heading } from '@plant/ui';
 import { canConsume } from '@plant/contracts';
 import { ConsumablesWorkspace } from '../workspace';
+import { StockWorkspace } from '../stock-workspace';
+import { ManageWorkspace } from '../manage-workspace';
 import { OrderCart } from '../order-cart';
 import { Picklist } from '../picklist';
 import { StockHistory } from '../stock-history';
@@ -22,7 +24,7 @@ const descriptions: Record<string, string> = {
   return: 'Kembalikan material ke R22 dan catat HAC/SAC asalnya.',
   picklist: 'Terima material dari Picklist SAP ke satuan terkecil R22.',
   history: 'Telusuri dokumen dan pergerakan stok R22.',
-  manage: 'Kelola master material, rak, dan konfirmasi saldo awal R22.',
+  manage: 'Kelola master material, area kerja, dan konfirmasi saldo awal R22.',
   audit: 'Telusuri perubahan material dan stok beserta pencatatnya.',
 };
 export default async function Page({ params }: { params: Promise<{ section: string }> }) {
@@ -57,6 +59,10 @@ export default async function Page({ params }: { params: Promise<{ section: stri
           <Picklist identity={identity} />
         ) : section === 'history' ? (
           <StockHistory identity={identity} />
+        ) : section === 'manage' ? (
+          <ManageWorkspace identity={identity} />
+        ) : section === 'stock' ? (
+          <StockWorkspace identity={identity} />
         ) : (
           <ConsumablesWorkspace identity={identity} view={section} />
         )

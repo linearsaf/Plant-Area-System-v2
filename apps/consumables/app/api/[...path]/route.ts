@@ -3,6 +3,7 @@ import { apiIdentity, failure, verifyOrigin, readJson } from '@plant/server';
 import {
   listMaterials,
   listCategories,
+  listWorkAreas,
   listInventory,
   materialDetail,
   listMovements,
@@ -20,6 +21,9 @@ import {
   listDocuments,
   searchMaterials,
   hecSuggestions,
+  listLoans,
+  loanDetail,
+  repayLoan,
   DocumentConflict,
 } from '@plant/consumables-core';
 export const dynamic = 'force-dynamic';
@@ -49,7 +53,10 @@ export async function GET(request: Request, context: Context) {
     if (s === 'hec-suggestions') return json(await hecSuggestions(a, p.get('q') || ''));
     if (s === 'documents') return json(await listDocuments(a, p));
     if (path.length === 2 && path[0] === 'documents') return json(await documentDetail(a, path[1]));
+    if (s === 'loans') return json(await listLoans(a, p));
+    if (path.length === 2 && path[0] === 'loans') return json(await loanDetail(a, path[1]));
     if (s === 'categories') return json(await listCategories(a));
+    if (s === 'areas') return json(await listWorkAreas(a));
     if (s === 'materials') return json(await listMaterials(a, p));
     if (s === 'inventory') return json(await listInventory(a, p));
     if (s === 'movements') return json(await listMovements(a, p));
@@ -83,6 +90,10 @@ async function mutate(request: Request, context: Context) {
     )[path[0] as 'consume-orders'];
     if (request.method === 'POST' && path.length === 1 && documentType) {
       const result = await createDocument(a, documentType, body, request.headers.get('idempotency-key'));
+      return json(result, result.replayed ? 200 : 201);
+    }
+    if (request.method === 'POST' && path.length === 3 && path[0] === 'loans' && path[2] === 'repayments') {
+      const result = await repayLoan(a, path[1], body, request.headers.get('idempotency-key'));
       return json(result, result.replayed ? 200 : 201);
     }
     const kind = (

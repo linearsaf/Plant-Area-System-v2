@@ -1,7 +1,13 @@
 'use client';
 import type { MaterialSearchResult } from '@plant/contracts';
-export type CartLine = { material: MaterialSearchResult; quantity: string; mode?: 'base' | 'sap' };
+export type CartLine = {
+  material: MaterialSearchResult;
+  quantity: string;
+  mode?: 'base' | 'sap';
+  borrowedFromArea?: string;
+};
 export type CartDraft = {
+  workArea: string;
   hec: string;
   wo: string;
   note: string;
@@ -18,6 +24,7 @@ export type CartDraft = {
   pending?: { fingerprint: string; key: string };
 };
 export const emptyCart = (): CartDraft => ({
+  workArea: '',
   hec: '',
   wo: '',
   note: '',
@@ -32,6 +39,8 @@ export const emptyCart = (): CartDraft => ({
   requiredDate: '',
   lines: [],
 });
+export const cartLineKey = (line: Pick<CartLine, 'material'>) =>
+  line.material.inventoryId || line.material.id;
 export const cartKey = (userId: string, type: string) => `r22-cart:${userId}:${type}`;
 const memory = new Map<string, CartDraft>();
 export function readCart(key: string): CartDraft {

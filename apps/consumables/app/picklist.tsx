@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   TableSkeleton,
   EmptyState,
@@ -10,6 +10,7 @@ import {
   useConfirmation,
   Toast,
   cartKey,
+  cartLineKey,
   emptyCart,
   readCart,
   writeCart,
@@ -17,15 +18,19 @@ import {
   type CartDraft,
 } from '@plant/ui';
 import {
+  costCenterLabel,
   decimalUnits,
   decimalString,
   formatQuantity,
+  isSharedWorkArea,
   localDecimal,
+  R22_COST_CENTERS,
+  R22_SHARED_AREA,
+  R22_WORK_AREAS,
   sapToR22,
   validateStockQuantity,
   type Identity,
   type MaterialSearchResult,
-  type StockDocument,
   type DocumentResult,
   type StockLineConflict,
 } from '@plant/contracts';
@@ -34,25 +39,45 @@ import { MaterialSearch } from './material-search';
 import { stockApi, StockApiError } from './r22-api';
 export function Picklist({ identity }: { identity: Identity }) {
   const [draft, setDraft] = useState<CartDraft>(emptyCart),
-    [loaded, setLoaded] = useState('');
+    [loaded, setLoaded] = useState(''),
+    [areas, setAreas] = useState<string[]>([...R22_WORK_AREAS]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
-    [previous, setPrevious] = useState<StockDocument[]>([]),
     [conflicts, setConflicts] = useState<StockLineConflict[]>([]),
     [success, setSuccess] = useState<DocumentResult | null>(null),
-    [focus, setFocus] = useState('');
+    [focus, setFocus] = useState(''),
+    [touchedWo, setTouchedWo] = useState(false),
+    [touchedCostCenter, setTouchedCostCenter] = useState(false),
+    [submitted, setSubmitted] = useState(false);
   const feedback = useCartFeedback(draft, setDraft, setMessage);
   const confirm = useConfirmation(),
+    formId = useId(),
     prefill = useRef(''),
     key = cartKey(identity.id, 'picklist');
-  const update = (patch: Partial<CartDraft>) => setDraft((v) => ({ ...v, ...patch }));
+  const update = (patch: Partial<CartDraft>) => {
+    setDraft((v) => ({ ...v, ...patch }));
+    setError('');
+  };
+  useEffect(() => {
+    const c = new AbortController();
+    stockApi('/areas', { signal: c.signal })
+      .then((d) => {
+        if (!c.signal.aborted && Array.isArray(d.items) && d.items.length) setAreas(d.items);
+      })
+      .catch(() => {});
+    return () => c.abort();
+  }, []);
   useEffect(() => {
     if (!key) return;
     setDraft(readCart(key));
     setLoaded(key);
     setSuccess(null);
     setConflicts([]);
+    setError('');
+    setTouchedWo(false);
+    setTouchedCostCenter(false);
+    setSubmitted(false);
   }, [key]);
   useEffect(() => {
     if (key && loaded === key && !success) writeCart(key, draft);
@@ -74,7 +99,7 @@ export function Picklist({ identity }: { identity: Identity }) {
       lines: [...v.lines, { material, quantity: '', mode: convertible ? 'sap' : 'base' }],
     }));
     setFocus(material.id);
-    feedback.added(material.id);
+    feedback.added(cartLineKey({ material }));
     setMessage(`${material.commonName || material.description} ditambahkan`);
   };
   useEffect(() => {
@@ -103,27 +128,6 @@ export function Picklist({ identity }: { identity: Identity }) {
       })
       .catch((e) => setError(e.message));
   }, [loaded, key]);
-  useEffect(() => {
-    const c = new AbortController();
-    if (!draft.reservationNo.trim()) {
-      setPrevious([]);
-      return;
-    }
-    const timer = setTimeout(
-      () =>
-        stockApi(
-          '/documents?' + new URLSearchParams({ reservationNo: draft.reservationNo, type: 'picklist' }),
-          { signal: c.signal },
-        )
-          .then((d) => setPrevious(d.items))
-          .catch(() => setPrevious([])),
-      200,
-    );
-    return () => {
-      clearTimeout(timer);
-      c.abort();
-    };
-  }, [draft.reservationNo]);
   const preview = (line: CartDraft['lines'][number]) => {
     try {
       return line.mode === 'base'
@@ -133,19 +137,32 @@ export function Picklist({ identity }: { identity: Identity }) {
       return null;
     }
   };
+  const woError = !draft.wo.trim() ? 'Nomor WO wajib diisi.' : '';
+  const costCenterError = !draft.costCenter.trim() ? 'Cost Center wajib diisi.' : '';
+  const showWoError = (touchedWo || submitted) && !!woError;
+  const showCostCenterError = (touchedCostCenter || submitted) && !!costCenterError;
+  const hasCustomCostCenter = Boolean(
+    draft.costCenter.trim() && !R22_COST_CENTERS.some((cc) => cc.code === draft.costCenter.trim()),
+  );
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy || loaded !== key) return;
+    setSubmitted(true);
+    if (woError || costCenterError) {
+      const firstErr = woError || costCenterError;
+      const firstId = woError ? `${formId}-wo` : `${formId}-cost-center`;
+      setError(firstErr);
+      const target = document.getElementById(firstId);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target?.focus();
+      return;
+    }
     try {
       if (!draft.lines.length || draft.lines.length > 100) throw Error('Pilih 1–100 material unik.');
-      if (!draft.reservationNo.trim() || !draft.wo.trim())
-        throw Error('Nomor reservasi dan Nomor WO wajib diisi.');
-      if (!draft.costCenter.trim()) throw Error('Pusat biaya wajib diisi.');
       const body = {
-        reservationNo: draft.reservationNo.trim(),
+        workArea: draft.workArea.trim(),
         wo: draft.wo.trim(),
         woDescription: draft.note.trim(),
-        equipmentNo: draft.equipmentNo.trim(),
         functionalLocation: draft.functionalLocation.trim(),
         costCenter: draft.costCenter.trim(),
         ...(draft.requiredDate ? { requiredDate: draft.requiredDate } : {}),
@@ -155,6 +172,7 @@ export function Picklist({ identity }: { identity: Identity }) {
             throw Error(`Baris ${i + 1}: stok belum dihitung atau nonaktif. Hubungi admin.`);
           return {
             materialId: l.material.id,
+            ...(l.material.inventoryId ? { inventoryId: l.material.inventoryId } : {}),
             ...(l.mode === 'base'
               ? { quantity: validateStockQuantity(localDecimal(l.quantity), l.material.decimalAllowed) }
               : {
@@ -166,7 +184,7 @@ export function Picklist({ identity }: { identity: Identity }) {
       };
       if (
         !(await confirm(
-          `Terima picklist ${body.reservationNo} · WO ${body.wo} · ${body.lines.length} item ke stok R22?`,
+          `Terima picklist WO ${body.wo} · Cost Center ${costCenterLabel(body.costCenter)} · ${body.lines.length} item ke stok R22?`,
           {
             title: 'Konfirmasi Penerimaan Picklist',
             confirmLabel: 'Terima ke Stok R22',
@@ -192,6 +210,9 @@ export function Picklist({ identity }: { identity: Identity }) {
       setSuccess(result);
       removeCart(key);
       setDraft(emptyCart());
+      setTouchedWo(false);
+      setTouchedCostCenter(false);
+      setSubmitted(false);
     } catch (e) {
       setError((e as Error).message);
       if (e instanceof StockApiError) setConflicts(e.lines);
@@ -206,11 +227,9 @@ export function Picklist({ identity }: { identity: Identity }) {
         <h2>Penerimaan Picklist tersimpan</h2>
         <p className="display-lg">{success.document.number}</p>
         <p>
-          {success.lines.length} item · Reservasi {success.document.reservationNo}
+          {success.lines.length} item · WO <span className="code-text">{success.document.wo}</span> · Cost
+          Center {costCenterLabel(success.document.costCenter)}
         </p>
-        {!!success.previousDocuments?.length && (
-          <p className="notice">Reservasi ini juga mempunyai penerimaan sebelumnya.</p>
-        )}
         <div className="form-actions">
           <a className="button primary" href={`/consumables/documents/${success.document.id}`}>
             Lihat / Cetak bukti
@@ -235,11 +254,7 @@ export function Picklist({ identity }: { identity: Identity }) {
     );
   return (
     <>
-      <form
-        onInvalid={(e) => e.currentTarget.classList.add('was-submitted')}
-        onSubmit={submit}
-        className="r22-picklist"
-      >
+      <form noValidate onSubmit={submit} className="r22-picklist">
         {error && (
           <p className="notice error" role="alert">
             {error}
@@ -254,82 +269,113 @@ export function Picklist({ identity }: { identity: Identity }) {
           </div>
           <fieldset className="r22-fieldset" disabled={busy || loaded !== key}>
             <div className="form-grid">
-              <label>
-                <span>Nomor reservasi </span>
+              <div className="r22-field">
+                <label htmlFor={`${formId}-wo`}>
+                  <span>Nomor WO</span>
+                </label>
                 <Input
-                  required
-                  maxLength={30}
-                  value={draft.reservationNo}
-                  onChange={(e) => update({ reservationNo: e.target.value })}
-                />
-              </label>
-              <label>
-                <span>Nomor WO </span>
-                <Input
+                  id={`${formId}-wo`}
                   required
                   maxLength={100}
                   value={draft.wo}
+                  aria-invalid={showWoError ? 'true' : 'false'}
+                  aria-describedby={showWoError ? `${formId}-wo-err` : undefined}
+                  onBlur={() => setTouchedWo(true)}
                   onChange={(e) => update({ wo: e.target.value })}
                 />
-              </label>
-              <label>
-                Nomor equipment (opsional)
+                {showWoError && (
+                  <p id={`${formId}-wo-err`} className="r22-field-error">
+                    {woError}
+                  </p>
+                )}
+              </div>
+              <div className="r22-field">
+                <label htmlFor={`${formId}-cost-center`}>
+                  <span>Cost Center</span>
+                </label>
+                <Select
+                  id={`${formId}-cost-center`}
+                  searchable
+                  searchPlaceholder="Cari kode atau nama Cost Center…"
+                  required
+                  value={draft.costCenter}
+                  aria-invalid={showCostCenterError ? 'true' : 'false'}
+                  aria-describedby={showCostCenterError ? `${formId}-cost-center-err` : undefined}
+                  onBlur={() => setTouchedCostCenter(true)}
+                  onChange={(e) => {
+                    setTouchedCostCenter(true);
+                    update({ costCenter: e.target.value });
+                  }}
+                >
+                  <option value="" disabled>
+                    Pilih Cost Center
+                  </option>
+                  {hasCustomCostCenter && (
+                    <option value={draft.costCenter.trim()}>{draft.costCenter.trim()}</option>
+                  )}
+                  {R22_COST_CENTERS.map((cc) => (
+                    <option key={cc.code} value={cc.code}>
+                      {cc.code} — {cc.description}
+                    </option>
+                  ))}
+                </Select>
+                {showCostCenterError && (
+                  <p id={`${formId}-cost-center-err`} className="r22-field-error">
+                    {costCenterError}
+                  </p>
+                )}
+              </div>
+              <div className="r22-field">
+                <label htmlFor={`${formId}-area`}>Area Kerja tujuan (opsional)</label>
+                <Select
+                  id={`${formId}-area`}
+                  searchable={false}
+                  value={draft.workArea}
+                  onChange={(e) => update({ workArea: e.target.value })}
+                >
+                  <option value="">{R22_SHARED_AREA} (Stok bersama)</option>
+                  {areas
+                    .filter((item) => !isSharedWorkArea(item))
+                    .map((item) => (
+                      <option key={item} value={item}>
+                        {(R22_WORK_AREAS as readonly string[]).includes(item) ? item : `${item} (nilai lama)`}
+                      </option>
+                    ))}
+                </Select>
+              </div>
+              <div className="r22-field">
+                <label htmlFor={`${formId}-date`}>Tanggal kebutuhan (opsional)</label>
                 <Input
-                  maxLength={100}
-                  value={draft.equipmentNo}
-                  onChange={(e) => update({ equipmentNo: e.target.value })}
+                  id={`${formId}-date`}
+                  type="date"
+                  value={draft.requiredDate}
+                  onChange={(e) => update({ requiredDate: e.target.value })}
                 />
-              </label>
-              <label>
-                Lokasi fungsional (opsional)
+              </div>
+              <div className="r22-field r22-picklist-floc">
+                <label htmlFor={`${formId}-floc`}>Lokasi fungsional (opsional)</label>
                 <Input
+                  id={`${formId}-floc`}
                   maxLength={100}
                   value={draft.functionalLocation}
                   onChange={(e) => update({ functionalLocation: e.target.value })}
                   placeholder="TQ.452-BU1 - deskripsi equipment"
                 />
-              </label>
-              <label>
-                <span>Pusat biaya </span>
-                <Input
-                  required
-                  maxLength={40}
-                  value={draft.costCenter}
-                  onChange={(e) => update({ costCenter: e.target.value })}
-                />
-              </label>
-              <label>
-                Tanggal kebutuhan (opsional)
-                <Input
-                  type="date"
-                  value={draft.requiredDate}
-                  onChange={(e) => update({ requiredDate: e.target.value })}
-                />
-              </label>
-              <label className="r22-span-all">
-                Keterangan pekerjaan (opsional)
+              </div>
+              <div className="r22-field r22-span-all">
+                <label htmlFor={`${formId}-note`}>Keterangan pekerjaan (opsional)</label>
                 <Textarea
+                  id={`${formId}-note`}
                   maxLength={500}
                   value={draft.note}
                   onChange={(e) => update({ note: e.target.value })}
                 />
-              </label>
+              </div>
             </div>
           </fieldset>
-          {!!previous.length && (
-            <div className="notice r22-reservation-warning" role="status">
-              <strong>Reservasi ini pernah diterima.</strong>
-              <span>Pengiriman parsial tetap dapat dicatat.</span>
-              {previous.map((d) => (
-                <a key={d.id} href={`/consumables/history?document=${d.id}`}>
-                  {d.number}
-                </a>
-              ))}
-            </div>
-          )}
         </section>
         <section className="panel">
-          <MaterialSearch catalog onSelect={add} />
+          <MaterialSearch catalog workArea={draft.workArea} onSelect={add} />
           <div className="section-title r22-cart-title">
             <h2>
               Material picklist <span className="badge neutral">{draft.lines.length} item</span>
@@ -361,10 +407,10 @@ export function Picklist({ identity }: { identity: Identity }) {
                 problem = conflicts.find((c) => c.materialId === m.id);
               return (
                 <div
-                  data-cart-material={m.id}
-                  className={`r22-cart-row ${problem ? 'has-error' : ''} ${feedback.highlight === m.id ? 'is-new' : ''}`}
+                  data-cart-material={cartLineKey(l)}
+                  className={`r22-cart-row ${problem ? 'has-error' : ''} ${feedback.highlight === cartLineKey(l) ? 'is-new' : ''}`}
                   role="row"
-                  key={m.id}
+                  key={cartLineKey(l)}
                 >
                   <span className="r22-line-no" role="cell">
                     {i + 1}

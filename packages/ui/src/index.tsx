@@ -28,6 +28,7 @@ export {
   removeCart,
   emptyCart,
   cartKey,
+  cartLineKey,
   cartCount,
   type CartDraft,
   type CartLine,

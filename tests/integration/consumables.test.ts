@@ -10,6 +10,8 @@ import {
   materialDetail,
   listInventory,
   listMaterials,
+  listCategories,
+  listWorkAreas,
   listMovements,
   stockDashboard,
   stockPortalSummary,
@@ -378,6 +380,82 @@ test('portal summary returns lightweight R22 metrics, signal and role-filtered a
     stockPortalSummary({ ...actor, grants: [] }),
     (e) => e instanceof AppError && e.status === 403,
   );
+});
+test('opening/adjustment enforce decimalAllowed and listMaterials exposes inStock status', async () => {
+  const suffix = key();
+  const { id: materialId } = await saveMaterial(actor, {
+    mmid: 'INT-' + suffix,
+    description: 'Count unit material ' + suffix,
+    commonName: 'Baut Bulat',
+    unit: 'PCS',
+    sapUnit: 'PCS',
+    decimalAllowed: false,
+    category: 'Synthetic',
+    mrpType: 'PD',
+    critical: false,
+    packSize: null,
+    active: true,
+  });
+  const beforeEnroll = await listMaterials(actor, new URLSearchParams({ q: 'INT-' + suffix }));
+  assert.equal(beforeEnroll.items[0]?.inStock, false);
+  await saveInventory(actor, { materialId: materialId!, rack: 'B-02' });
+  const afterEnroll = await listMaterials(actor, new URLSearchParams({ q: 'INT-' + suffix }));
+  assert.equal(afterEnroll.items[0]?.inStock, true);
+  assert.equal((await materialDetail(actor, materialId!)).material.inStock, true);
+  await assert.rejects(
+    postMovement(
+      actor,
+      'opening',
+      { materialId: materialId!, quantity: '10.5', reason: 'Fractional reject', expectedVersion: 1 },
+      key(),
+    ),
+    (e) => e instanceof AppError && e.status === 400 && /jumlah bulat/.test(e.message),
+  );
+  await postMovement(
+    actor,
+    'opening',
+    { materialId: materialId!, quantity: '0', reason: 'Zero integer ok', expectedVersion: 1 },
+    key(),
+  );
+  await assert.rejects(
+    postMovement(
+      actor,
+      'adjustment',
+      { materialId: materialId!, quantity: '2.5', reason: 'Fractional adjust', expectedVersion: 2 },
+      key(),
+    ),
+    (e) => e instanceof AppError && e.status === 400 && /jumlah bulat/.test(e.message),
+  );
+  await postMovement(
+    actor,
+    'adjustment',
+    { materialId: materialId!, quantity: '5', reason: 'Integer adjust ok', expectedVersion: 2 },
+    key(),
+  );
+  assert.equal((await state({ materialId: materialId! })).quantity, '5.000000');
+  const minimalSuffix = key();
+  const { id: minimalId } = await saveMaterial(actor, {
+    mmid: 'MIN-' + minimalSuffix,
+    description: 'Minimal master ' + minimalSuffix,
+    unit: 'PCS',
+    sapUnit: 'PCS',
+    decimalAllowed: false,
+  });
+  const minimalDetail = await materialDetail(actor, minimalId!);
+  assert.equal(minimalDetail.material.category, '');
+  assert.equal(minimalDetail.material.commonName, '');
+  assert.equal(minimalDetail.material.mrpType, '');
+  assert.equal(minimalDetail.material.decimalAllowed, false);
+  const cats = await listCategories(actor);
+  assert.equal(cats.items.includes(''), false);
+  const byArea = await listInventory(actor, new URLSearchParams({ area: 'B-02', q: 'INT-' + suffix }));
+  assert.equal(byArea.items.length, 1);
+  assert.equal(byArea.items[0]?.id, materialId);
+  const areas = await listWorkAreas(actor);
+  assert.ok(areas.items.includes('RMP'));
+  assert.ok(areas.items.includes('Tool & Utility'));
+  assert.ok(areas.items.includes('B-02'));
+  assert.equal(new Set(areas.items).size, areas.items.length);
 });
 after(async () => {
   await closeConsumablesDb();

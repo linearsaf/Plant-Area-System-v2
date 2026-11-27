@@ -18,13 +18,16 @@ import { wibInput } from '@plant/contracts';
 export function Select({
   children,
   searchable = true,
+  searchPlaceholder = 'Cari…',
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { searchable?: boolean }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { searchable?: boolean; searchPlaceholder?: string }) {
   const ref = useRef<HTMLSelectElement>(null),
     button = useRef<HTMLButtonElement>(null),
     list = useRef<HTMLDivElement>(null),
     highlightBar = useRef<HTMLSpanElement>(null),
     placed = useRef(false),
+    keyboardNav = useRef(false),
+    opening = useRef(false),
     id = useId();
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState(''),
@@ -69,11 +72,16 @@ export function Select({
       bar.style.transition = '';
       placed.current = true;
     }
+    if (keyboardNav.current) {
+      option.scrollIntoView({ block: 'nearest' });
+      keyboardNav.current = false;
+    }
   });
+  const triggerId = props.id || id + '-trigger';
   useEffect(() => {
     const label = button.current?.closest('label');
-    if (label) label.htmlFor = id + '-trigger';
-  }, [id]);
+    if (label) label.htmlFor = triggerId;
+  }, [triggerId]);
   useEffect(() => {
     if (!open || searchable) return;
     const frame = requestAnimationFrame(() => {
@@ -108,19 +116,22 @@ export function Select({
         {children}
       </select>
       <button
-        id={id + '-trigger'}
+        id={triggerId}
         ref={button}
         type="button"
         role="combobox"
         className="select-trigger"
         aria-label={props['aria-label']}
         aria-labelledby={props['aria-labelledby']}
+        aria-invalid={props['aria-invalid']}
+        aria-describedby={props['aria-describedby']}
         aria-expanded={open}
         aria-controls={id}
         disabled={props.disabled}
         value={value}
         aria-required={props.required}
         onClick={() => {
+          opening.current = true;
           setOpen(true);
           setQuery('');
           setIndex(
@@ -130,13 +141,29 @@ export function Select({
             ),
           );
         }}
+        onBlur={(e) => {
+          if (opening.current || open) {
+            opening.current = false;
+            return;
+          }
+          props.onBlur?.(e as unknown as React.FocusEvent<HTMLSelectElement>);
+        }}
       >
         <span>{options.find((o) => o.value === value)?.label || 'Pilih'}</span>
         <Icon name="chevron" className={open ? 'chevron open' : 'chevron'} />
       </button>
       <Overlay
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          opening.current = false;
+          setOpen(false);
+          if (ref.current) {
+            props.onBlur?.({
+              target: ref.current,
+              currentTarget: ref.current,
+            } as unknown as React.FocusEvent<HTMLSelectElement>);
+          }
+        }}
         title={props['aria-label'] || 'Pilih opsi'}
         kind="menu"
         anchor={button}
@@ -148,21 +175,25 @@ export function Select({
             <input
               autoFocus
               aria-label="Cari opsi"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 setIndex(0);
               }}
-              placeholder="Cari…"
+              placeholder={searchPlaceholder}
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                   e.preventDefault();
+                  keyboardNav.current = true;
                   setIndex(
                     (i) =>
                       (i + (e.key === 'ArrowDown' ? 1 : -1) + filtered.length) % Math.max(1, filtered.length),
                   );
                 }
-                if (e.key === 'Enter' && filtered[index]) {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing && filtered[index]) {
                   e.preventDefault();
                   choose(filtered[index].value);
                 }

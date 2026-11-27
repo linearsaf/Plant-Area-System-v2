@@ -10,9 +10,16 @@ import {
   HEC_PATTERN,
   normalizeAliases,
   sapToR22,
+  validateCountQuantity,
   validateStockQuantity,
   canonicalDocumentPayload,
   allowsDecimals,
+  costCenterLabel,
+  R22_COST_CENTERS,
+  R22_SHARED_AREA,
+  R22_WORK_AREAS,
+  isSharedWorkArea,
+  workAreaLabel,
   AppError,
   type Identity,
 } from '@plant/contracts';
@@ -73,7 +80,6 @@ test('picklist requires a nonblank Cost Center before accessing persistence', as
     grants: [{ appId: 'consumables', role: 'storekeeper' }],
   };
   const input = {
-    reservationNo: 'RES-VALIDATION',
     wo: 'WO-VALIDATION',
     lines: [{ materialId: '8f3345f3-50a5-48fb-bbc4-3596711c41a7', quantity: '1' }],
   };
@@ -173,6 +179,11 @@ test('R22 SAP conversion is exact, bounded and respects count units', () => {
   assert.throws(() => sapToR22('999999999999', m));
   assert.throws(() => validateStockQuantity('1.1', false));
   assert.equal(validateStockQuantity('2.000', false), '2.000000');
+  assert.equal(validateCountQuantity('0', false), '0.000000');
+  assert.equal(validateCountQuantity('10.000', false), '10.000000');
+  assert.equal(validateCountQuantity('0.25', true), '0.250000');
+  assert.throws(() => validateCountQuantity('10.5', false), /jumlah bulat/);
+  assert.throws(() => validateCountQuantity('-1', true));
   assert.equal(allowsDecimals(' ea '), false);
   assert.equal(allowsDecimals('KG'), true);
   assert.equal(
@@ -211,4 +222,39 @@ test('catalog mapping preserves master and excludes historical quantity/value', 
   assert.throws(() =>
     parseCatalog(JSON.stringify({ batch: 'fixture', rows: [[...row.slice(0, 3), '', ...row.slice(4)]] })),
   );
+});
+
+test('R22 Umum R22 shared pool helpers distinguish shared stock from specific work areas', () => {
+  assert.equal(R22_SHARED_AREA, 'Umum R22');
+  assert.equal(R22_WORK_AREAS.includes(R22_SHARED_AREA), true);
+  assert.equal(isSharedWorkArea(''), true);
+  assert.equal(isSharedWorkArea('   '), true);
+  assert.equal(isSharedWorkArea(null), true);
+  assert.equal(isSharedWorkArea(undefined), true);
+  assert.equal(isSharedWorkArea('Umum R22'), true);
+  assert.equal(isSharedWorkArea(' Umum R22 '), true);
+  assert.equal(isSharedWorkArea('RMP'), false);
+  assert.equal(isSharedWorkArea('RMK 1'), false);
+  assert.equal(isSharedWorkArea('Rack A-01'), false);
+  assert.equal(workAreaLabel(''), 'Umum R22');
+  assert.equal(workAreaLabel(null), 'Umum R22');
+  assert.equal(workAreaLabel('Umum R22'), 'Umum R22');
+  assert.equal(workAreaLabel('RMP'), 'RMP');
+  assert.equal(workAreaLabel('Rack A-01'), 'Rack A-01');
+});
+
+test('R22 Cost Center master list contains 43 unique codes and formats labels cleanly', () => {
+  assert.equal(R22_COST_CENTERS.length, 43);
+  const codes = R22_COST_CENTERS.map((c) => c.code);
+  assert.equal(new Set(codes).size, 43);
+  for (const cc of R22_COST_CENTERS) {
+    assert.ok(cc.code.length >= 1 && cc.code.length <= 40);
+    assert.ok(cc.description.length > 0);
+  }
+  assert.equal(costCenterLabel('40420'), '40420 — TQ2-Clinker Production');
+  assert.equal(costCenterLabel(' 10410 '), '10410 — TQ-RME Limestone');
+  assert.equal(costCenterLabel('10451'), '10451 — TQ-Dolomite for Sale');
+  assert.equal(costCenterLabel('LEGACY-CC'), 'LEGACY-CC');
+  assert.equal(costCenterLabel(''), '');
+  assert.equal(costCenterLabel(null), '');
 });

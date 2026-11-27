@@ -147,7 +147,7 @@ for (const theme of ['light', 'dark'])
     await page.goto('/bag-filter');
     await readable(page.locator('.equipment-subgroup'));
     await page.goto('/consumables/stock');
-    await readable(page.getByRole('combobox', { name: 'Ketersediaan', exact: true }));
+    await readable(page.getByRole('combobox', { name: 'Area Kerja', exact: true }));
     const rows = page.locator('.stock-table-row');
     if (await rows.count()) await readable(rows.first());
     await page.goto('/consumables/manage');
@@ -169,18 +169,18 @@ for (const width of [1440, 390])
     page.on('pageerror', (error) => failures.push(error.message));
     for (const [route, name] of [
       ['/consumables', 'Tahun transaksi stok'],
-      ['/consumables/stock', 'Ketersediaan'],
+      ['/consumables/stock', 'Area Kerja'],
       ['/bag-filter', 'Tahun grafik'],
     ]) {
       await page.goto(route);
       const trigger = page.getByRole('combobox', { name, exact: true }),
-        menu = page.getByRole('dialog', { name: name === 'Ketersediaan' ? 'Pilih opsi' : name, exact: true });
+        menu = page.getByRole('dialog', { name: name === 'Area Kerja' ? 'Pilih opsi' : name, exact: true });
       await expect(trigger).toBeVisible();
       const value = await trigger.textContent();
       await trigger.click();
       await expect(menu).toBeVisible();
       const search = menu.getByRole('textbox', { name: 'Cari opsi' });
-      if (route === '/bag-filter') await expect(search).toHaveCount(0);
+      if (route === '/bag-filter' || route === '/consumables/stock') await expect(search).toHaveCount(0);
       else await search.fill('2');
       await expect(menu).toBeVisible();
       await outside(page, menu);

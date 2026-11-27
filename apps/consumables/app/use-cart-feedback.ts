@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { type CartDraft, type CartLine } from '@plant/ui';
+import { cartLineKey, type CartDraft, type CartLine } from '@plant/ui';
 /** A single reversible removal; document fields are never rolled back by undo. */
 export function useCartFeedback(
   draft: CartDraft,
@@ -31,9 +31,9 @@ export function useCartFeedback(
       clearTimeout(timer);
     };
   }, [highlight, change]);
-  const added = (id: string) => {
+  const added = (key: string) => {
     setRemoved(null);
-    setHighlight(id);
+    setHighlight(key);
     setChange(++revision.current);
   };
   return {
@@ -51,21 +51,23 @@ export function useCartFeedback(
     remove: (index: number) => {
       const line = draft.lines[index];
       if (!line) return;
+      const lineKey = cartLineKey(line);
       setRemoved({ line, index });
-      setDraft((v) => ({ ...v, lines: v.lines.filter((l) => l.material.id !== line.material.id) }));
+      setDraft((v) => ({ ...v, lines: v.lines.filter((l) => cartLineKey(l) !== lineKey) }));
       setMessage('Item dihapus');
     },
     action: removed
       ? {
           label: 'Urungkan',
           onClick: () => {
+            const removedKey = cartLineKey(removed.line);
             setDraft((v) => {
-              if (v.lines.some((l) => l.material.id === removed.line.material.id)) return v;
+              if (v.lines.some((l) => cartLineKey(l) === removedKey)) return v;
               const lines = [...v.lines];
               lines.splice(Math.min(removed.index, lines.length), 0, removed.line);
               return { ...v, lines };
             });
-            added(removed.line.material.id);
+            added(removedKey);
             setMessage('Item dipulihkan');
           },
         }
