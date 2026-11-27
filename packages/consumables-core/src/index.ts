@@ -9,6 +9,10 @@ import {
   decimalString,
   allowsDecimals,
   normalizeAliases,
+  R22_SHARED_AREA,
+  R22_WORK_AREAS,
+  isSharedWorkArea,
+  validateCountQuantity,
   stockDocumentLabels,
   wibWeekStarts,
   type Identity,
@@ -32,6 +36,7 @@ export {
   hecSuggestions,
   DocumentConflict,
 } from './documents';
+export { listLoans, loanDetail, repayLoan } from './loans';
 import {
   rows,
   requireStock,
@@ -63,7 +68,7 @@ const materialInput = z
     sapUnit: z.string().trim().min(1).max(30).optional(),
     aliases: z.string().max(500).transform(normalizeAliases).optional(),
     decimalAllowed: z.boolean().optional(),
-    category: z.string().trim().min(1).max(100),
+    category: z.string().trim().max(100).default(''),
     mrpType: z.string().trim().max(30).default(''),
     critical: z.boolean().default(false),
     packSize: positive.nullable().default(null),
@@ -169,11 +174,12 @@ export async function saveInventory(actor: Identity, body: unknown, id?: string)
       return { id };
     });
   } catch (e) {
-    if (code(e) === 'ER_DUP_ENTRY') throw new AppError(409, 'Material sudah terdaftar dalam stok R22.');
+    if (code(e) === 'ER_DUP_ENTRY')
+      throw new AppError(409, 'Material sudah terdaftar pada Area Kerja tersebut.');
     throw e;
   }
 }
-const common = { materialId: recordId };
+const common = { materialId: recordId, inventoryId: recordId.optional() };
 const schemas = {
   opening: z
     .object({
@@ -252,11 +258,23 @@ export async function postMovement(actor: Identity, kind: MoveKind, body: unknow
       return await db().transaction(async (tx) => {
         const [l] = await tx.select().from(locations).where(eq(locations.id, input.locationId)).for('update');
         const [m] = await tx.select().from(materials).where(eq(materials.id, input.materialId)).for('update');
-        const [i] = await tx
+        const invRows = await tx
           .select()
           .from(inventory)
-          .where(and(eq(inventory.materialId, input.materialId), eq(inventory.locationId, input.locationId)))
+          .where(
+            input.inventoryId
+              ? and(
+                  eq(inventory.id, String(input.inventoryId)),
+                  eq(inventory.materialId, input.materialId),
+                  eq(inventory.locationId, input.locationId),
+                )
+              : and(eq(inventory.materialId, input.materialId), eq(inventory.locationId, input.locationId)),
+          )
           .for('update');
+        if (!input.inventoryId && invRows.length > 1) {
+          throw new AppError(400, 'Material tersedia di beberapa Area Kerja. Pilih Area Kerja spesifik.');
+        }
+        const i = invRows[0];
         // Recheck after acquiring locks: another identical request may have committed while waiting.
         const [previous] = await tx
           .select()
@@ -280,8 +298,15 @@ export async function postMovement(actor: Identity, kind: MoveKind, body: unknow
         const before = decimalUnits(i.quantity);
         let delta = 0n;
         let packs: number | null = null;
-        if (kind === 'opening' || kind === 'adjustment') delta = decimalUnits(input.quantity) - before;
-        else if (kind === 'issue') delta = -decimalUnits(input.quantity);
+        if (kind === 'opening' || kind === 'adjustment') {
+          let target: string;
+          try {
+            target = validateCountQuantity(String(input.quantity), m.decimalAllowed);
+          } catch (e) {
+            return failValidation(e);
+          }
+          delta = decimalUnits(target) - before;
+        } else if (kind === 'issue') delta = -decimalUnits(input.quantity);
         else if (input.mode === 'pack') {
           if (!m.packSize || input.materialVersion !== m.version)
             throw new AppError(409, 'Konfigurasi kemasan berubah/belum diatur. Muat ulang.');
@@ -307,6 +332,9 @@ export async function postMovement(actor: Identity, kind: MoveKind, body: unknow
           description: m.description,
           unit: m.unit,
           locationName: l.name,
+          workArea: i.rack,
+          borrowedFromArea: '',
+          loanId: null,
           type: kind,
           quantity,
           balanceAfter,
@@ -391,6 +419,11 @@ export async function listInventory(actor: Identity, p: URLSearchParams) {
   ];
 
   if (p.get('materialId')) conditions.push(sql`i.material_id=${p.get('materialId')}`);
+  const area = (p.get('area') || p.get('rack') || '').trim();
+  if (area) {
+    if (isSharedWorkArea(area)) conditions.push(sql`i.rack IN (${R22_SHARED_AREA},'')`);
+    else conditions.push(sql`i.rack=${area}`);
+  }
   if (p.get('category')) conditions.push(sql`m.category=${p.get('category')}`);
   if (p.get('active') !== 'all') conditions.push(sql`i.active=1 AND m.active=1 AND l.active=1`);
   if (p.get('availability') === 'available') conditions.push(sql`i.initialized=1 AND i.quantity>0`);
@@ -411,26 +444,44 @@ export async function listCategories(actor: Identity) {
   requireStock(actor, 'read');
   return {
     items: (
-      await rows<{ category: string }>(db(), sql`SELECT DISTINCT category FROM materials ORDER BY category`)
+      await rows<{ category: string }>(
+        db(),
+        sql`SELECT DISTINCT category FROM materials WHERE category <> '' ORDER BY category`,
+      )
     ).map((v) => v.category),
   };
+}
+export async function listWorkAreas(actor: Identity) {
+  requireStock(actor, 'read');
+  const existing = (
+    await rows<{ rack: string }>(
+      db(),
+      sql`SELECT DISTINCT i.rack FROM inventory i WHERE ${scope(actor, sql`i.location_id`)} AND i.rack <> '' ORDER BY i.rack`,
+    )
+  ).map((v) => v.rack);
+  const canonical = [...R22_WORK_AREAS] as string[];
+  const legacy = existing.filter((r) => !canonical.includes(r));
+  return { items: [...canonical, ...legacy] };
 }
 export async function materialDetail(actor: Identity, id: string) {
   requireStock(actor, 'read');
   const [material] = await db().select().from(materials).where(eq(materials.id, id));
   if (!material) throw new AppError(404, 'Material tidak ditemukan.');
-  const stocks = await rows<InventoryItem>(
-    db(),
-    sql`SELECT ${invCols} FROM ${joinInv} WHERE m.id=${id} AND ${scope(actor, sql`i.location_id`)}`,
-  );
+  const stocks = (
+    await rows<InventoryItem>(
+      db(),
+      sql`SELECT ${invCols} FROM ${joinInv} WHERE m.id=${id} AND ${scope(actor, sql`i.location_id`)} ORDER BY i.rack,i.id`,
+    )
+  ).map(normalize);
   const [used] = await db()
     .select({ id: movements.id })
     .from(movements)
     .where(eq(movements.materialId, id))
     .limit(1);
   return {
-    material: { ...material, unitLocked: !!used },
-    stock: stocks.length ? normalize(stocks[0]) : null,
+    material: { ...material, unitLocked: !!used, inStock: stocks.length > 0 },
+    stock: stocks[0] || null,
+    stocks,
   };
 }
 export async function listMovements(actor: Identity, p: URLSearchParams) {
@@ -439,6 +490,8 @@ export async function listMovements(actor: Identity, p: URLSearchParams) {
     ...search(p.get('q') || '', [
       sql`v.mmid`,
       sql`v.description`,
+      sql`v.work_area`,
+      sql`v.borrowed_from_area`,
       sql`v.reference`,
       sql`v.wo`,
       sql`v.job`,
@@ -450,7 +503,11 @@ export async function listMovements(actor: Identity, p: URLSearchParams) {
   if (p.get('materialId')) conditions.push(sql`v.material_id=${p.get('materialId')}`);
   if (p.get('documentId')) conditions.push(sql`v.document_id=${p.get('documentId')}`);
   if (p.get('type')) {
-    if (!['opening', 'receipt', 'issue', 'return', 'adjustment'].includes(p.get('type')!))
+    if (
+      !['opening', 'receipt', 'issue', 'return', 'adjustment', 'loan_out', 'loan_in', 'loan_return'].includes(
+        p.get('type')!,
+      )
+    )
       throw new AppError(400, 'Jenis transaksi tidak valid.');
     conditions.push(sql`v.type=${p.get('type')}`);
   }
@@ -530,6 +587,10 @@ export async function stockDashboard(
     db(),
     sql`SELECT COUNT(*) AS count FROM stock_movements v WHERE ${scope(actor, sql`v.location_id`)} AND v.document_id IS NULL AND v.type IN ('issue','receipt') AND v.created_at>=${start} AND v.created_at<${end}`,
   );
+  const [activeLoansRow] = await rows<{ count: number }>(
+    db(),
+    sql`SELECT COUNT(*) AS count FROM stock_loans l WHERE ${scope(actor, sql`l.location_id`)} AND l.status IN ('open','partial')`,
+  );
   const series = Array.from({ length: 4 }, (_, i) => ({
     quarter: i + 1,
     opening: 0,
@@ -545,6 +606,7 @@ export async function stockDashboard(
     empty: Number(counts.empty),
     criticalEmpty: Number(counts.criticalEmpty),
     uncounted: Number(counts.uncounted),
+    activeLoans: Number(activeLoansRow?.count || 0),
     year,
     currentYear,
     series,

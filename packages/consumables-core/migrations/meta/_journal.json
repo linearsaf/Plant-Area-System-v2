@@ -29,6 +29,13 @@
       "when": 1793618187114,
       "tag": "0003_r22_single_room",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1795782800000,
+      "tag": "0004_r22_work_area_loans",
+      "breakpoints": true
     }
   ]
 }

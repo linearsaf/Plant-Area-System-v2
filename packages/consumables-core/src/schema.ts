@@ -62,8 +62,9 @@ export const inventory = mysqlTable(
     version: int('version').notNull().default(1),
   },
   (t) => [
-    uniqueIndex('inventory_material_location_uq').on(t.materialId, t.locationId),
+    uniqueIndex('inventory_material_location_rack_uq').on(t.materialId, t.locationId, t.rack),
     index('inventory_location_idx').on(t.locationId, t.id),
+    index('inventory_location_rack_idx').on(t.locationId, t.rack, t.id),
     check('inventory_quantity_nonnegative', sql`${t.quantity} >= 0`),
   ],
 );
@@ -77,6 +78,8 @@ export const documents = mysqlTable(
       .notNull()
       .references(() => locations.id),
     locationName: varchar('location_name', { length: 100 }).notNull(),
+    workArea: varchar('work_area', { length: 100 }).notNull().default(''),
+    borrowCount: int('borrow_count').notNull().default(0),
     hec: varchar('hec', { length: 20 }).notNull().default(''),
     wo: varchar('wo', { length: 100 }).notNull().default(''),
     note: varchar('note', { length: 500 }).notNull().default(''),
@@ -96,6 +99,7 @@ export const documents = mysqlTable(
   },
   (t) => [
     index('document_location_time_idx').on(t.locationId, t.createdAt, t.id),
+    index('document_work_area_idx').on(t.locationId, t.workArea, t.createdAt, t.id),
     index('document_type_time_idx').on(t.type, t.createdAt, t.id),
     index('document_hec_idx').on(t.hec),
     index('document_wo_idx').on(t.wo),
@@ -133,6 +137,9 @@ export const movements = mysqlTable(
     description: varchar('description', { length: 160 }).notNull(),
     unit: varchar('unit', { length: 30 }).notNull(),
     locationName: varchar('location_name', { length: 100 }).notNull(),
+    workArea: varchar('work_area', { length: 100 }).notNull().default(''),
+    borrowedFromArea: varchar('borrowed_from_area', { length: 100 }).notNull().default(''),
+    loanId: varchar('loan_id', { length: 36 }),
     type: varchar('type', { length: 16 }).notNull(),
     quantity: decimal('quantity', { precision: 18, scale: 6 }).notNull(),
     balanceAfter: decimal('balance_after', { precision: 18, scale: 6 }).notNull(),
@@ -149,7 +156,85 @@ export const movements = mysqlTable(
   (t) => [
     index('movement_location_time_idx').on(t.locationId, t.createdAt, t.id),
     index('movement_material_idx').on(t.materialId, t.createdAt, t.id),
+    index('movement_loan_idx').on(t.loanId),
     uniqueIndex('movement_document_line_uq').on(t.documentId, t.lineNo),
+  ],
+);
+export const loans = mysqlTable(
+  'stock_loans',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    number: varchar('number', { length: 30 }).notNull().unique(),
+    documentId: varchar('document_id', { length: 36 })
+      .notNull()
+      .references(() => documents.id),
+    movementId: varchar('movement_id', { length: 36 })
+      .notNull()
+      .references(() => movements.id),
+    locationId: varchar('location_id', { length: 36 })
+      .notNull()
+      .references(() => locations.id),
+    materialId: varchar('material_id', { length: 36 })
+      .notNull()
+      .references(() => materials.id),
+    lenderInventoryId: varchar('lender_inventory_id', { length: 36 })
+      .notNull()
+      .references(() => inventory.id),
+    borrowerArea: varchar('borrower_area', { length: 100 }).notNull(),
+    lenderArea: varchar('lender_area', { length: 100 }).notNull(),
+    mmid: varchar('mmid', { length: 80 }).notNull(),
+    description: varchar('description', { length: 160 }).notNull(),
+    commonName: varchar('common_name', { length: 160 }).notNull().default(''),
+    unit: varchar('unit', { length: 30 }).notNull(),
+    hec: varchar('hec', { length: 20 }).notNull().default(''),
+    wo: varchar('wo', { length: 100 }).notNull().default(''),
+    requesterName: varchar('requester_name', { length: 100 }).notNull(),
+    requesterNik: varchar('requester_nik', { length: 30 }).notNull().default(''),
+    quantity: decimal('quantity', { precision: 18, scale: 6 }).notNull(),
+    returnedQuantity: decimal('returned_quantity', { precision: 18, scale: 6 }).notNull().default('0.000000'),
+    status: varchar('status', { length: 16 }).notNull().default('open'),
+    note: varchar('note', { length: 500 }).notNull().default(''),
+    actorId: varchar('actor_id', { length: 64 }).notNull(),
+    actorName: varchar('actor_name', { length: 100 }).notNull(),
+    createdAt: timestamp('created_at', { fsp: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { fsp: 3 }).notNull(),
+    settledAt: timestamp('settled_at', { fsp: 3 }),
+  },
+  (t) => [
+    index('stock_loans_status_time_idx').on(t.locationId, t.status, t.createdAt, t.id),
+    index('stock_loans_areas_idx').on(t.locationId, t.borrowerArea, t.lenderArea, t.status),
+    check('stock_loans_quantity_positive', sql`${t.quantity} > 0`),
+    check(
+      'stock_loans_returned_bounds',
+      sql`${t.returnedQuantity} >= 0 AND ${t.returnedQuantity} <= ${t.quantity}`,
+    ),
+  ],
+);
+export const loanRepayments = mysqlTable(
+  'stock_loan_repayments',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    loanId: varchar('loan_id', { length: 36 })
+      .notNull()
+      .references(() => loans.id),
+    method: varchar('method', { length: 20 }).notNull(),
+    quantity: decimal('quantity', { precision: 18, scale: 6 }).notNull(),
+    borrowerInventoryId: varchar('borrower_inventory_id', { length: 36 }).references(() => inventory.id),
+    lenderInventoryId: varchar('lender_inventory_id', { length: 36 })
+      .notNull()
+      .references(() => inventory.id),
+    outMovementId: varchar('out_movement_id', { length: 36 }).references(() => movements.id),
+    inMovementId: varchar('in_movement_id', { length: 36 })
+      .notNull()
+      .references(() => movements.id),
+    note: varchar('note', { length: 500 }).notNull().default(''),
+    actorId: varchar('actor_id', { length: 64 }).notNull(),
+    actorName: varchar('actor_name', { length: 100 }).notNull(),
+    createdAt: timestamp('created_at', { fsp: 3 }).notNull(),
+  },
+  (t) => [
+    index('stock_loan_repayments_loan_idx').on(t.loanId, t.createdAt, t.id),
+    check('stock_loan_repayments_quantity_positive', sql`${t.quantity} > 0`),
   ],
 );
 export const idempotency = mysqlTable(
@@ -161,12 +246,13 @@ export const idempotency = mysqlTable(
     hash: varchar('payload_hash', { length: 64 }).notNull(),
     movementId: varchar('movement_id', { length: 36 }).references(() => movements.id),
     documentId: varchar('document_id', { length: 36 }).references(() => documents.id),
+    repaymentId: varchar('repayment_id', { length: 36 }).references(() => loanRepayments.id),
   },
   (t) => [
     uniqueIndex('stock_idempotency_actor_key_uq').on(t.actorId, t.key),
     check(
       'stock_idempotency_one_target',
-      sql`(${t.movementId} IS NOT NULL) <> (${t.documentId} IS NOT NULL)`,
+      sql`((${t.movementId} IS NOT NULL) + (${t.documentId} IS NOT NULL) + (${t.repaymentId} IS NOT NULL)) = 1`,
     ),
   ],
 );

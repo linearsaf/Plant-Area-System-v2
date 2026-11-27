@@ -1,6 +1,12 @@
 import { notFound } from 'next/navigation';
 import { pageIdentity } from '@plant/server';
-import { AppError, formatDate, formatQuantity, type StockDocumentType } from '@plant/contracts';
+import {
+  AppError,
+  costCenterLabel,
+  formatDate,
+  formatQuantity,
+  type StockDocumentType,
+} from '@plant/contracts';
 import { documentDetail } from '@plant/consumables-core';
 import { Shell, Heading } from '@plant/ui';
 import { PrintButton } from './print-button';
@@ -20,7 +26,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     if (e instanceof AppError && e.status === 404) notFound();
     throw e;
   }
-  const { document: d, lines } = result;
+  const { document: d, lines, loans = [] } = result;
   return (
     <Shell identity={identity} active="consumables" activePath="/consumables/history">
       <div className="r22-print-actions">
@@ -45,6 +51,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </header>
         <dl className="stock-detail-grid">
           {[
+            ...(d.workArea ? ([['Area Kerja', d.workArea, false]] as const) : []),
             ['HAC/SAC / Lokasi fungsional', d.hec || d.functionalLocation || '—', true],
             ['Nomor WO', d.wo || '—', true],
             ['Keterangan', d.note || '—', false],
@@ -54,10 +61,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             ...(d.sourceRef ? ([['Consume Order asal', d.sourceRef, true]] as const) : []),
             ...(d.type === 'picklist'
               ? ([
-                  ['Nomor reservasi', d.reservationNo, true],
-                  ['Nomor equipment', d.equipmentNo || '—', true],
+                  ...(d.reservationNo ? ([['Nomor reservasi', d.reservationNo, true]] as const) : []),
+                  ...(d.equipmentNo ? ([['Nomor equipment', d.equipmentNo, true]] as const) : []),
+                  ['Cost Center', costCenterLabel(d.costCenter) || '—', false],
                   ['Lokasi fungsional SAP', d.functionalLocation || '—', true],
-                  ['Pusat biaya', d.costCenter || '—', true],
                   ['Tanggal kebutuhan', d.requiredDate || '—', false],
                 ] as const)
               : []),
@@ -80,26 +87,43 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </tr>
             </thead>
             <tbody>
-              {lines.map((l) => (
-                <tr key={l.id}>
-                  <td>{l.lineNo}</td>
-                  <td>
-                    <strong>
-                      <span className="code-text">{l.mmid}</span> · {l.commonName || l.description}
-                    </strong>
-                    <small>{l.description}</small>
-                  </td>
-                  {d.type === 'picklist' && (
-                    <td>{l.sapQuantity ? `${formatQuantity(l.sapQuantity)} ${l.sapUnit}` : 'Input R22'}</td>
-                  )}
-                  <td>{formatQuantity(l.quantity.replace('-', ''))}</td>
-                  <td>{l.unit}</td>
-                </tr>
-              ))}
+              {lines.map((l) => {
+                const loan = l.loanId ? loans.find((item) => item.id === l.loanId) : undefined;
+                return (
+                  <tr key={l.id}>
+                    <td>{l.lineNo}</td>
+                    <td>
+                      <strong>
+                        <span className="code-text">{l.mmid}</span> · {l.commonName || l.description}
+                      </strong>
+                      <small>
+                        {l.description}
+                        {l.workArea ? ` · Area Kerja: ${l.workArea}` : ''}
+                      </small>
+                      {l.borrowedFromArea && (
+                        <small>
+                          <strong>
+                            Pinjam dari {l.borrowedFromArea}
+                            {loan ? ` (${loan.number})` : ''}
+                          </strong>
+                        </small>
+                      )}
+                    </td>
+                    {d.type === 'picklist' && (
+                      <td>{l.sapQuantity ? `${formatQuantity(l.sapQuantity)} ${l.sapUnit}` : 'Input R22'}</td>
+                    )}
+                    <td>{formatQuantity(l.quantity.replace('-', ''))}</td>
+                    <td>{l.unit}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        <p className="fine">{lines.length} item tercatat pada dokumen ini.</p>
+        <p className="fine">
+          {lines.length} item tercatat pada dokumen ini.
+          {loans.length > 0 ? ` Memuat ${loans.length} pinjaman antar Area Kerja.` : ''}
+        </p>
         <div className="r22-signatures">
           <div>
             Peminta<span>{d.requesterName}</span>

@@ -364,9 +364,12 @@ test('premium dashboard, bounded activity, responsive sidebar, themes and Bag Fi
   }
   await theme(page, 'Terang');
   await page.getByRole('link', { name: 'Lihat yang belum dihitung' }).click();
-  await expect(page.getByRole('combobox', { name: 'Ketersediaan', exact: true })).toContainText(
-    'Belum dihitung',
-  );
+  await expect(page).toHaveURL(/\/consumables\/manage\?tab=inventory&availability=uncounted/);
+  await expect(
+    page
+      .getByRole('group', { name: 'Filter kondisi stok', exact: true })
+      .getByRole('button', { name: 'Belum dihitung', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/bag-filter');
   await expect(page.locator('.bar-chart')).toBeVisible();
   await expect(page.locator('.sidebar .equipment-links a')).toHaveCount(6);

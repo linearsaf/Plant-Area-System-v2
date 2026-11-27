@@ -16,6 +16,9 @@ import {
   hecSuggestions,
   materialDetail,
   stockDashboard,
+  listLoans,
+  loanDetail,
+  repayLoan,
   discovery,
   reconcile,
   getConsumablesDb,
@@ -71,7 +74,7 @@ async function fixture(n = 2, legacyIds = false) {
     const id = legacyIds ? 'mat-' + key().slice(0, 20) : generatedId;
     if (legacyIds)
       await getConsumablesDb().update(s.materials).set({ id }).where(eq(s.materials.id, generatedId));
-    const stock = await saveInventory(actor, { materialId: id });
+    const stock = await saveInventory(actor, { materialId: id, rack: `AREA-${fixtureWo}` });
     if (legacyIds)
       await getConsumablesDb()
         .update(s.inventory)
@@ -357,6 +360,8 @@ test('R22 permissions, malformed quantities, shared stock and ranked search fail
   assert.equal(found.items[0].quantity.includes('.'), true);
   const exact = await searchMaterials(operator, new URLSearchParams({ q: f.list[0].source.mmid }));
   assert.equal(exact.items[0].id, f.list[0].id);
+  const byArea = await searchMaterials(operator, new URLSearchParams({ q: `AREA-${f.input.wo}` }));
+  assert.ok(byArea.items.some((item) => item.id === f.list[0].id));
   assert.equal((await searchMaterials(operator, new URLSearchParams({ q: '%' }))).items.length, 0);
   await assert.rejects(searchMaterials(operator, new URLSearchParams({ q: 'baut' }), true), status(403));
 });
@@ -387,6 +392,235 @@ test('R22 audit failure rolls back document, all balances, auto enrollment, idem
   } finally {
     Date.now = fixtureBefore;
   }
+  assert.deepEqual((await reconcile(actor)).items, []);
+});
+test('multi-area stock per MMID, cross-area borrowing rules, split orders and two settlement methods', async () => {
+  const mmid = 'LOAN-' + key();
+  const matId = (
+    await saveMaterial(actor, {
+      mmid,
+      description: 'Bearing multi-area',
+      commonName: 'Bearing Loan Test',
+      unit: 'PCS',
+      sapUnit: 'PCS',
+      decimalAllowed: false,
+      category: 'Synthetic',
+    })
+  ).id;
+  const invRmp = (await saveInventory(actor, { materialId: matId, rack: 'RMP' })).id;
+  const invRmk1 = (await saveInventory(actor, { materialId: matId, rack: 'RMK 1' })).id;
+  // Same material + same Area Kerja still rejected.
+  await assert.rejects(saveInventory(actor, { materialId: matId, rack: 'RMP' }), status(409));
+
+  await postMovement(
+    actor,
+    'opening',
+    { materialId: matId, inventoryId: invRmp, quantity: '2', reason: 'Init RMP', expectedVersion: 1 },
+    key(),
+  );
+  await postMovement(
+    actor,
+    'opening',
+    { materialId: matId, inventoryId: invRmk1, quantity: '10', reason: 'Init RMK 1', expectedVersion: 1 },
+    key(),
+  );
+  const detail = await materialDetail(actor, matId);
+  assert.equal(detail.stocks.length, 2);
+
+  // Borrowing when own stock (RMP = 2) already suffices (requesting 2 from RMK 1) must be rejected.
+  await assert.rejects(
+    createDocument(
+      actor,
+      'consume',
+      {
+        workArea: 'RMP',
+        hec: '452-BU1',
+        wo: 'WO-LOAN-BLOCK',
+        lines: [{ materialId: matId, inventoryId: invRmk1, quantity: '2' }],
+      },
+      key(),
+    ),
+    (e: unknown) => e instanceof DocumentConflict && e.lines[0].error.includes('masih mencukupi'),
+  );
+
+  // Split order: RMP has 2 PCS, needs 5 PCS -> takes 2 from RMP + borrows 3 from RMK 1.
+  const splitDoc = await createDocument(
+    actor,
+    'consume',
+    {
+      workArea: 'RMP',
+      hec: '452-BU1',
+      wo: 'WO-LOAN-SPLIT',
+      lines: [
+        { materialId: matId, inventoryId: invRmp, quantity: '2' },
+        { materialId: matId, inventoryId: invRmk1, quantity: '3' },
+      ],
+    },
+    key(),
+  );
+  assert.equal(splitDoc.document.workArea, 'RMP');
+  assert.equal(splitDoc.document.borrowCount, 1);
+  assert.equal(splitDoc.loans?.length, 1);
+  const loan = splitDoc.loans![0];
+  assert.equal(loan.borrowerArea, 'RMP');
+  assert.equal(loan.lenderArea, 'RMK 1');
+  assert.equal(loan.quantity, '3.000000');
+  assert.equal(loan.status, 'open');
+
+  // Search for RMP now sees 0 in RMP and RMK 1 (7 PCS) in otherAreas.
+  const searched = await searchMaterials(actor, new URLSearchParams({ q: mmid, workArea: 'RMP' }));
+  assert.equal(searched.items[0].quantity, '0.000000');
+  assert.equal(searched.items[0].otherAreas?.length, 1);
+  assert.equal(searched.items[0].otherAreas?.[0].rack, 'RMK 1');
+  assert.equal(searched.items[0].otherAreas?.[0].quantity, '7.000000');
+
+  // Partial repayment #1 via physical_return (1 PCS back to RMK 1 without touching RMP).
+  const repayKey1 = key();
+  const part1 = await repayLoan(
+    actor,
+    loan.id,
+    { method: 'physical_return', quantity: '1', note: 'Sisa tidak terpakai' },
+    repayKey1,
+  );
+  assert.equal(part1.replayed, false);
+  assert.equal(part1.loan.status, 'partial');
+  assert.equal(part1.loan.returnedQuantity, '1.000000');
+  assert.equal(part1.lenderStock?.quantity, '8.000000');
+  // Idempotency replay returns identical result without double-adding stock.
+  const replay1 = await repayLoan(
+    actor,
+    loan.id,
+    { method: 'physical_return', quantity: '1', note: 'Sisa tidak terpakai' },
+    repayKey1,
+  );
+  assert.equal(replay1.replayed, true);
+  assert.equal(replay1.lenderStock?.quantity, '8.000000');
+
+  // Transfer repayment when RMP is still 0 must fail with 409.
+  await assert.rejects(repayLoan(actor, loan.id, { method: 'transfer', quantity: '2' }, key()), status(409));
+
+  // Replenish RMP via Return Order (5 PCS), then settle remaining 2 PCS via transfer (RMP -> RMK 1).
+  await createDocument(
+    actor,
+    'return',
+    {
+      workArea: 'RMP',
+      hec: '452-BU1',
+      wo: 'WO-LOAN-REPLENISH',
+      lines: [{ materialId: matId, inventoryId: invRmp, quantity: '5' }],
+    },
+    key(),
+  );
+  const part2 = await repayLoan(
+    actor,
+    loan.id,
+    { method: 'transfer', quantity: '2', note: 'Pelunasan dari stok RMP' },
+    key(),
+  );
+  assert.equal(part2.loan.status, 'settled');
+  assert.equal(part2.loan.remainingQuantity, '0.000000');
+  assert.equal(part2.borrowerStock?.quantity, '3.000000');
+  assert.equal(part2.lenderStock?.quantity, '10.000000');
+  assert.equal((await loanDetail(actor, loan.id)).repayments.length, 2);
+  assert.ok(
+    (await listLoans(actor, new URLSearchParams({ status: 'settled', q: loan.number }))).items.length >= 1,
+  );
+  assert.deepEqual((await reconcile(actor)).items, []);
+});
+test('Umum R22 shared pool (explicit & default Picklist blank rack) can be consumed without loans', async () => {
+  const mmidExplicit = 'SHARED-EX-' + key();
+  const matExplicit = (
+    await saveMaterial(actor, {
+      mmid: mmidExplicit,
+      description: 'Karung plastik 50 kg',
+      unit: 'PCS',
+      sapUnit: 'PCS',
+      decimalAllowed: false,
+    })
+  ).id;
+  const invExplicit = (await saveInventory(actor, { materialId: matExplicit, rack: 'Umum R22' })).id;
+  await postMovement(
+    actor,
+    'opening',
+    {
+      materialId: matExplicit,
+      inventoryId: invExplicit,
+      quantity: '10',
+      reason: 'Stok bersama',
+      expectedVersion: 1,
+    },
+    key(),
+  );
+
+  // Material received via default Picklist (blank workArea -> K3 auto-enroll with rack = '').
+  const mmidPicklist = 'SHARED-PL-' + key();
+  const matPicklist = (
+    await saveMaterial(actor, {
+      mmid: mmidPicklist,
+      description: 'Ember plastik 20L',
+      unit: 'PCS',
+      sapUnit: 'PCS',
+      decimalAllowed: false,
+    })
+  ).id;
+  const sharedPicklist = await createDocument(
+    actor,
+    'picklist',
+    {
+      wo: 'WO-SHARED-PL',
+      costCenter: '40420',
+      lines: [{ materialId: matPicklist, quantity: '8' }],
+    },
+    key(),
+  );
+  assert.equal(sharedPicklist.document.reservationNo, '');
+  assert.equal(sharedPicklist.document.equipmentNo, '');
+  assert.equal(sharedPicklist.previousDocuments?.length ?? 0, 0);
+
+  // Filter ?area=Umum R22 must match both explicit 'Umum R22' and blank rack '' rows.
+  const listedExplicit = await listInventory(
+    actor,
+    new URLSearchParams({ area: 'Umum R22', q: mmidExplicit }),
+  );
+  assert.equal(listedExplicit.items.length, 1);
+  const listedBlank = await listInventory(actor, new URLSearchParams({ area: 'Umum R22', q: mmidPicklist }));
+  assert.equal(listedBlank.items.length, 1);
+  assert.equal(listedBlank.items[0].rack, '');
+
+  // Search from RMP promotes shared stock directly as primary stock.
+  const searchExplicit = await searchMaterials(
+    actor,
+    new URLSearchParams({ q: mmidExplicit, workArea: 'RMP' }),
+  );
+  assert.equal(searchExplicit.items[0].rack, 'Umum R22');
+  assert.equal(searchExplicit.items[0].quantity, '10.000000');
+
+  const searchBlank = await searchMaterials(actor, new URLSearchParams({ q: mmidPicklist, workArea: 'RMP' }));
+  assert.equal(searchBlank.items[0].rack, 'Umum R22');
+  assert.equal(searchBlank.items[0].quantity, '8.000000');
+
+  // RMP consumes both shared items directly -> zero cross-area loans created.
+  const consumed = await createDocument(
+    actor,
+    'consume',
+    {
+      workArea: 'RMP',
+      hec: '452-BU1',
+      wo: 'WO-SHARED-CONSUME',
+      lines: [
+        { materialId: matExplicit, inventoryId: invExplicit, quantity: '3' },
+        { materialId: matPicklist, inventoryId: searchBlank.items[0].inventoryId!, quantity: '2' },
+      ],
+    },
+    key(),
+  );
+  assert.equal(consumed.document.workArea, 'RMP');
+  assert.equal(consumed.document.borrowCount, 0);
+  assert.equal(consumed.loans?.length ?? 0, 0);
+  assert.equal(consumed.lines[0].borrowedFromArea, '');
+  assert.equal(consumed.lines[1].borrowedFromArea, '');
+  assert.equal(consumed.lines[0].workArea, 'Umum R22');
+  assert.equal(consumed.lines[1].workArea, 'Umum R22');
   assert.deepEqual((await reconcile(actor)).items, []);
 });
 after(closeConsumablesDb);

@@ -216,7 +216,14 @@ export function StockSummary({ identity }: { identity?: Identity }) {
                   ? `${percent.toLocaleString('id-ID', { maximumFractionDigits: 1 })}% material dikelola telah dikonfirmasi.`
                   : 'Daftarkan material ke stok R22 untuk mulai menghitung stok.'}
               </p>
-              <a className="stock-inline-link" href="/consumables/stock?availability=uncounted">
+              <a
+                className="stock-inline-link"
+                href={
+                  identity && canConsume(identity, 'manage')
+                    ? '/consumables/manage?tab=inventory&availability=uncounted'
+                    : '/consumables/stock?availability=uncounted'
+                }
+              >
                 Lihat yang belum dihitung <Icon name="arrow" />
               </a>
             </section>
@@ -233,9 +240,16 @@ export function StockSummary({ identity }: { identity?: Identity }) {
                   </strong>
                   <small>Saldo nol terkonfirmasi</small>
                 </a>
+                {!!data.activeLoans && data.activeLoans > 0 && (
+                  <a href="/consumables/history?tab=loans">
+                    <span>Pinjaman antar area</span>
+                    <strong className="stock-warning-value">{n(data.activeLoans)}</strong>
+                    <small>Aktif menunggu pelunasan</small>
+                  </a>
+                )}
               </div>
               {identity && canConsume(identity, 'manage') && (
-                <a className="stock-inline-link" href="/consumables/manage">
+                <a className="stock-inline-link" href="/consumables/manage?tab=inventory">
                   Kelola daftar stok <Icon name="arrow" />
                 </a>
               )}
